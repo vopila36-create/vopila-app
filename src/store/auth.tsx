@@ -72,6 +72,11 @@ function toTurkish(err: { message?: string; code?: string } | null | undefined):
     return 'E-posta gönderim sınırına ulaşıldı. Bu, sunucu ayarından kaynaklanıyor; kısa süre içinde düzeltilecek.';
   if (code.startsWith('over_') || msg.includes('rate limit') || msg.includes('security purposes'))
     return 'Yeni kodu birkaç saniye sonra isteyebilirsin.';
+  // Sunucudaki güvenlik kuralları (0006_anti_abuse.sql)
+  if (msg.includes('rate_limited')) return 'Çok hızlı işlem yapıyorsun. Biraz bekleyip tekrar dene.';
+  if (msg.includes('account_suspended'))
+    return 'Hesabın topluluk kurallarını ihlal ettiği için kısıtlandı. Destek ekibiyle iletişime geçebilirsin.';
+  if (msg === 'blocked' || msg.includes('"blocked"')) return 'Bu kullanıcıyla etkileşim kuramazsın.';
   if (msg.includes('provider is not enabled')) return 'Google ile giriş henüz açılmadı. Şimdilik e-posta ile devam et.';
   if (code === '23505' || msg.includes('duplicate key')) return 'Bu kullanıcı adı alınmış, başka bir tane dene.';
   if (msg.includes('network') || msg.includes('fetch')) return 'İnternet bağlantısı yok gibi görünüyor. Bağlantını kontrol et.';

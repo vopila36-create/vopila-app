@@ -75,3 +75,13 @@ EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 - Listeler, sayılar ve gizli hesabın içeriği yalnızca `accepted` takipleri sayar.
 - Hesap gizliden açığa geçince bekleyen istekler otomatik kabul edilir.
 - **Yapılacak (ekranlar bağlanırken):** `/takip-istekleri` ekranı (bildirim bu adrese yönlendirir) ve profilde "İstek gönderildi" durumu.
+
+
+## Güvenlik (hile ve kötüye kullanım) — `0006_anti_abuse.sql`
+
+- **Hesap durumu:** `profiles.status` = `active` / `suspended` / `banned`. Askıdaki hesap yazamaz; banlı hesabın içeriği kimseye görünmez. Yalnızca yönetici değiştirebilir (`admin_set_user_status`).
+- **Yönetici:** `private.admins` tablosu (rol asla `user_metadata`'dan gelmez). Tüm yönetici işlemleri `private.audit_log`'a yazılır.
+- **Hız sınırları:** `private.rate_limits` (örn. dakikada 10 yorum, saatte 100 oy). Aşılırsa `rate_limited` hatası.
+- **Engelle:** `blocks` — engel iki yönde içerik/profil görünürlüğünü, takibi ve oyu kapatır; takipler silinir.
+- **Şikayet:** `reports` — 5 farklı kişi şikayet edince gönderi/yorum yönetici bakana kadar gizlenir (`admin_resolve_report`: `remove` / `dismiss`).
+- **Ödül hilesi:** sezon kapanırken kazananın oyları incelenir (oy halkası, içi boş hesaplar, aynı gün açılmış hesaplar, 1 saatte oy patlaması). Temizse token hemen verilir; şüpheliyse `pending_rewards`'a düşer, yönetici `admin_review_reward` ile onaylar/reddeder.
