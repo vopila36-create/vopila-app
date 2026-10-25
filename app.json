@@ -1,18 +1,21 @@
 {
   "expo": {
-    "name": "vopila-app",
-    "slug": "vopila-app",
+    "name": "VOPILA",
+    "slug": "vopila",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "vopilaapp",
-    "userInterfaceStyle": "automatic",
+    "scheme": "vopila",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#040A17",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "bundleIdentifier": "com.vopila.app",
+      "supportsTablet": false
     },
     "android": {
+      "package": "com.vopila.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#041632",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -20,7 +23,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "server",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -28,9 +31,34 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#040A17",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 180
+        }
+      ],
+      "expo-video",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "VOPILA, anlık fotoğraf ve video çekip paylaşabilmen için kameranı kullanmak istiyor.",
+          "microphonePermission": "VOPILA, çektiğin videolara ses kaydedebilmek için mikrofonunu kullanmak istiyor.",
+          "recordAudioAndroid": true,
+          "barcodeScannerEnabled": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "VOPILA, paylaşım yapabilmen için galerine erişmek istiyor.",
+          "cameraPermission": "VOPILA, anlık fotoğraf ve video çekip paylaşabilmen için kameranı kullanmak istiyor.",
+          "microphonePermission": "VOPILA, çektiğin videolara ses kaydedebilmek için mikrofonunu kullanmak istiyor."
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "VOPILA, hesabına hızlı ve güvenli giriş yapabilmen için Face ID kullanmak istiyor."
         }
       ]
     ],

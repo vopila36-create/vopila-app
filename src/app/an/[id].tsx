@@ -1,0 +1,177 @@
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
+import { Heart, Pause, Play, X } from 'lucide-react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Avatar } from '@/components/ui/primitives';
+import { VText } from '@/components/ui/text';
+import { Colors } from '@/constants/theme';
+import { moments, userById } from '@/data/mock';
+import { useStore } from '@/store/app-store';
+
+const DURATION = 5000;
+const TICK = 50;
+
+type Pos = { mi: number; ii: number; done: boolean };
+
+/** Bir sonraki/önceki hikâye ögesinin konumu. */
+function step(p: Pos, dir: 1 | -1): Pos {
+  if (dir === 1) {
+    if (p.ii < moments[p.mi].items.length - 1) return { ...p, ii: p.ii + 1 };
+    if (p.mi < moments.length - 1) return { mi: p.mi + 1, ii: 0, done: false };
+    return { ...p, done: true };
+  }
+  if (p.ii > 0) return { ...p, ii: p.ii - 1 };
+  if (p.mi > 0) return { mi: p.mi - 1, ii: moments[p.mi - 1].items.length - 1, done: false };
+  return p;
+}
+
+/** Tam ekran "Anlar" (hikâye) görüntüleyici. */
+export default function AnGoruntuleyici() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
+  const store = useStore();
+
+  const startIndex = Math.max(0, moments.findIndex((m) => m.id === id));
+  const [pos, setPos] = useState<Pos>({ mi: startIndex, ii: 0, done: false });
+  const [progress, setProgress] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [liked, setLiked] = useState<Record<string, boolean>>({});
+  const elapsed = useRef(0);
+
+  const momentIndex = pos.mi;
+  const itemIndex = pos.ii;
+  const moment = moments[momentIndex];
+  const author = userById(moment.authorId);
+  const following = store.isFollowing(author.id);
+
+  const close = useCallback(() => (router.canGoBack() ? router.back() : router.replace('/akis' as Href)), []);
+
+  const go = useCallback((dir: 1 | -1) => {
+    elapsed.current = 0;
+    setProgress(0);
+    setPos((p) => step(p, dir));
+  }, []);
+
+  // Son hikâye bitince kapat
+  useEffect(() => {
+    if (pos.done) close();
+  }, [pos.done, close]);
+
+  // Otomatik ilerleme
+  useEffect(() => {
+    if (paused || pos.done) return;
+    const t = setInterval(() => {
+      elapsed.current += TICK;
+      setProgress(Math.min(1, elapsed.current / DURATION));
+      if (elapsed.current >= DURATION) {
+        clearInterval(t);
+        go(1);
+      }
+    }, TICK);
+    return () => clearInterval(t);
+  }, [paused, pos, go]);
+
+  const next = () => go(1);
+  const prev = () => go(-1);
+
+  const key = `${moment.id}-${itemIndex}`;
+
+  return (
+    <View style={styles.root}>
+      <Image source={{ uri: moment.items[itemIndex] }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
+      <LinearGradient colors={['rgba(0,0,0,0.6)', 'transparent']} style={styles.topShade} />
+      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.7)']} style={styles.bottomShade} />
+
+      {/* Dokunma alanları */}
+      <View style={StyleSheet.absoluteFill}>
+        <View style={{ flex: 1, flexDirection: 'row' }}>
+          <Pressable style={{ flex: 1 }} onPress={prev} accessibilityLabel="Önceki" />
+          <Pressable style={{ flex: 1.4 }} onPress={next} accessibilityLabel="Sonraki" />
+        </View>
+      </View>
+
+      <View style={[styles.top, { paddingTop: insets.top + 8 }]}>
+        <View style={styles.bars}>
+          {moment.items.map((it, i) => (
+            <View key={`${it}-${i}`} style={styles.bar}>
+              <View
+                style={[
+                  styles.barFill,
+                  { width: `${(i < itemIndex ? 1 : i === itemIndex ? progress : 0) * 100}%` },
+                ]}
+              />
+            </View>
+          ))}
+        </View>
+        <View style={styles.header}>
+          <Pressable style={styles.author} onPress={() => router.push(`/kullanici/${author.id}` as Href)}>
+            <Avatar uri={author.avatar} size={38} ring />
+            <View>
+              <VText variant="bodyBold">{author.name}</VText>
+              <VText variant="caption" color="rgba(255,255,255,0.8)">
+                {moment.title}
+              </VText>
+            </View>
+          </Pressable>
+          <Pressable onPress={() => setPaused((p) => !p)} hitSlop={10} accessibilityLabel={paused ? 'Devam et' : 'Duraklat'}>
+            {paused ? <Play size={24} color="#fff" /> : <Pause size={24} color="#fff" />}
+          </Pressable>
+          <Pressable onPress={close} hitSlop={10} accessibilityLabel="Kapat">
+            <X size={28} color="#fff" />
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={[styles.bottom, { paddingBottom: insets.bottom + 16 }]}>
+        <Pressable
+          onPress={() => store.toggleFollow(author.id)}
+          style={[styles.follow, following && styles.following]}>
+          <VText variant="label" color={following ? Colors.text : Colors.onCyan}>
+            {following ? 'Takip ediliyor' : 'Takip Et'}
+          </VText>
+        </Pressable>
+        <View style={{ flex: 1 }} />
+        <Pressable
+          onPress={() => setLiked((l) => ({ ...l, [key]: !l[key] }))}
+          hitSlop={10}
+          accessibilityLabel="Beğen">
+          <Heart size={30} color={liked[key] ? Colors.heart : '#fff'} fill={liked[key] ? Colors.heart : 'transparent'} />
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#000' },
+  topShade: { position: 'absolute', top: 0, left: 0, right: 0, height: 160 },
+  bottomShade: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 160 },
+  top: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: 12 },
+  bars: { flexDirection: 'row', gap: 4 },
+  bar: { flex: 1, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.35)', overflow: 'hidden' },
+  barFill: { height: 3, backgroundColor: Colors.cyan },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 12 },
+  author: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  bottom: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+  },
+  follow: {
+    paddingHorizontal: 18,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: Colors.cyan,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  following: { backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)' },
+});
