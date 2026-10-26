@@ -32,8 +32,9 @@
 - [x] Kod GitHub'da (private)
 
 ## ⏳ Adım 0 — Beklenen bilgiler (geldikçe hemen yapılır)
-- [ ] **Ana e-posta değişikliği** — yeni adres verilecek; hangi hesaplarda değişeceği o zaman netleşir (uygulama/yönetici hesabı, Supabase, GitHub, Resend, Expo)
-- [ ] Yeni GitHub adresi + eski deponun silinip silinmeyeceği
+- [x] **Ana e-posta:** vopila36@gmail.com — uygulama/yönetici hesabı ve kod kayıtları değişti (26 Ekim 2026)
+- [ ] Supabase, Expo ve Resend hesaplarının e-postası → vopila36@gmail.com (kullanıcı yapacak, adım adım tarif)
+- [ ] Yeni GitHub hesabı (vopila36@gmail.com) → yeni gizli depo, kod taşınır; eski depo onay alınmadan silinmez
 - [ ] Alan adı → Resend DNS kayıtları → Resend API anahtarı
 - [ ] Supabase erişim anahtarı → e-posta servisi (SMTP), Türkçe kodlu e-posta şablonları, e-posta sınırı, CAPTCHA, sızmış şifre koruması, iki adımlı doğrulama
 
