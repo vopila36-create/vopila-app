@@ -77,6 +77,14 @@ export function toTurkish(err: { message?: string; code?: string } | null | unde
   if (msg.includes('account_suspended'))
     return 'Hesabın topluluk kurallarını ihlal ettiği için kısıtlandı. Destek ekibiyle iletişime geçebilirsin.';
   if (msg === 'blocked' || msg.includes('"blocked"')) return 'Bu kullanıcıyla etkileşim kuramazsın.';
+  // Yaş kuralları (0017_age_rules.sql)
+  if (msg.includes('minor_dm_not_allowed'))
+    return 'Bu kişi 18 yaşından küçük; ona yalnızca onun takip ettiği hesaplar mesaj gönderebilir.';
+  if (msg.includes('under_15')) return "VOPILA'yı kullanmak için en az 15 yaşında olmalısın.";
+  if (msg.includes('invalid_birth_date')) return 'Geçerli bir doğum tarihi yaz.';
+  if (msg.includes('age_already_set')) return 'Yaş bilgin zaten kayıtlı. Değiştirmek için Destek üzerinden itiraz et.';
+  if (msg.includes('database error saving new user'))
+    return 'Hesap oluşturulamadı. Doğum tarihini kontrol edip tekrar dene.';
   if (msg.includes('provider is not enabled')) return 'Google ile giriş henüz açılmadı. Şimdilik e-posta ile devam et.';
   if (code === '23505' || msg.includes('duplicate key')) return 'Bu kullanıcı adı alınmış, başka bir tane dene.';
   if (msg.includes('network') || msg.includes('fetch')) return 'İnternet bağlantısı yok gibi görünüyor. Bağlantını kontrol et.';
@@ -300,11 +308,12 @@ function useBuildAuth() {
     return error ? { ok: false, error: toTurkish(error) } : { ok: true };
   }, [biometric.enabled, biometric.label, disableBiometric]);
 
-  const signUp = useCallback(async (name: string, email: string, password: string): Promise<Result> => {
+  const signUp = useCallback(async (name: string, email: string, password: string, birthDate: string): Promise<Result> => {
     const { data, error } = await supabase.auth.signUp({
       email: normalizeEmail(email),
       password,
-      options: { data: { full_name: name.trim() }, emailRedirectTo: authRedirectUrl() },
+      // Doğum tarihi yalnızca yaş grubunu hesaplamak için gider; sunucu tarihi hemen siler (0017)
+      options: { data: { full_name: name.trim(), birth_date: birthDate }, emailRedirectTo: authRedirectUrl() },
     });
     if (error) return { ok: false, error: toTurkish(error), code: error.code };
     // E-posta doğrulaması açıkken var olan bir adres hata vermez, kimliksiz kullanıcı döner

@@ -1,4 +1,4 @@
-/** Yönetici: kullanıcı ara, hesap durumunu değiştir (aktif / askıda / yasaklı). */
+/** Yönetici: kullanıcı ara, hesap durumunu değiştir (aktif / askıda / yasaklı), yaş itirazını sonuçlandır. */
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { Search, Users } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { searchUsers, setUserStatus, type AdminUser } from '@/lib/admin-api';
+import { adminAgeGroupOf, adminSetAgeGroup, AGE_LABEL, type AgeGroup } from '@/lib/age-api';
 
 const STATUS = {
   active: { label: 'Aktif', color: Colors.success },
@@ -78,6 +79,7 @@ export default function YonetimKullanicilar() {
 function UserRow({ u, onDone }: { u: AdminUser; onDone: () => void }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [showAge, setShowAge] = useState(false);
   const st = STATUS[u.status];
   const change = async (s: AdminUser['status']) => {
     setBusy(s);
@@ -110,9 +112,49 @@ function UserRow({ u, onDone }: { u: AdminUser; onDone: () => void }) {
         {u.status !== 'banned' ? (
           <SmallButton label="Yasakla" color={Colors.live} onPress={() => change('banned')} busy={busy === 'banned'} />
         ) : null}
+        <SmallButton label="Yaş" color={Colors.cyanSoft} onPress={() => setShowAge((v) => !v)} />
       </View>
+      {showAge ? <AgeEditor userId={u.id} /> : null}
       <Notice text={msg} />
     </GlassCard>
+  );
+}
+
+/** Yaş itirazı (Yönetmelik md. 10): insan incelemesiyle yaş grubunu değiştirir; denetim kaydına yazılır. */
+function AgeEditor({ userId }: { userId: string }) {
+  const [group, setGroup] = useState<AgeGroup | null>(null);
+  const [busy, setBusy] = useState<AgeGroup | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    adminAgeGroupOf(userId).then((g) => {
+      if (alive) setGroup(g ?? 'unknown');
+    });
+    return () => {
+      alive = false;
+    };
+  }, [userId]);
+
+  const set = async (g: AgeGroup) => {
+    setBusy(g);
+    const r = await adminSetAgeGroup(userId, g, 'Yaş itirazı incelemesi');
+    setBusy(null);
+    if (!r.ok) setMsg(r.error);
+    else setGroup(g);
+  };
+
+  if (!group) return <ActivityIndicator color={Colors.cyan} />;
+  return (
+    <View style={{ gap: 8 }}>
+      <VText variant="caption">Kayıtlı yaş grubu: {AGE_LABEL[group]}</VText>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {(['under15', 'teen', 'adult'] as AgeGroup[]).map((g) => (
+          <Chip key={g} label={busy === g ? '…' : AGE_LABEL[g]} active={group === g} onPress={() => set(g)} />
+        ))}
+      </View>
+      <Notice text={msg} />
+    </View>
   );
 }
 

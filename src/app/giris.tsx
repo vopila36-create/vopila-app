@@ -22,6 +22,7 @@ import { OutlineButton, PrimaryButton } from '@/components/ui/primitives';
 import { Logo } from '@/components/ui/screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Gradients, Radius, Spacing } from '@/constants/theme';
+import { checkBirthDate } from '@/lib/age-api';
 import { hasNonAsciiEmail, normalizeEmail, useAuth, type CodePurpose, type Result } from '@/store/auth';
 
 type Mode = 'giris' | 'kayit';
@@ -40,6 +41,7 @@ export default function Giris() {
   const [step, setStep] = useState<Step>('form');
   const [purpose, setPurpose] = useState<CodePurpose>('login');
   const [name, setName] = useState('');
+  const [birth, setBirth] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
@@ -121,7 +123,10 @@ export default function Giris() {
       if (password.length < 6) return setError('Şifre en az 6 karakter olmalı.');
 
       if (mode === 'kayit') {
-        const res = await auth.signUp(name, addr, password);
+        // 5651 s. Kanun: 15 yaşını doldurmamış kişiye hesap açılmaz (sunucu da kontrol eder)
+        const age = checkBirthDate(birth);
+        if (!age.ok) return setError(age.error);
+        const res = await auth.signUp(name, addr, password, age.iso);
         if (!res.ok) setError(res.error);
         else if (res.needsCode) openCodeStep('signup', res.info);
         return;
@@ -273,7 +278,20 @@ export default function Giris() {
               </View>
 
               {mode === 'kayit' ? (
-                <Field label="Ad Soyad" value={name} onChangeText={setName} maxLength={60} autoComplete="name" />
+                <>
+                  <Field label="Ad Soyad" value={name} onChangeText={setName} maxLength={60} autoComplete="name" />
+                  <Field
+                    label="Doğum tarihi (GG.AA.YYYY)"
+                    value={birth}
+                    onChangeText={(t) => {
+                      const d = t.replace(/\D/g, '').slice(0, 8);
+                      setBirth([d.slice(0, 2), d.slice(2, 4), d.slice(4, 8)].filter(Boolean).join('.'));
+                    }}
+                    keyboardType="number-pad"
+                    maxLength={10}
+                    placeholder="05.09.2004"
+                  />
+                </>
               ) : null}
               <EmailField value={email} onChange={setEmail} />
               <Field

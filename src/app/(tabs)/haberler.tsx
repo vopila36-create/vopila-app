@@ -86,14 +86,24 @@ function NewsReels() {
       keyOf={(n) => n.id}
       overlay={overlay}
       onDwell={(n, secs) => store.addInterest(topicOf(n), secs, n.id)}
-      renderItem={(n, { active }) => (
-        <NewsReel article={n} active={active} bottom={TabBarHeight + Math.max(insets.bottom, 10) + 12} />
+      renderItem={(n, { active, autoplay }) => (
+        <NewsReel article={n} active={active} autoplay={autoplay} bottom={TabBarHeight + Math.max(insets.bottom, 10) + 12} />
       )}
     />
   );
 }
 
-function NewsReel({ article, active, bottom }: { article: NewsArticle; active: boolean; bottom: number }) {
+function NewsReel({
+  article,
+  active,
+  autoplay,
+  bottom,
+}: {
+  article: NewsArticle;
+  active: boolean;
+  autoplay: boolean;
+  bottom: number;
+}) {
   const store = useStore();
 
   const hasAi = article.aiSummary.length > 0;
@@ -115,7 +125,7 @@ function NewsReel({ article, active, bottom }: { article: NewsArticle; active: b
     <View style={{ flex: 1 }}>
       {article.video && active ? (
         <View style={StyleSheet.absoluteFill}>
-          <VideoPlayer uri={article.video} autoPlay controls={false} />
+          <VideoPlayer uri={article.video} autoPlay={autoplay} controls={!autoplay} />
         </View>
       ) : (
         <Image source={{ uri: article.image }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />

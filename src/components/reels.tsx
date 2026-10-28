@@ -11,9 +11,14 @@ import {
 } from 'react-native';
 
 import { VText } from '@/components/ui/text';
+import { useAge } from '@/store/age';
 import { Colors } from '@/constants/theme';
 
-export type ReelState = { active: boolean; height: number };
+/** autoplay: 15–18 yaşta video kendiliğinden başlamaz (Yaş Doğrulama Yönetmeliği). */
+export type ReelState = { active: boolean; height: number; autoplay: boolean };
+
+/** 15–18 yaş: sonsuz kaydırma yok; bu kadar içerikten sonra akış durur. */
+const TEEN_LIMIT = 20;
 
 /** İzlenme süresi en fazla bu kadar sayılır (videoyu açık bırakıp gitmek ilgiyi şişirmesin). */
 const MAX_DWELL_SEC = 30;
@@ -38,6 +43,7 @@ export function ReelPager<T>({
   /** Üstte sabit duran başlık / filtreler. */
   overlay?: ReactNode;
 }) {
+  const { isTeen } = useAge();
   const [height, setHeight] = useState(0);
   const [index, setIndex] = useState(0);
   const [focused, setFocused] = useState(true);
@@ -81,11 +87,25 @@ export function ReelPager<T>({
     <View style={styles.root} onLayout={(e: LayoutChangeEvent) => setHeight(e.nativeEvent.layout.height)}>
       {height ? (
         <FlatList
-          data={data}
+          data={isTeen ? data.slice(0, TEEN_LIMIT) : data}
           keyExtractor={keyOf}
           renderItem={({ item, index: i }) => (
-            <View style={{ height }}>{renderItem(item, { active: focused && i === index, height })}</View>
+            <View style={{ height }}>
+              {renderItem(item, { active: focused && i === index, height, autoplay: !isTeen })}
+            </View>
           )}
+          ListFooterComponent={
+            isTeen && data.length > TEEN_LIMIT ? (
+              <View style={[styles.end, { height }]}>
+                <VText variant="title" color="#fff" style={{ textAlign: 'center' }}>
+                  Bugünlük bu kadar
+                </VText>
+                <VText color={Colors.textSecondary} style={{ textAlign: 'center', marginTop: 8 }}>
+                  Biraz ara ver. Yeni içerikler için daha sonra tekrar gel.
+                </VText>
+              </View>
+            ) : undefined
+          }
           pagingEnabled
           snapToInterval={height}
           snapToAlignment="start"
@@ -134,6 +154,7 @@ export function ReelAction({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#000' },
   overlay: { position: 'absolute', top: 0, left: 0, right: 0 },
+  end: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
   action: { alignItems: 'center', gap: 4 },
   actionCircle: {
     width: 46,

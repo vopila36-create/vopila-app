@@ -79,8 +79,11 @@
 - [ ] Destek taleplerini yanıtlama ekranı (yönetici paneli, Adım 4)
 
 ## Adım 6 — Yasal paket (yayından önce şart)
-- [ ] 15 yaş sınırı + e-Devlet yaş doğrulama (yönetmelik 1 Kasım 2026'da yürürlükte; mevcut hesaplar 31 Mart 2027'ye kadar)
-- [ ] 15–18 yaş: hesap varsayılan gizli, canlı yayın kapalı, "görüldü" bilgisi yok, kişiye özel reklam yok, sonsuz kaydırma kapalı
+- [x] 15 yaş sınırı (28 Ekim 2026): kayıtta doğum tarihi (saklanmaz, yalnızca yaş grubu); 15 altı kayıt sunucuda reddedilir; eski hesaplara bir kez sorulur; 15 altı hesap kilitlenir (itiraz + hesap silme açık), itirazı yönetici inceler (Kullanıcılar > Yaş)
+- [x] 15–18 yaş (sunucuda): hesap gizli açılır, takipçi/takip listesi yalnızca kendisine, yalnızca takip ettiği kişiler mesaj atabilir, aramada yalnızca ilişkisi olanlara çıkar; uygulamada video otomatik oynamaz, Reels 20 içerikte durur. "Görüldü" bilgisi zaten yok, reklam yok, canlı yayın henüz yok (açılınca 15–18'e kapalı olacak)
+- [ ] e-Devlet yaş belirteci (Siber Güvenlik Başkanlığı servisi) → servise başvuru/erişim gerekiyor; mevcut hesaplar 31 Mart 2027'ye kadar doğrulanmalı
+- [ ] Ebeveyn denetim araçları (zorunlu, md. 9), 15–18 içeriklerinde ekran görüntüsü koruması, zararlı içerik filtresi, uygulama dışı doğrudan tablo aramasını kapatmak
+- [ ] Yönetmelik md. 8/6: alınan önlemleri web sitesinde yayımlamak; md. 10: yıllık itiraz istatistiği
 - [ ] KVKK metinleri, 5651 sayılı Kanun yükümlülükleri, hukukçu görüşü (token ödülleri / promosyon)
 
 ## Adım 7 — Aşama 7–9

@@ -1,5 +1,5 @@
 /** Yardım ve destek: sık sorulanlar + sorun bildir (destek talebi) + taleplerim. */
-import { router, type Href } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { BookOpen, Check, ChevronDown, ChevronUp, LifeBuoy, Send } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
@@ -25,7 +25,8 @@ const STATUS: Record<Ticket['status'], string> = { open: 'Açık', answered: 'Ya
 export default function Destek() {
   const { myId } = useStore();
   const [open, setOpen] = useState<number | null>(null);
-  const [topic, setTopic] = useState<TicketTopic>('hata');
+  const { konu } = useLocalSearchParams<{ konu?: string }>();
+  const [topic, setTopic] = useState<TicketTopic>(konu === 'yas' ? 'yas' : 'hata');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);

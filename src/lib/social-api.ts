@@ -111,11 +111,10 @@ export async function answerFollowRequest(myId: string, follower: string, accept
 export async function searchProfiles(myId: string | null, query: string): Promise<ApiResult<User[]>> {
   const q = query.trim().replace(/[%_,()]/g, '');
   if (q.length < 2) return { ok: true, data: [] };
-  let req = supabase.from('profiles').select(AUTHOR).or(`username.ilike.%${q}%,name.ilike.%${q}%`).limit(20);
-  if (myId) req = req.neq('id', myId);
-  const { data, error } = await req;
+  // Sunucuda arama: 18 yaş altı hesaplar yalnızca takip ilişkisi olanlara çıkar (0017_age_rules.sql)
+  const { data, error } = await supabase.rpc('search_people', { p_query: q });
   if (error) return { ok: false, error: toTurkish(error) };
-  return { ok: true, data: ((data ?? []) as DbAuthor[]).map(toUser) };
+  return { ok: true, data: ((data ?? []) as DbAuthor[]).filter((p) => p.id !== myId).map(toUser) };
 }
 
 /** Kullanıcı adlarından kimlik bulur (@bahsetme bağlantıları için). */

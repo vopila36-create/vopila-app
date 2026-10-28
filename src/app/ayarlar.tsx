@@ -37,6 +37,7 @@ import {
   UserPen,
   UserPlus,
   Users,
+  CalendarDays,
 } from 'lucide-react-native';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Switch, TextInput, View } from 'react-native';
@@ -183,6 +184,7 @@ export default function Ayarlar() {
           <Section title="Güvenlik">
             <Row icon={<KeyRound size={20} color={Colors.cyan} />} label="Şifreyi değiştir" onPress={() => go('/yeni-sifre')} />
             <Row icon={<ShieldCheck size={20} color={Colors.success} />} label="İki adımlı doğrulama" onPress={() => go('/iki-adimli')} />
+            <Row icon={<CalendarDays size={20} color={Colors.cyanSoft} />} label="Yaş doğrulama" onPress={() => go('/yas-dogrulama')} />
             {auth.biometric.available ? (
               <View style={[styles.row, { flexWrap: 'wrap' }]}>
                 <ScanFace size={20} color={Colors.cyanSoft} />

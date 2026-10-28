@@ -12,10 +12,12 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, type ReactNode } from 'react';
 import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 
+import { AgeGate } from '@/components/age-gate';
 import { MfaGate } from '@/components/mfa-gate';
 import { Colors } from '@/constants/theme';
 import { useUsageTracker } from '@/lib/usage';
 import { AppStoreProvider } from '@/store/app-store';
+import { AgeProvider } from '@/store/age';
 import { AuthProvider, useAuth } from '@/store/auth';
 
 SplashScreen.preventAutoHideAsync();
@@ -38,6 +40,7 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
+      <AgeProvider>
       <AppStoreProvider>
         <ThemeProvider value={theme}>
           <StatusBar style="light" />
@@ -46,6 +49,7 @@ export default function RootLayout() {
           </WebPhoneFrame>
         </ThemeProvider>
       </AppStoreProvider>
+      </AgeProvider>
     </AuthProvider>
   );
 }
@@ -76,6 +80,7 @@ function RootStack() {
 
   return (
     <MfaGate>
+      <AgeGate>
       <Stack
       screenOptions={{
         headerShown: false,
@@ -92,6 +97,7 @@ function RootStack() {
         options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', gestureEnabled: false }}
       />
       </Stack>
+      </AgeGate>
     </MfaGate>
   );
 }

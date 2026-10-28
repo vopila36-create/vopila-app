@@ -144,7 +144,7 @@ export async function deleteComment(id: string): Promise<ApiResult> {
 
 // ─── Destek ─────────────────────────────────────────────────────────────────
 
-export type TicketTopic = 'hesap' | 'arena' | 'magaza' | 'guvenlik' | 'hata' | 'oneri' | 'diger';
+export type TicketTopic = 'hesap' | 'arena' | 'magaza' | 'guvenlik' | 'hata' | 'oneri' | 'diger' | 'yas';
 export const TICKET_TOPICS: { key: TicketTopic; label: string }[] = [
   { key: 'hesap', label: 'Hesabım' },
   { key: 'guvenlik', label: 'Güvenlik' },
@@ -152,6 +152,7 @@ export const TICKET_TOPICS: { key: TicketTopic; label: string }[] = [
   { key: 'magaza', label: 'Mağaza ve sipariş' },
   { key: 'hata', label: 'Bir şey çalışmıyor' },
   { key: 'oneri', label: 'Öneri' },
+  { key: 'yas', label: 'Yaş itirazı' },
   { key: 'diger', label: 'Diğer' },
 ];
 
