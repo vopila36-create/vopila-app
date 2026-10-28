@@ -3,7 +3,7 @@
  */
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { ChevronRight, Lock, Search, UserPlus, Users } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Avatar, GlassCard } from '@/components/ui/primitives';
@@ -18,7 +18,9 @@ import {
   privateUserIds,
   userById,
   users,
+  type User,
 } from '@/data/mock';
+import { fetchFollowers, fetchFollowing, fetchProfile, isRealId } from '@/lib/social-api';
 import { useStore } from '@/store/app-store';
 
 type Tab = 'takipciler' | 'takip';
@@ -31,19 +33,50 @@ export default function Takip() {
   const [tab, setTab] = useState<Tab>(params.tab === 'takip' ? 'takip' : 'takipciler');
   const [query, setQuery] = useState('');
 
-  const ownerId = params.user && users.some((u) => u.id === params.user) ? params.user : ME_ID;
+  // Gerçek kullanıcı (Supabase kimliği) ya da örnek kullanıcı ya da ben
+  const realOwner = params.user && isRealId(params.user) && params.user !== store.myId ? params.user : null;
+  const ownerId = realOwner ?? (params.user && users.some((u) => u.id === params.user) ? params.user : ME_ID);
   const isMe = ownerId === ME_ID;
-  const owner = userById(ownerId);
+  const realListOwner = realOwner ?? (isMe ? store.myId : null);
+
+  // Gerçek listeler sunucudan (gizli hesapta yetkisi olmayana boş döner)
+  const [real, setReal] = useState<{ followers: User[]; following: User[]; title?: string }>({ followers: [], following: [] });
+  const followVersion = store.followingIds.length;
+  useEffect(() => {
+    if (!realListOwner) return;
+    let cancelled = false;
+    Promise.all([
+      fetchFollowers(realListOwner),
+      fetchFollowing(realListOwner),
+      realOwner ? fetchProfile(realOwner) : Promise.resolve(null),
+    ]).then(([a, b, p]) => {
+      if (cancelled) return;
+      setReal({
+        followers: a.ok ? a.data : [],
+        following: b.ok ? b.data : [],
+        title: p && p.ok && p.data ? p.data.username : undefined,
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [realListOwner, realOwner, followVersion]);
+
+  const owner = realOwner ? { ...userById(ME_ID), username: real.title ?? '…', name: real.title ?? '' } : userById(ownerId);
   // Gizli hesap: listeleri yalnızca hesap sahibi ve onu takip edenler görür
-  const locked = !isMe && privateUserIds.includes(ownerId) && !store.isFollowing(ownerId);
+  const locked = !realOwner && !isMe && privateUserIds.includes(ownerId) && !store.isFollowing(ownerId);
 
   const byIds = (ids: string[]) => ids.map((id) => userById(id));
-  const followers = isMe
-    ? byIds(myFollowerIds)
-    : byIds([...followerIdsOf(ownerId), ...(store.isFollowing(ownerId) ? [ME_ID] : [])]);
-  const following = isMe
-    ? users.filter((u) => u.id !== ME_ID && store.isFollowing(u.id))
-    : byIds(followingIdsOf(ownerId));
+  const followers = realOwner
+    ? real.followers
+    : isMe
+      ? [...real.followers, ...byIds(myFollowerIds)]
+      : byIds([...followerIdsOf(ownerId), ...(store.isFollowing(ownerId) ? [ME_ID] : [])]);
+  const following = realOwner
+    ? real.following
+    : isMe
+      ? [...real.following, ...users.filter((u) => u.id !== ME_ID && store.isFollowing(u.id))]
+      : byIds(followingIdsOf(ownerId));
 
   const list = (tab === 'takipciler' ? followers : following).filter((u) => {
     const q = normalize(query.trim());
@@ -115,9 +148,10 @@ export default function Takip() {
         {list.length ? (
           <GlassCard>
             {list.map((u, i) => {
-              const isSelf = u.id === ME_ID;
-              const iFollow = store.isFollowing(u.id);
-              const followsMe = myFollowerIds.includes(u.id);
+              const isSelf = u.id === ME_ID || u.id === store.myId;
+              const status = store.followStatus(u.id);
+              const iFollow = status !== 'none';
+              const followsMe = myFollowerIds.includes(u.id) || (isRealId(u.id) && real.followers.some((f) => f.id === u.id) && isMe);
               return (
                 <View key={u.id} style={[styles.person, i === list.length - 1 && { borderBottomWidth: 0 }]}>
                   <Pressable
@@ -141,7 +175,9 @@ export default function Takip() {
                     style={[styles.followBtn, iFollow && styles.followingBtn]}
                     accessibilityLabel={iFollow ? 'Takipten çık' : 'Takip et'}>
                     <VText variant="caption" color={iFollow ? Colors.text : Colors.onCyan} style={{ fontFamily: Fonts.bold }}>
-                      {iFollow
+                      {status === 'pending'
+                        ? 'İstek gönderildi'
+                        : iFollow
                         ? isMe && tab === 'takip'
                           ? 'Takipten çık'
                           : 'Takip ediliyor'

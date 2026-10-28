@@ -260,7 +260,7 @@ export default function Kamera() {
   /** Medyayı paylaşım ekranına gönder. */
   const finish = (media: Media[]) => {
     setPendingMedia(media);
-    if (params.from === 'olustur' && router.canGoBack()) router.back();
+    if ((params.from === 'olustur' || params.from === 'an') && router.canGoBack()) router.back();
     else router.replace('/olustur' as Href);
   };
 

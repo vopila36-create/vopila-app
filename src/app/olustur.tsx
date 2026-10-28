@@ -2,7 +2,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import { Camera, ImagePlus, MapPin, Trophy, Video, X } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { MediaView } from '@/components/ui/media';
 import { Chip, GlassCard, OutlineButton, PrimaryButton } from '@/components/ui/primitives';
@@ -26,6 +26,7 @@ export default function Olustur() {
   const [arenaKey, setArenaKey] = useState<ArenaKey | undefined>(initialArena);
   const [title, setTitle] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
 
   const addAssets = (assets: ImagePicker.ImagePickerAsset[]) => {
     const picked: Media[] = assets.map((a) => ({ type: a.type === 'video' ? 'video' : 'image', uri: a.uri }));
@@ -69,7 +70,8 @@ export default function Olustur() {
     }, []),
   );
 
-  const publish = () => {
+  const publish = async () => {
+    if (publishing) return;
     if (!media.length) {
       setError('Paylaşmak için en az bir fotoğraf ya da video seç.');
       return;
@@ -78,14 +80,21 @@ export default function Olustur() {
       setError('Gönderine kısa bir açıklama yaz.');
       return;
     }
-    const post = store.createPost({
+    setPublishing(true);
+    setError(null);
+    const res = await store.createPost({
       media,
       caption: caption.trim(),
       location: location.trim() || undefined,
       arenaKey,
       title: title.trim() || undefined,
     });
-    router.replace((arenaKey ? `/arena/${arenaKey}` : `/gonderi/${post.id}`) as Href);
+    setPublishing(false);
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
+    router.replace((arenaKey ? `/arena/${arenaKey}` : `/gonderi/${res.post.id}`) as Href);
   };
 
   const full = media.length >= MAX_MEDIA;
@@ -94,10 +103,14 @@ export default function Olustur() {
     <SubScreen
       title="Yeni Gönderi"
       right={
-        <Pressable onPress={publish} hitSlop={8}>
-          <VText variant="label" color={Colors.cyan} style={{ fontFamily: Fonts.bold }}>
-            Paylaş
-          </VText>
+        <Pressable onPress={publish} hitSlop={8} disabled={publishing}>
+          {publishing ? (
+            <ActivityIndicator size="small" color={Colors.cyan} />
+          ) : (
+            <VText variant="label" color={Colors.cyan} style={{ fontFamily: Fonts.bold }}>
+              Paylaş
+            </VText>
+          )}
         </Pressable>
       }>
       <View style={styles.pad}>
@@ -233,7 +246,16 @@ export default function Olustur() {
           </View>
         ) : null}
 
-        <PrimaryButton label={arenaKey ? 'Paylaş ve Yarışmaya Katıl' : 'Paylaş'} onPress={publish} style={{ marginTop: Spacing.xl }} />
+        <PrimaryButton
+          label={publishing ? 'Yükleniyor…' : arenaKey ? 'Paylaş ve Yarışmaya Katıl' : 'Paylaş'}
+          onPress={publish}
+          style={{ marginTop: Spacing.xl, opacity: publishing ? 0.6 : 1 }}
+        />
+        {publishing ? (
+          <VText variant="caption" style={{ textAlign: 'center', marginTop: 8 }}>
+            Fotoğraf ve videolar yükleniyor, bu birkaç saniye sürebilir.
+          </VText>
+        ) : null}
       </View>
     </SubScreen>
   );

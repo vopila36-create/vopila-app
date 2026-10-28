@@ -12,12 +12,15 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
   type ReactNode,
 } from 'react';
 
 import {
   arenaEntries as seedEntries,
   initialLedger,
+  moments as demoMoments,
+  notifications as demoNotifications,
   ME_ID,
   MIN_VOTES_FOR_RANK,
   posts as seedPosts,
@@ -26,9 +29,28 @@ import {
   type ArenaEntry,
   type ArenaKey,
   type Comment,
+  type AppNotification,
   type Media,
+  type Moment,
   type Post,
+  type User,
 } from '@/data/mock';
+import {
+  addRemoteComment,
+  createRemotePost,
+  fetchComments,
+  fetchFeed,
+  fetchMyFlags,
+  fetchPosts,
+  setLike,
+  setSave,
+  type NewPost,
+} from '@/lib/posts-api';
+import { fetchConversations, subscribeToInbox, type Conversation } from '@/lib/messages-api';
+import { createMoment as createRemoteMoment, fetchMoments } from '@/lib/moments-api';
+import { fetchNotifications, markNotificationsRead as markRemoteNotificationsRead } from '@/lib/notifications-api';
+import { fetchMyFollowing, follow, isRealId, unfollow, type FollowStatus } from '@/lib/social-api';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import { useAuth } from '@/store/auth';
 
 // ─── Tipler ─────────────────────────────────────────────────────────────────
@@ -68,6 +90,10 @@ type State = {
   address: Address | null;
   readNotifications: string[];
   settings: Settings;
+  /** İlgi puanları: "arena:doga", "news:Spor" gibi konuların ne kadar izlendiği (Reels sıralaması için). */
+  interests: Record<string, number>;
+  /** Son görülen Reels içerikleri (aynı şey tekrar tekrar başa gelmesin). */
+  seenReels: string[];
 };
 
 const me = userById(ME_ID);
@@ -88,7 +114,18 @@ const initialState: State = {
   address: null,
   readNotifications: [],
   settings: { pushNotifications: true, arenaReminders: true, privateAccount: false, autoplayVideos: true },
+  interests: {},
+  seenReels: [],
 };
+
+const EMPTY_FOLLOWS: Record<string, 'pending' | 'accepted'> = {};
+const EMPTY_INBOX: Conversation[] = [];
+const EMPTY_NOTIFS: AppNotification[] = [];
+const EMPTY_MOMENTS: Moment[] = [];
+
+const MAX_SEEN = 300;
+/** Eski ilgiler yavaşça sönümlenir; kullanıcının zevki değişince akış da değişir. */
+const INTEREST_DECAY = 0.98;
 
 type Action =
   | { type: 'hydrate'; state: State }
@@ -97,6 +134,7 @@ type Action =
   | { type: 'toggleSave'; postId: string }
   | { type: 'addComment'; postId: string; comment: Comment }
   | { type: 'addPost'; post: Post; entry?: ArenaEntry }
+  | { type: 'addEntry'; entry: ArenaEntry }
   | { type: 'vote'; entryId: string; score: number }
   | { type: 'toggleJoinArena'; key: ArenaKey }
   | { type: 'setCartQty'; productId: string; qty: number }
@@ -105,6 +143,7 @@ type Action =
   | { type: 'updateProfile'; profile: Partial<Profile> }
   | { type: 'markNotificationsRead'; ids: string[] }
   | { type: 'updateSettings'; settings: Partial<Settings> }
+  | { type: 'addInterest'; topic: string; amount: number; seenId?: string }
   | { type: 'reset' };
 
 const toggle = (list: string[], id: string) =>
@@ -134,6 +173,8 @@ function reducer(state: State, action: Action): State {
         myPosts: [action.post, ...state.myPosts],
         myEntries: action.entry ? [action.entry, ...state.myEntries] : state.myEntries,
       };
+    case 'addEntry':
+      return { ...state, myEntries: [action.entry, ...state.myEntries] };
     case 'vote':
       return { ...state, votes: { ...state.votes, [action.entryId]: action.score } };
     case 'toggleJoinArena':
@@ -165,6 +206,19 @@ function reducer(state: State, action: Action): State {
       return { ...state, readNotifications: Array.from(new Set([...state.readNotifications, ...action.ids])) };
     case 'updateSettings':
       return { ...state, settings: { ...state.settings, ...action.settings } };
+    case 'addInterest': {
+      const interests: Record<string, number> = {};
+      for (const [k, v] of Object.entries(state.interests)) {
+        const decayed = v * INTEREST_DECAY;
+        if (decayed > 0.05) interests[k] = decayed;
+      }
+      interests[action.topic] = (interests[action.topic] ?? 0) + action.amount;
+      const seenReels =
+        action.seenId && !state.seenReels.includes(action.seenId)
+          ? [action.seenId, ...state.seenReels].slice(0, MAX_SEEN)
+          : state.seenReels;
+      return { ...state, interests, seenReels };
+    }
     case 'reset':
       return initialState;
   }
@@ -173,6 +227,16 @@ function reducer(state: State, action: Action): State {
 // ─── Yardımcılar ────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = 'vopila-state-v1';
+
+const EMPTY_REMOTE = {
+  owner: null as string | null,
+  posts: [] as Post[],
+  extra: [] as Post[],
+  authors: {} as Record<string, User>,
+  liked: [] as string[],
+  saved: [] as string[],
+  comments: {} as Record<string, Comment[]>,
+};
 
 const today = () =>
   new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -219,18 +283,393 @@ function useBuildStore() {
 
   const balance = useMemo(() => state.ledger.reduce((sum, l) => sum + l.amount, 0), [state.ledger]);
 
-  const allPosts = useMemo(() => [...state.myPosts, ...seedPosts], [state.myPosts]);
+  // ─── Gerçek gönderiler (Supabase) ─────────────────────────────────────────
+  // Giriş yapılmışsa gerçek gönderiler akışın en üstünde, örnek gönderiler altında görünür.
+  const { session } = useAuth();
+  const myId = isSupabaseConfigured ? (session?.user.id ?? null) : null;
+  type RemoteState = {
+    /** Bu verinin ait olduğu kullanıcı: hesap değişince eski kişinin verisi gösterilmez. */
+    owner: string | null;
+    posts: Post[];
+    /** Akışta olmayan ama açılan gönderiler (ör. mesajla gelen, profilden açılan). */
+    extra: Post[];
+    authors: Record<string, User>;
+    liked: string[];
+    saved: string[];
+    comments: Record<string, Comment[]>;
+  };
+  const [rawRemote, setRemote] = useState<RemoteState>(EMPTY_REMOTE);
+  const remote = rawRemote.owner === myId ? rawRemote : EMPTY_REMOTE;
+  const [feedError, setFeedError] = useState<string | null>(null);
 
-  const getPost = useCallback((id: string) => allPosts.find((p) => p.id === id), [allPosts]);
+  const addAuthors = (list: User[]) => (authors: Record<string, User>) => {
+    const next = { ...authors };
+    for (const u of list) next[u.id] = u;
+    return next;
+  };
+
+  const applyFeed = useCallback((owner: string, res: Awaited<ReturnType<typeof fetchFeed>>) => {
+    if (!res.ok) {
+      setFeedError(res.error);
+      return;
+    }
+    setFeedError(null);
+    setRemote((r) => {
+      const base = r.owner === owner ? r : { ...EMPTY_REMOTE, owner };
+      return {
+        ...base,
+        posts: res.data.posts,
+        authors: addAuthors(res.data.authors)(base.authors),
+        liked: res.data.liked,
+        saved: res.data.saved,
+      };
+    });
+  }, []);
+
+  const refreshFeed = useCallback(async () => {
+    if (!myId) return;
+    applyFeed(myId, await fetchFeed(myId));
+  }, [myId, applyFeed]);
+
+  // Giriş yapan kişi değişince (giriş / çıkış) gerçek akışı yeniden yükle
+  useEffect(() => {
+    if (!myId) return;
+    let cancelled = false;
+    fetchFeed(myId).then((res) => {
+      if (!cancelled) applyFeed(myId, res);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [myId, applyFeed]);
+
+  const remoteIds = useMemo(
+    () => new Set([...remote.posts, ...remote.extra].map((p) => p.id)),
+    [remote.posts, remote.extra],
+  );
+  const isRemote = useCallback((id: string) => remoteIds.has(id), [remoteIds]);
+
+  // Giriş yapılmışsa telefonda kalmış eski demo paylaşımları gizlenir (gerçekleri sunucudan gelir)
+  const allPosts = useMemo(
+    () => (myId ? [...remote.posts, ...seedPosts] : [...state.myPosts, ...seedPosts]),
+    [myId, remote.posts, state.myPosts],
+  );
+
+  const getPost = useCallback(
+    (id: string) => allPosts.find((p) => p.id === id) ?? remote.extra.find((p) => p.id === id),
+    [allPosts, remote.extra],
+  );
+
+  /** Akışta olmayan gerçek gönderiyi sunucudan getirir (görme yetkisi yoksa bulunamaz). */
+  const loadPost = useCallback(
+    async (id: string): Promise<boolean> => {
+      if (!myId || !isRealId(id)) return false;
+      if (remoteIds.has(id)) return true;
+      const [res, flags] = await Promise.all([fetchPosts(myId, { ids: [id] }), fetchMyFlags(myId, [id])]);
+      if (!res.ok || !res.data.posts.length) return false;
+      setRemote((r) => {
+        const base = r.owner === myId ? r : { ...EMPTY_REMOTE, owner: myId };
+        return {
+          ...base,
+          extra: [...base.extra.filter((p) => p.id !== id), ...res.data.posts],
+          authors: addAuthors(res.data.authors)(base.authors),
+          liked: [...base.liked.filter((x) => x !== id), ...flags.liked],
+          saved: [...base.saved.filter((x) => x !== id), ...flags.saved],
+        };
+      });
+      return true;
+    },
+    [myId, remoteIds],
+  );
+
+  /** Gönderi / yorum sahibinin bilgisi: gerçek kullanıcıysa sunucudan, değilse örnek veriden. */
+  const userOf = useCallback((id: string) => remote.authors[id] ?? userById(id), [remote.authors]);
 
   const commentsFor = useCallback(
-    (post: Post) => [...post.comments, ...(state.extraComments[post.id] ?? [])],
-    [state.extraComments],
+    (post: Post) =>
+      post.remote ? (remote.comments[post.id] ?? []) : [...post.comments, ...(state.extraComments[post.id] ?? [])],
+    [state.extraComments, remote.comments],
+  );
+
+  const commentCount = useCallback(
+    (post: Post) => (post.remote ? (remote.comments[post.id]?.length ?? post.commentCount ?? 0) : commentsFor(post).length),
+    [remote.comments, commentsFor],
   );
 
   const likeCount = useCallback(
-    (post: Post) => post.likes + (state.likedPosts.includes(post.id) ? 1 : 0),
+    (post: Post) => (post.remote ? post.likes : post.likes + (state.likedPosts.includes(post.id) ? 1 : 0)),
     [state.likedPosts],
+  );
+
+  const isLiked = (id: string) => (isRemote(id) ? remote.liked.includes(id) : state.likedPosts.includes(id));
+  const isSaved = (id: string) => (isRemote(id) ? remote.saved.includes(id) : state.savedPosts.includes(id));
+
+  const savedPostList = useMemo(
+    () =>
+      [...remote.saved, ...state.savedPosts]
+        .map((id) => allPosts.find((p) => p.id === id))
+        .filter(Boolean) as Post[],
+    [remote.saved, state.savedPosts, allPosts],
+  );
+
+  /** Beğeni: ekranda hemen değişir, sunucu reddederse geri alınır. */
+  const toggleLike = useCallback(
+    async (postId: string) => {
+      if (!myId || !remoteIds.has(postId)) {
+        dispatch({ type: 'toggleLike', postId });
+        return;
+      }
+      const bump = (on: boolean) => (p: Post) =>
+        p.id === postId ? { ...p, likes: Math.max(0, p.likes + (on ? 1 : -1)) } : p;
+      const flip = (on: boolean) =>
+        setRemote((r) => ({
+          ...r,
+          liked: on ? [...r.liked, postId] : r.liked.filter((x) => x !== postId),
+          posts: r.posts.map(bump(on)),
+          extra: r.extra.map(bump(on)),
+        }));
+      const on = !remote.liked.includes(postId);
+      flip(on);
+      const res = await setLike(myId, postId, on);
+      if (!res.ok) flip(!on);
+    },
+    [myId, remoteIds, remote.liked],
+  );
+
+  const toggleSave = useCallback(
+    async (postId: string) => {
+      if (!myId || !remoteIds.has(postId)) {
+        dispatch({ type: 'toggleSave', postId });
+        return;
+      }
+      const flip = (on: boolean) =>
+        setRemote((r) => ({ ...r, saved: on ? [...r.saved, postId] : r.saved.filter((x) => x !== postId) }));
+      const on = !remote.saved.includes(postId);
+      flip(on);
+      const res = await setSave(myId, postId, on);
+      if (!res.ok) flip(!on);
+    },
+    [myId, remoteIds, remote.saved],
+  );
+
+  /** Gerçek gönderinin yorumlarını sunucudan yükler (gönderi detayı açılınca). */
+  const loadComments = useCallback(
+    async (postId: string) => {
+      if (!myId || !remoteIds.has(postId)) return;
+      const res = await fetchComments(myId, postId);
+      if (!res.ok) return;
+      setRemote((r) => ({
+        ...r,
+        authors: addAuthors(res.data.authors)(r.authors),
+        comments: { ...r.comments, [postId]: res.data.comments },
+      }));
+    },
+    [myId, remoteIds],
+  );
+
+  const addComment = useCallback(
+    async (postId: string, text: string, parentId?: string): Promise<{ ok: boolean; error?: string }> => {
+      if (!myId || !remoteIds.has(postId)) {
+        dispatch({ type: 'addComment', postId, comment: { id: newId('c'), authorId: ME_ID, text, time: 'şimdi', parentId } });
+        return { ok: true };
+      }
+      const res = await addRemoteComment(myId, postId, text, parentId);
+      if (!res.ok) return { ok: false, error: res.error };
+      setRemote((r) => ({
+        ...r,
+        comments: { ...r.comments, [postId]: [...(r.comments[postId] ?? []), res.data] },
+      }));
+      return { ok: true };
+    },
+    [myId, remoteIds],
+  );
+
+  // ─── Gerçek takip ─────────────────────────────────────────────────────────
+  const [rawFollows, setFollows] = useState<{ owner: string | null; map: Record<string, FollowStatus> }>({
+    owner: null,
+    map: {},
+  });
+  const followMap = rawFollows.owner === myId ? rawFollows.map : EMPTY_FOLLOWS;
+
+  useEffect(() => {
+    if (!myId) return;
+    let cancelled = false;
+    fetchMyFollowing(myId).then((res) => {
+      if (!cancelled && res.ok) setFollows({ owner: myId, map: res.data });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [myId]);
+
+  const setFollowStatus = useCallback(
+    (id: string, status: FollowStatus) =>
+      setFollows((f) => {
+        const map = { ...(f.owner === myId ? f.map : {}) };
+        if (status === 'none') delete map[id];
+        else map[id] = status;
+        return { owner: myId, map };
+      }),
+    [myId],
+  );
+
+  /** Takip durumu: örnek kişiler telefonda, gerçek kişiler sunucuda. */
+  const followStatus = useCallback(
+    (id: string): FollowStatus =>
+      isRealId(id) ? (followMap[id] ?? 'none') : state.following.includes(id) ? 'accepted' : 'none',
+    [followMap, state.following],
+  );
+
+  /** Takip et / bırak / isteği geri çek. Ekranda hemen değişir, sunucu reddederse geri alınır. */
+  const toggleFollow = useCallback(
+    async (id: string): Promise<{ ok: boolean; error?: string }> => {
+      if (!isRealId(id) || !myId) {
+        dispatch({ type: 'toggleFollow', userId: id });
+        return { ok: true };
+      }
+      const before = followMap[id] ?? 'none';
+      if (before === 'none') {
+        setFollowStatus(id, 'accepted');
+        const res = await follow(myId, id);
+        setFollowStatus(id, res.ok ? res.data : 'none');
+        return res.ok ? { ok: true } : { ok: false, error: res.error };
+      }
+      setFollowStatus(id, 'none');
+      const res = await unfollow(myId, id);
+      if (!res.ok) setFollowStatus(id, before);
+      return res.ok ? { ok: true } : { ok: false, error: res.error };
+    },
+    [myId, followMap, setFollowStatus],
+  );
+
+  // ─── Mesajlar (gelen kutusu) ──────────────────────────────────────────────
+  const [rawInbox, setInbox] = useState<{ owner: string | null; list: Conversation[] }>({ owner: null, list: [] });
+  const inbox = rawInbox.owner === myId ? rawInbox.list : EMPTY_INBOX;
+
+  const refreshInbox = useCallback(async () => {
+    if (!myId) return;
+    const res = await fetchConversations(myId);
+    if (res.ok) setInbox({ owner: myId, list: res.data });
+  }, [myId]);
+
+  // Girişte gelen kutusunu yükle; yeni mesaj gelince tazele (canlı)
+  useEffect(() => {
+    if (!myId) return;
+    let cancelled = false;
+    fetchConversations(myId).then((res) => {
+      if (!cancelled && res.ok) setInbox({ owner: myId, list: res.data });
+    });
+    const stop = subscribeToInbox(() => {
+      fetchConversations(myId).then((res) => {
+        if (!cancelled && res.ok) setInbox({ owner: myId, list: res.data });
+      });
+    });
+    return () => {
+      cancelled = true;
+      stop();
+    };
+  }, [myId]);
+
+  const unreadMessages = useMemo(() => inbox.reduce((s, c) => s + (c.unread > 0 ? 1 : 0), 0), [inbox]);
+
+  // ─── Anlar (24 saat) ──────────────────────────────────────────────────────
+  const [rawMoments, setMoments] = useState<{ owner: string | null; list: Moment[] }>({ owner: null, list: [] });
+  const realMoments = rawMoments.owner === myId ? rawMoments.list : EMPTY_MOMENTS;
+
+  const applyMoments = useCallback((owner: string, res: Awaited<ReturnType<typeof fetchMoments>>) => {
+    if (!res.ok) return;
+    setMoments({ owner, list: res.data.moments });
+    setRemote((r) => (r.owner === owner ? { ...r, authors: addAuthors(res.data.authors)(r.authors) } : r));
+  }, []);
+
+  const refreshMoments = useCallback(async () => {
+    if (!myId) return;
+    applyMoments(myId, await fetchMoments(myId));
+  }, [myId, applyMoments]);
+
+  useEffect(() => {
+    if (!myId) return;
+    let cancelled = false;
+    fetchMoments(myId).then((res) => {
+      if (!cancelled) applyMoments(myId, res);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [myId, applyMoments]);
+
+  /** Akıştaki Anlar şeridi: önce benim anım, sonra diğer gerçek anlar, en sonda örnekler. */
+  const allMoments = useMemo(() => {
+    const mine = realMoments.filter((m) => m.authorId === ME_ID);
+    const others = realMoments.filter((m) => m.authorId !== ME_ID);
+    return [...mine, ...others, ...demoMoments];
+  }, [realMoments]);
+
+  const createMoment = useCallback(
+    async (media: Media[], title: string): Promise<{ ok: boolean; error?: string }> => {
+      if (!myId) return { ok: false, error: 'An paylaşmak için giriş yapmalısın.' };
+      const res = await createRemoteMoment(myId, media, title);
+      if (!res.ok) return { ok: false, error: res.error };
+      await refreshMoments();
+      return { ok: true };
+    },
+    [myId, refreshMoments],
+  );
+
+  // ─── Gerçek bildirimler ───────────────────────────────────────────────────
+  const [rawNotifs, setNotifs] = useState<{ owner: string | null; list: AppNotification[] }>({ owner: null, list: [] });
+  const realNotifications = rawNotifs.owner === myId ? rawNotifs.list : EMPTY_NOTIFS;
+
+  const applyNotifs = useCallback(
+    (owner: string, res: Awaited<ReturnType<typeof fetchNotifications>>) => {
+      if (!res.ok) return;
+      setNotifs({ owner, list: res.data.list });
+      setRemote((r) => (r.owner === owner ? { ...r, authors: addAuthors(res.data.actors)(r.authors) } : r));
+    },
+    [],
+  );
+
+  const refreshNotifications = useCallback(async () => {
+    if (!myId) return;
+    applyNotifs(myId, await fetchNotifications(myId));
+  }, [myId, applyNotifs]);
+
+  useEffect(() => {
+    if (!myId) return;
+    let cancelled = false;
+    fetchNotifications(myId).then((res) => {
+      if (!cancelled) applyNotifs(myId, res);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [myId, applyNotifs]);
+
+  /** Bildirimleri okundu say (gerçekler sunucuda, örnekler telefonda). */
+  const markNotificationsRead = useCallback(
+    (ids: string[]) => {
+      const real = ids.filter((id) => realNotifications.some((n) => n.id === id && !n.read));
+      const demo = ids.filter((id) => !realNotifications.some((n) => n.id === id));
+      if (demo.length) dispatch({ type: 'markNotificationsRead', ids: demo });
+      if (real.length && myId) {
+        setNotifs((s) => ({ ...s, list: s.list.map((n) => (real.includes(n.id) ? { ...n, read: true } : n)) }));
+        markRemoteNotificationsRead(myId, real);
+      }
+    },
+    [realNotifications, myId],
+  );
+
+  const unreadNotifications = useMemo(
+    () =>
+      realNotifications.filter((n) => !n.read).length +
+      demoNotifications.filter((n) => !state.readNotifications.includes(n.id)).length,
+    [realNotifications, state.readNotifications],
+  );
+
+  /** Takip ettiğim herkes (örnek + gerçek, yalnızca onaylı). */
+  const followingIds = useMemo(
+    () => [...state.following, ...Object.keys(followMap).filter((id) => followMap[id] === 'accepted')],
+    [state.following, followMap],
   );
 
   /** Bir arenadaki gönderiler; benim oyum dahil edilerek sıralanmış. */
@@ -263,12 +702,45 @@ function useBuildStore() {
 
   const actions = useMemo(
     () => ({
-      toggleFollow: (userId: string) => dispatch({ type: 'toggleFollow', userId }),
-      toggleLike: (postId: string) => dispatch({ type: 'toggleLike', postId }),
-      toggleSave: (postId: string) => dispatch({ type: 'toggleSave', postId }),
-      addComment: (postId: string, text: string) =>
-        dispatch({ type: 'addComment', postId, comment: { id: newId('c'), authorId: ME_ID, text, time: 'şimdi' } }),
-      createPost: (input: { media: Media[]; caption: string; location?: string; arenaKey?: ArenaKey; title?: string }) => {
+      /**
+       * Gönderi paylaşır. Giriş yapılmışsa dosyalar sunucuya yüklenir ve gönderi herkese görünür;
+       * değilse (demo modu) yalnızca bu telefonda saklanır.
+       */
+      createPost: async (input: NewPost): Promise<{ ok: true; post: Post } | { ok: false; error: string }> => {
+        if (myId) {
+          const res = await createRemotePost(myId, input);
+          if (!res.ok) return res;
+          // Arena ekranı 4. aşamaya kadar yerel listeyi gösterdiği için girişi oraya da ekle
+          if (input.arenaKey) {
+            const cover = input.media[0];
+            dispatch({
+              type: 'addEntry',
+              entry: {
+                id: newId('e'),
+                arenaKey: input.arenaKey,
+                authorId: ME_ID,
+                image: cover.type === 'video' ? cover.poster ?? cover.uri : cover.uri,
+                title: input.title || input.caption.slice(0, 30) || 'Yeni gönderi',
+                votes: 0,
+                totalScore: 0,
+              },
+            });
+          }
+          await refreshFeed();
+          const post: Post = {
+            id: res.data.id,
+            authorId: ME_ID,
+            location: input.location ?? '',
+            time: 'şimdi',
+            media: input.media,
+            caption: input.caption,
+            likes: 0,
+            comments: [],
+            arenaKey: input.arenaKey,
+            remote: true,
+          };
+          return { ok: true, post };
+        }
         const post: Post = {
           id: newId('p'),
           authorId: ME_ID,
@@ -293,7 +765,7 @@ function useBuildStore() {
             }
           : undefined;
         dispatch({ type: 'addPost', post, entry });
-        return post;
+        return { ok: true, post };
       },
       /** Oy verme kuralları: kendi gönderine oy yok, her gönderiye tek oy, 1-5 arası. */
       vote: (entry: ArenaEntry, score: number): { ok: boolean; error?: string } => {
@@ -332,11 +804,16 @@ function useBuildStore() {
       },
       setAddress: (address: Address) => dispatch({ type: 'setAddress', address }),
       updateProfile: (profile: Partial<Profile>) => dispatch({ type: 'updateProfile', profile }),
-      markNotificationsRead: (ids: string[]) => dispatch({ type: 'markNotificationsRead', ids }),
       updateSettings: (settings: Partial<Settings>) => dispatch({ type: 'updateSettings', settings }),
+      /**
+       * İlgi kaydı: bir konuya bakılan süre (saniye) ya da etkileşim puanı eklenir.
+       * `seenId` verilirse içerik "görüldü" sayılır ve sıralamada geriye düşer.
+       */
+      addInterest: (topic: string, amount: number, seenId?: string) =>
+        dispatch({ type: 'addInterest', topic, amount, seenId }),
       resetDemo: () => dispatch({ type: 'reset' }),
     }),
-    [state.profile.location, state.votes, state.cart, cartItems, cartTotal, balance],
+    [state.profile.location, state.votes, state.cart, cartItems, cartTotal, balance, myId, refreshFeed],
   );
 
   return {
@@ -344,15 +821,39 @@ function useBuildStore() {
     balance,
     allPosts,
     getPost,
+    loadPost,
+    userOf,
     commentsFor,
+    commentCount,
     likeCount,
     rankedEntries,
     cartItems,
     cartTotal,
     cartCount,
-    isFollowing: (id: string) => state.following.includes(id),
-    isLiked: (id: string) => state.likedPosts.includes(id),
-    isSaved: (id: string) => state.savedPosts.includes(id),
+    savedPostList,
+    feedError,
+    refreshFeed,
+    loadComments,
+    myId,
+    isFollowing: (id: string) => followStatus(id) === 'accepted',
+    followStatus,
+    toggleFollow,
+    followingIds,
+    inbox,
+    unreadMessages,
+    refreshInbox,
+    allMoments,
+    refreshMoments,
+    createMoment,
+    realNotifications,
+    unreadNotifications,
+    refreshNotifications,
+    markNotificationsRead,
+    isLiked,
+    isSaved,
+    toggleLike,
+    toggleSave,
+    addComment,
     ...actions,
   };
 }

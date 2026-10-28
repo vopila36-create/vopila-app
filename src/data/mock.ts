@@ -198,7 +198,7 @@ export const followingIdsOf = (id: string) => [
 
 export type Media = { type: 'image' | 'video'; uri: string; poster?: string };
 
-export type Comment = { id: string; authorId: string; text: string; time: string };
+export type Comment = { id: string; authorId: string; text: string; time: string; /** Yanıtsa ana yorumun kimliği. */ parentId?: string };
 
 export type Post = {
   id: string;
@@ -210,6 +210,10 @@ export type Post = {
   likes: number;
   comments: Comment[];
   arenaKey?: ArenaKey;
+  /** Supabase'den gelen gerçek gönderi (örnek veri değil). */
+  remote?: boolean;
+  /** Gerçek gönderide sunucudaki yorum sayısı (yorumlar ayrıca yüklenir). */
+  commentCount?: number;
 };
 
 export const posts: Post[] = [
@@ -287,7 +291,16 @@ export const posts: Post[] = [
 
 // ─── Anlar (hikâyeler) ──────────────────────────────────────────────────────
 
-export type Moment = { id: string; authorId: string; title: string; items: string[] };
+export type Moment = {
+  id: string;
+  authorId: string;
+  title: string;
+  items: string[];
+  /** Gerçek anlarda öge türleri (video olabilir); yoksa hepsi fotoğraf. */
+  media?: Media[];
+  /** Sunucudan gelen gerçek an mı? */
+  remote?: boolean;
+};
 
 export const moments: Moment[] = [
   { id: 's1', authorId: 'u_soner', title: 'Zirve Yolculuğu', items: [img.mountain2, img.mountain, img.lake, img.forest] },
@@ -626,11 +639,15 @@ export const interests: Interest[] = [
 
 export type AppNotification = {
   id: string;
-  kind: 'like' | 'comment' | 'follow' | 'arena' | 'token' | 'order';
+  kind: 'like' | 'comment' | 'follow' | 'arena' | 'token' | 'order' | 'mention' | 'reply';
   actorId?: string;
   text: string;
   time: string;
   href: string;
+  /** Gerçek bildirimde okunma durumu sunucudan gelir. */
+  read?: boolean;
+  /** Sunucudan gelen gerçek bildirim mi? */
+  remote?: boolean;
 };
 
 export const notifications: AppNotification[] = [

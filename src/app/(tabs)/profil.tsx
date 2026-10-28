@@ -57,7 +57,7 @@ export default function Profil() {
 
   const myPosts = useMemo(() => store.allPosts.filter((p) => p.authorId === ME_ID), [store.allPosts]);
   const totalLikes = myPosts.reduce((s, p) => s + store.likeCount(p), 0) + 600;
-  const savedPosts = store.state.savedPosts.map((id) => store.getPost(id)).filter(Boolean) as Post[];
+  const savedPosts = store.savedPostList;
   const lvl = levelInfo(MY_LEVEL_XP);
   const current = lvl.current;
   const levelPct = `${Math.round(lvl.progress * 100)}%` as const;
@@ -163,7 +163,7 @@ export default function Profil() {
           <Divider />
           <Stat
             icon={<UserCheck size={20} color={Colors.cyanSoft} />}
-            value={formatCount(store.state.following.length)}
+            value={formatCount(store.followingIds.length)}
             label="Takip"
             onPress={() => go('/takip?tab=takip')}
           />

@@ -1,14 +1,13 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, type Href } from 'expo-router';
-import { Bell, Search } from 'lucide-react-native';
+import { Bell, Search, Send } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Gradients, Spacing, TabBarHeight } from '@/constants/theme';
-import { notifications } from '@/data/mock';
 import { useStore } from '@/store/app-store';
 
 /** Tüm ekranların koyu lacivert degrade zemini + kaydırılabilir içerik. */
@@ -54,6 +53,7 @@ export function AppHeader({
         {right ?? (
           <>
             <SearchButton />
+            <MessagesButton />
             <BellButton />
           </>
         )}
@@ -71,10 +71,25 @@ export function SearchButton() {
   );
 }
 
+/** Mesajlar (gelen kutusu); okunmamış sohbet varsa sayı rozeti. */
+export function MessagesButton() {
+  const { unreadMessages } = useStore();
+  return (
+    <Pressable hitSlop={8} onPress={() => router.push('/mesajlar' as Href)} accessibilityLabel="Mesajlar">
+      <Send size={23} color={Colors.text} strokeWidth={1.8} />
+      {unreadMessages ? (
+        <View style={styles.badge}>
+          <VText style={styles.badgeText}>{unreadMessages > 9 ? '9+' : unreadMessages}</VText>
+        </View>
+      ) : null}
+    </Pressable>
+  );
+}
+
 /** Bildirimleri açan zil; okunmamış bildirim varsa altın nokta. */
 export function BellButton() {
-  const { state } = useStore();
-  const unread = notifications.some((n) => !state.readNotifications.includes(n.id));
+  const { unreadNotifications } = useStore();
+  const unread = unreadNotifications > 0;
   return (
     <Pressable hitSlop={8} onPress={() => router.push('/bildirimler' as Href)} accessibilityLabel="Bildirimler">
       <Bell size={24} color={Colors.text} strokeWidth={1.8} />
@@ -120,6 +135,21 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: Colors.bg,
   },
+  badge: {
+    position: 'absolute',
+    top: -6,
+    right: -8,
+    minWidth: 17,
+    height: 17,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    backgroundColor: Colors.live,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: Colors.bg,
+  },
+  badgeText: { color: '#fff', fontFamily: Fonts.bold, fontSize: 10, lineHeight: 12 },
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   mark: { width: 52, height: 28 },
   wordmark: {

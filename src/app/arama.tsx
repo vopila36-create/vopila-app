@@ -1,14 +1,15 @@
 import { Image } from 'expo-image';
 import { router, type Href } from 'expo-router';
-import { BadgeCheck, ChevronRight, Search, SearchX, X } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { BadgeCheck, ChevronRight, Hash, Search, SearchX, X } from 'lucide-react-native';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Avatar, Chip, GlassCard } from '@/components/ui/primitives';
 import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { arenas, ME_ID, news, users } from '@/data/mock';
+import { arenas, ME_ID, news, users, type User } from '@/data/mock';
+import { isRealId, searchProfiles } from '@/lib/social-api';
 import { formatCount, useStore } from '@/store/app-store';
 
 type Tab = 'people' | 'posts' | 'arenas' | 'news';
@@ -29,15 +30,36 @@ export default function Arama() {
   const [tab, setTab] = useState<Tab>('people');
   const query = norm(q.trim());
 
+  // Gerçek kullanıcılar sunucudan aranır (yazmayı bırakınca, 300 ms sonra)
+  const [realPeople, setRealPeople] = useState<{ q: string; list: User[] }>({ q: '', list: [] });
+  const myId = store.myId;
+  useEffect(() => {
+    const term = q.trim().replace(/^@/, '');
+    if (!myId || term.length < 2) return;
+    let cancelled = false;
+    const t = setTimeout(() => {
+      searchProfiles(myId, term).then((res) => {
+        if (!cancelled && res.ok) setRealPeople({ q: term, list: res.data });
+      });
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [q, myId]);
+
   const results = useMemo(() => {
-    const has = (s: string) => norm(s).includes(query);
+    const has = (s: string) => norm(s).includes(query.replace(/^[@#]/, ''));
+    const real = realPeople.q && query.includes(norm(realPeople.q)) ? realPeople.list : [];
     return {
-      people: users.filter((u) => u.id !== ME_ID && (has(u.name) || has(u.username) || has(u.location))),
+      people: [...real, ...users.filter((u) => u.id !== ME_ID && (has(u.name) || has(u.username) || has(u.location)))],
       posts: store.allPosts.filter((p) => has(p.caption) || has(p.location)),
       arenas: arenas.filter((a) => has(a.name) || has(a.tagline)),
       news: news.filter((n) => has(n.title) || has(n.category)),
     };
-  }, [query, store.allPosts]);
+  }, [query, store.allPosts, realPeople]);
+
+  const tag = q.trim().startsWith('#') ? q.trim().slice(1).replace(/[^\p{L}\p{N}_]/gu, '') : '';
 
   const count = { people: results.people.length, posts: results.posts.length, arenas: results.arenas.length, news: results.news.length };
 
@@ -81,7 +103,7 @@ export default function Arama() {
               .filter((u) => u.id !== ME_ID)
               .slice(0, 4)
               .map((u) => (
-                <PersonRow key={u.id} id={u.id} />
+                <PersonRow key={u.id} user={u} />
               ))}
           </View>
         </View>
@@ -93,7 +115,18 @@ export default function Arama() {
             ))}
           </ScrollView>
           <View style={[styles.pad, { gap: 8 }]}>
-            {tab === 'people' && results.people.map((u) => <PersonRow key={u.id} id={u.id} />)}
+            {tag ? (
+              <Pressable onPress={() => router.push(`/etiket/${encodeURIComponent(tag)}` as Href)}>
+                <GlassCard style={styles.row}>
+                  <Hash size={22} color={Colors.cyan} />
+                  <VText variant="bodyBold" style={{ flex: 1 }}>
+                    #{tag} etiketli gönderileri gör
+                  </VText>
+                  <ChevronRight size={18} color={Colors.textSecondary} />
+                </GlassCard>
+              </Pressable>
+            ) : null}
+            {tab === 'people' && results.people.map((u) => <PersonRow key={u.id} user={u} />)}
             {tab === 'posts' &&
               results.posts.map((p) => {
                 const cover = p.media[0];
@@ -141,10 +174,11 @@ export default function Arama() {
   );
 }
 
-function PersonRow({ id }: { id: string }) {
+function PersonRow({ user: u }: { user: User }) {
   const store = useStore();
-  const u = users.find((x) => x.id === id)!;
-  const following = store.isFollowing(u.id);
+  const status = store.followStatus(u.id);
+  const following = status !== 'none';
+  const real = isRealId(u.id);
   return (
     <GlassCard style={styles.row}>
       <Pressable style={styles.rowMain} onPress={() => router.push(`/kullanici/${u.id}` as Href)}>
@@ -155,7 +189,8 @@ function PersonRow({ id }: { id: string }) {
             {u.verified ? <BadgeCheck size={14} color="#fff" fill={Colors.cyan} /> : null}
           </View>
           <VText variant="caption">
-            @{u.username} · {formatCount(u.followers)} takipçi
+            @{u.username}
+            {real ? '' : ` · ${formatCount(u.followers)} takipçi`}
           </VText>
         </View>
       </Pressable>
@@ -163,7 +198,7 @@ function PersonRow({ id }: { id: string }) {
         onPress={() => store.toggleFollow(u.id)}
         style={[styles.followBtn, following && styles.followingBtn]}>
         <VText variant="label" color={following ? Colors.text : Colors.onCyan} style={{ fontSize: 12 }}>
-          {following ? 'Takipte' : 'Takip Et'}
+          {status === 'pending' ? 'İstek' : following ? 'Takipte' : 'Takip Et'}
         </VText>
       </Pressable>
     </GlassCard>

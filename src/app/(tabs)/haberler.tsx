@@ -1,14 +1,20 @@
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, type Href } from 'expo-router';
-import { ChevronRight, Clock, FileText, Globe, Play, Radio, Sparkles } from 'lucide-react-native';
-import { useMemo, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Clock, LayoutList, Radio, Send, Sparkles } from 'lucide-react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BottomFade, Chip, GlassCard, PlayBadge, SectionHeader } from '@/components/ui/primitives';
-import { AppHeader, Screen } from '@/components/ui/screen';
+import { ReelAction, ReelPager } from '@/components/reels';
+import { SendSheet, type SendPayload } from '@/components/send-sheet';
+import { VideoPlayer } from '@/components/ui/media';
+import { OutlineButton, PrimaryButton } from '@/components/ui/primitives';
 import { VText } from '@/components/ui/text';
-import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { liveUpdates, news, newsCategories, type NewsArticle, type NewsCategory } from '@/data/mock';
+import { Colors, Fonts, Radius, Spacing, TabBarHeight } from '@/constants/theme';
+import { news, type NewsArticle, type NewsCategory } from '@/data/mock';
+import { rankByInterest } from '@/lib/feed-rank';
+import { useStore } from '@/store/app-store';
 
 const TAG_COLORS: Record<NewsCategory, string> = {
   Gündem: Colors.cyan,
@@ -19,341 +25,153 @@ const TAG_COLORS: Record<NewsCategory, string> = {
   Bilim: Colors.purple,
 };
 
-const open = (id: string, ozet?: boolean) =>
-  router.push((ozet ? `/haber/${id}?ozet=1` : `/haber/${id}`) as Href);
+const topicOf = (n: NewsArticle) => `news:${n.category}`;
 
+/**
+ * Haberler sekmesi: tüm haberler tam ekran, dikey kaydırmalı.
+ * Kullanıcının en çok izlediği konular (Spor, Teknoloji…) öne çıkar; canlı haberler her zaman öncelikli.
+ */
 export default function Haberler() {
-  const [cat, setCat] = useState<NewsCategory>('Gündem');
-  const [showAll, setShowAll] = useState(false);
+  const store = useStore();
+  const insets = useSafeAreaInsets();
 
-  // "Gündem" tüm haberleri gösterir; diğerleri kategoriye göre süzer.
-  const filtered = useMemo(
-    () => (cat === 'Gündem' ? news : news.filter((n) => n.category === cat)),
-    [cat],
+  // Sıra açılışta bir kez hesaplanır; izledikçe içerik yer değiştirmez
+  const [items] = useState(() =>
+    rankByInterest(news, {
+      idOf: (n) => n.id,
+      topicOf,
+      interests: store.state.interests,
+      seen: store.state.seenReels,
+      seed: Math.floor(Math.random() * 1e9),
+      boost: (n) => (n.live ? 2.5 : n.special ? 1.5 : 1),
+    }),
   );
-  const headline = filtered.find((n) => n.live) ?? filtered[0];
-  const rest = filtered.filter((n) => n.id !== headline?.id && !n.special);
-  const special = news.find((n) => n.special);
 
-  return (
-    <Screen header={<AppHeader />}>
-      <View style={styles.pad}>
-        <VText variant="title">Haberler</VText>
-        <VText variant="body">Dünyayı daha geniş bir perspektiften takip et.</VText>
-      </View>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-        {newsCategories.map((c) => (
-          <Chip
-            key={c}
-            label={c}
-            active={c === cat}
-            onPress={() => {
-              setCat(c);
-              setShowAll(false);
-            }}
-          />
-        ))}
-      </ScrollView>
-
-      {/* Manşet */}
-      {headline ? (
-        <View style={styles.pad}>
-          <Pressable style={styles.headline} onPress={() => open(headline.id)}>
-            <Image source={{ uri: headline.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
-            <BottomFade />
-            {headline.live ? (
-              <View style={styles.liveTag}>
-                <View style={styles.liveDot} />
-                <VText style={styles.liveText}>CANLI</VText>
-              </View>
-            ) : (
-              <View style={[styles.liveTag, styles.catTag]}>
-                <VText style={[styles.liveText, { color: TAG_COLORS[headline.category] }]}>
-                  {headline.category.toLocaleUpperCase('tr-TR')}
-                </VText>
-              </View>
-            )}
-            <View style={styles.devTag}>
-              <Sparkles size={13} color={Colors.cyan} />
-              <VText variant="caption" color={Colors.text}>
-                Son Gelişme
-              </VText>
-            </View>
-            {headline.video ? (
-              <View style={styles.headlinePlay}>
-                <PlayBadge size={46}>
-                  <Play size={20} color="#fff" fill="#fff" />
-                </PlayBadge>
-              </View>
-            ) : null}
-            <View style={styles.headlineBody}>
-              <VText variant="heading" style={{ fontSize: 22, lineHeight: 28 }} numberOfLines={2}>
-                {headline.title}
-              </VText>
-              <VText variant="body" color={Colors.textSecondary} style={{ marginTop: 4 }} numberOfLines={2}>
-                {headline.summary}
-              </VText>
-              <View style={styles.metaRow}>
-                <Meta icon={<Globe size={14} color={Colors.textSecondary} />} text={headline.category} />
-                <Meta icon={<Clock size={14} color={Colors.textSecondary} />} text={headline.readTime} />
-                <View style={{ flex: 1 }} />
-                <Pressable style={styles.inline} onPress={() => open(headline.id, true)} hitSlop={8}>
-                  <Sparkles size={14} color={Colors.cyan} />
-                  <VText variant="label" color={Colors.cyan}>
-                    Yapay Zekâ Özeti
-                  </VText>
-                  <ChevronRight size={14} color={Colors.cyan} />
-                </Pressable>
-              </View>
-            </View>
-          </Pressable>
-        </View>
-      ) : null}
-
-      {/* Sana Özel */}
-      {rest.length ? (
-        <View style={[styles.pad, { marginTop: Spacing.lg }]}>
-          <GlassCard style={{ paddingVertical: 14 }}>
-            <View style={{ paddingHorizontal: 14 }}>
-              <SectionHeader
-                title="Sana Özel"
-                subtitle="İlgi alanlarına göre seçilen günün öne çıkan haberleri."
-                icon={<Sparkles size={20} color={Colors.cyan} />}
-                action={showAll ? 'Daralt' : 'Tümünü Gör'}
-                onAction={() => setShowAll((v) => !v)}
-              />
-            </View>
-            {showAll ? (
-              <View style={{ paddingHorizontal: 14, gap: 10 }}>
-                {rest.map((n) => (
-                  <NewsRow key={n.id} item={n} />
-                ))}
-              </View>
-            ) : (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 14, gap: 10 }}>
-                {rest.map((n) => (
-                  <Pressable key={n.id} style={styles.newsCard} onPress={() => open(n.id)}>
-                    <Image source={{ uri: n.image }} style={styles.newsImage} contentFit="cover" />
-                    <View style={{ padding: 8, flex: 1 }}>
-                      <VText style={[styles.newsTag, { color: TAG_COLORS[n.category] }]}>
-                        {n.category.toLocaleUpperCase('tr-TR')}
-                      </VText>
-                      <VText variant="label" numberOfLines={3} style={{ fontSize: 12.5 }}>
-                        {n.title}
-                      </VText>
-                      <View style={[styles.metaRow, { marginTop: 'auto' }]}>
-                        <Meta icon={<Clock size={12} color={Colors.textMuted} />} text={n.readTime} />
-                        <View style={{ flex: 1 }} />
-                        <ChevronRight size={14} color={Colors.text} />
-                      </View>
-                    </View>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            )}
-          </GlassCard>
-        </View>
-      ) : null}
-
-      {/* Canlı Gelişmeler */}
-      <View style={[styles.pad, { marginTop: Spacing.lg }]}>
-        <GlassCard style={{ padding: 14 }}>
-          <SectionHeader
-            title="Canlı Gelişmeler"
-            subtitle="Dünya genelindeki önemli gelişmeler, anlık olarak."
-            icon={<Radio size={20} color={Colors.live} />}
-            onAction={() => router.push('/haberler-canli' as Href)}
-          />
-          {liveUpdates.slice(0, 4).map((u, i, arr) => (
-            <Pressable
-              key={u.id}
-              style={styles.timelineRow}
-              onPress={() =>
-                u.articleId ? open(u.articleId) : router.push('/haberler-canli' as Href)
-              }>
-              <View style={styles.timelineRail}>
-                <View style={[styles.timelineDot, u.fresh && { backgroundColor: Colors.live }]} />
-                {i < arr.length - 1 ? <View style={styles.timelineLine} /> : null}
-              </View>
-              <VText
-                variant="label"
-                color={u.fresh ? Colors.live : Colors.textSecondary}
-                style={{ width: 46 }}>
-                {u.time}
-              </VText>
-              <VText variant="body" color={Colors.text} style={{ flex: 1, fontSize: 13 }} numberOfLines={1}>
-                {u.text}
-              </VText>
-              <ChevronRight size={16} color={Colors.textSecondary} />
-            </Pressable>
-          ))}
-        </GlassCard>
-      </View>
-
-      {/* VOPILA Özel dosya */}
-      {special ? (
-        <View style={[styles.pad, { marginTop: Spacing.lg }]}>
-          <Pressable style={styles.special} onPress={() => open(special.id)}>
-            <Image source={{ uri: special.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
-            <BottomFade />
-            <View style={styles.specialBadge}>
-              <VText style={styles.badgeText}>VOPILA ÖZEL</VText>
-            </View>
-            <View style={styles.headlinePlay}>
-              <PlayBadge size={46}>
-                <Play size={20} color="#fff" fill="#fff" />
-              </PlayBadge>
-            </View>
-            <View style={styles.headlineBody}>
-              <VText variant="heading">{special.title}</VText>
-              <VText variant="caption" color={Colors.textSecondary} numberOfLines={2}>
-                {special.summary}
-              </VText>
-              <View style={styles.metaRow}>
-                <Meta icon={<Clock size={14} color={Colors.textSecondary} />} text={special.readTime} />
-                <View style={{ flex: 1 }} />
-                <FileText size={14} color={Colors.cyan} />
-                <VText variant="label" color={Colors.cyan}>
-                  Özel Dosya
-                </VText>
-              </View>
-            </View>
-          </Pressable>
-        </View>
-      ) : null}
-    </Screen>
-  );
-}
-
-function NewsRow({ item }: { item: NewsArticle }) {
-  return (
-    <Pressable style={styles.row} onPress={() => open(item.id)}>
-      <Image source={{ uri: item.image }} style={styles.rowImage} contentFit="cover" />
+  const overlay = (
+    <View style={[styles.topRow, { paddingTop: insets.top + 6 }]}>
       <View style={{ flex: 1 }}>
-        <VText style={[styles.newsTag, { color: TAG_COLORS[item.category] }]}>
-          {item.category.toLocaleUpperCase('tr-TR')}
+        <VText variant="title" style={styles.shadow}>
+          Haberler
         </VText>
-        <VText variant="label" numberOfLines={2}>
-          {item.title}
-        </VText>
-        <VText variant="caption" style={{ marginTop: 2 }}>
-          {item.time} · {item.readTime}
+        <VText variant="caption" color="#fff" style={styles.shadow}>
+          Sana özel · ilgilendiğin konular önde
         </VText>
       </View>
-      <ChevronRight size={16} color={Colors.textSecondary} />
-    </Pressable>
+      <Pressable hitSlop={8} onPress={() => router.push('/haberler-canli' as Href)} accessibilityLabel="Canlı gelişmeler">
+        <Radio size={23} color={Colors.live} />
+      </Pressable>
+      <Pressable hitSlop={8} onPress={() => router.push('/haber-merkezi' as Href)} accessibilityLabel="Haber Merkezi (liste görünümü)">
+        <LayoutList size={23} color="#fff" />
+      </Pressable>
+    </View>
+  );
+
+  return (
+    <ReelPager
+      data={items}
+      keyOf={(n) => n.id}
+      overlay={overlay}
+      onDwell={(n, secs) => store.addInterest(topicOf(n), secs, n.id)}
+      renderItem={(n, { active }) => (
+        <NewsReel article={n} active={active} bottom={TabBarHeight + Math.max(insets.bottom, 10) + 12} />
+      )}
+    />
   );
 }
 
-function Meta({ icon, text }: { icon: ReactNode; text: string }) {
+function NewsReel({ article, active, bottom }: { article: NewsArticle; active: boolean; bottom: number }) {
+  const store = useStore();
+
+  const open = (ozet?: boolean) => {
+    // Haberi açmak güçlü bir ilgi işaretidir
+    store.addInterest(topicOf(article), ozet ? 4 : 6, article.id);
+    router.push((ozet ? `/haber/${article.id}?ozet=1` : `/haber/${article.id}`) as Href);
+  };
+
+  const [sendPayload, setSendPayload] = useState<SendPayload | null>(null);
+  const send = () => setSendPayload({ title: `${article.title} — VOPILA Haberler`, link: `vopila://haber/${article.id}` });
+
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginRight: 10 }}>
-      {icon}
-      <VText variant="caption" color={Colors.textSecondary}>
-        {text}
-      </VText>
+    <View style={{ flex: 1 }}>
+      {article.video && active ? (
+        <View style={StyleSheet.absoluteFill}>
+          <VideoPlayer uri={article.video} autoPlay controls={false} />
+        </View>
+      ) : (
+        <Image source={{ uri: article.image }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
+      )}
+      <LinearGradient
+        colors={['rgba(0,0,0,0.6)', 'transparent', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.92)']}
+        locations={[0, 0.25, 0.55, 1]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+
+      <View style={[styles.side, { bottom: bottom + 150 }]}>
+        <ReelAction icon={<Send size={22} color="#fff" />} label="Gönder" onPress={send} />
+        <ReelAction icon={<Sparkles size={22} color={Colors.cyan} />} label="AI Özet" onPress={() => open(true)} />
+      </View>
+
+      <View style={[styles.bottom, { paddingBottom: bottom }]}>
+        {article.live ? (
+          <View style={[styles.tag, { borderColor: Colors.live }]}>
+            <View style={styles.liveDot} />
+            <VText style={[styles.tagText, { color: Colors.live }]}>CANLI</VText>
+          </View>
+        ) : (
+          <View style={[styles.tag, { borderColor: TAG_COLORS[article.category] }]}>
+            <VText style={[styles.tagText, { color: TAG_COLORS[article.category] }]}>
+              {article.category.toLocaleUpperCase('tr-TR')}
+            </VText>
+          </View>
+        )}
+
+        <VText variant="title" color="#fff" style={[styles.shadow, { fontSize: 24, marginTop: 8 }]} numberOfLines={3}>
+          {article.title}
+        </VText>
+        <VText color="#fff" style={[styles.shadow, { marginTop: 6, opacity: 0.92 }]} numberOfLines={3}>
+          {article.summary}
+        </VText>
+        <View style={styles.meta}>
+          <Clock size={13} color={Colors.textSecondary} />
+          <VText variant="caption">
+            {article.time} · {article.readTime}
+          </VText>
+        </View>
+
+        <View style={styles.buttons}>
+          <PrimaryButton label="Habere Git" onPress={() => open()} style={{ flex: 1 }} />
+          <OutlineButton
+            label="AI Özet"
+            iconLeft={<Sparkles size={15} color={Colors.text} />}
+            onPress={() => open(true)}
+            style={{ flex: 1 }}
+          />
+        </View>
+      </View>
+      <SendSheet payload={sendPayload} onClose={() => setSendPayload(null)} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  pad: { paddingHorizontal: Spacing.screen },
-  chips: { paddingHorizontal: Spacing.screen, gap: 8, paddingVertical: Spacing.lg },
-  inline: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  headline: {
-    height: 290,
-    borderRadius: Radius.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  liveTag: {
-    position: 'absolute',
-    top: 14,
-    left: 14,
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: 18, paddingHorizontal: Spacing.screen },
+  shadow: { textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 6 },
+  side: { position: 'absolute', right: 12, gap: 18, alignItems: 'center' },
+  bottom: { position: 'absolute', left: 0, right: 64, bottom: 0, paddingHorizontal: Spacing.screen },
+  tag: {
+    alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.live,
-    backgroundColor: 'rgba(239,68,68,0.18)',
-  },
-  catTag: { borderColor: Colors.border, backgroundColor: 'rgba(4,10,23,0.6)' },
-  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.live },
-  liveText: { fontFamily: Fonts.bold, fontSize: 11, color: '#fff', letterSpacing: 0.5 },
-  devTag: {
-    position: 'absolute',
-    top: 14,
-    right: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    backgroundColor: 'rgba(4,10,23,0.6)',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  headlinePlay: { position: 'absolute', right: 16, top: '28%' },
-  headlineBody: { position: 'absolute', left: 14, right: 14, bottom: 12 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 },
-  newsCard: {
-    width: 128,
-    height: 210,
-    borderRadius: Radius.md,
-    overflow: 'hidden',
-    backgroundColor: Colors.surfaceStrong,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  newsImage: { width: '100%', height: 92 },
-  newsTag: { fontFamily: Fonts.bold, fontSize: 9.5, letterSpacing: 0.6, marginBottom: 3 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 8,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.surfaceStrong,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  rowImage: { width: 72, height: 60, borderRadius: Radius.sm },
-  timelineRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 34 },
-  timelineRail: { width: 10, alignItems: 'center', alignSelf: 'stretch', justifyContent: 'center' },
-  timelineDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.textMuted },
-  timelineLine: {
-    position: 'absolute',
-    top: '60%',
-    bottom: '-40%',
-    width: 1,
-    backgroundColor: Colors.border,
-  },
-  special: {
-    height: 190,
-    borderRadius: Radius.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  specialBadge: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 4,
     borderRadius: Radius.pill,
     borderWidth: 1,
-    borderColor: Colors.borderStrong,
-    backgroundColor: 'rgba(4,10,23,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
-  badgeText: { fontFamily: Fonts.bold, fontSize: 10, letterSpacing: 1, color: Colors.text },
+  tagText: { fontFamily: Fonts.bold, fontSize: 11, letterSpacing: 1 },
+  liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.live },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
+  buttons: { flexDirection: 'row', gap: 10, marginTop: 12 },
 });

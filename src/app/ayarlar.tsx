@@ -1,7 +1,10 @@
 import { router, type Href } from 'expo-router';
 import {
   Award,
+  Ban,
   Bell,
+  MessageCircle,
+  UserPlus,
   ChevronDown,
   ChevronRight,
   ChevronUp,
@@ -99,6 +102,12 @@ export default function Ayarlar() {
           <Row icon={<Coins size={20} color={Colors.gold} />} label="Token cüzdanım" onPress={() => go('/cuzdan')} />
           <Row icon={<Package size={20} color={Colors.cyanSoft} />} label="Siparişlerim" onPress={() => go('/siparisler')} />
           <Row icon={<Award size={20} color={Colors.gold} />} label="Rozetlerim" onPress={() => go('/rozetler')} last />
+        </Section>
+
+        <Section title="Gizlilik ve Etkileşim">
+          <Row icon={<MessageCircle size={20} color={Colors.cyan} />} label="Mesajlar" onPress={() => go('/mesajlar')} />
+          <Row icon={<UserPlus size={20} color={Colors.cyanSoft} />} label="Takip istekleri" onPress={() => go('/takip-istekleri')} />
+          <Row icon={<Ban size={20} color={Colors.live} />} label="Engellenen hesaplar" onPress={() => go('/engellenenler')} last />
         </Section>
 
         {auth.session ? (

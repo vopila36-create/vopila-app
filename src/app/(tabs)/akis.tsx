@@ -1,8 +1,8 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, type Href } from 'expo-router';
+import { router, useFocusEffect, type Href } from 'expo-router';
 import { Plus, Sparkles, Users } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -12,16 +12,18 @@ import { AppHeader, Screen } from '@/components/ui/screen';
 import { EmptyState } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Gradients, Radius, Spacing, TabBarHeight } from '@/constants/theme';
-import { ME_ID, moments, userById } from '@/data/mock';
-import { useStore } from '@/store/app-store';
+import { ME_ID } from '@/data/mock';
+import { useMe, useStore } from '@/store/app-store';
 
 export default function Akis() {
   const [tab, setTab] = useState<'following' | 'forYou'>('following');
   const store = useStore();
+  const me = useMe();
+  const moments = store.allMoments;
   const insets = useSafeAreaInsets();
 
   const list = useMemo(() => {
-    const following = store.state.following;
+    const following = store.followingIds;
     if (tab === 'forYou') {
       // Önce takip etmediğin kişilerden öneriler, sonra en çok beğenilenler
       const others = store.allPosts.filter((p) => p.authorId !== ME_ID);
@@ -29,11 +31,20 @@ export default function Akis() {
       const popular = others.filter((p) => following.includes(p.authorId)).sort((a, b) => b.likes - a.likes);
       return [...discover, ...popular];
     }
-    // Takip ettiklerin + senin yeni paylaşımların, en yeniden eskiye
-    return store.allPosts.filter((p) => following.includes(p.authorId) || store.state.myPosts.includes(p));
-  }, [tab, store.allPosts, store.state.following, store.state.myPosts]);
+    // Takip ettiklerin + senin paylaşımların, en yeniden eskiye
+    return store.allPosts.filter((p) => following.includes(p.authorId) || p.authorId === ME_ID);
+  }, [tab, store.allPosts, store.followingIds]);
 
-  const followingCount = store.state.following.length;
+  // Akış sekmesine her gelişte gerçek gönderileri ve anları tazele
+  const { refreshFeed, refreshMoments } = store;
+  useFocusEffect(
+    useCallback(() => {
+      refreshFeed();
+      refreshMoments();
+    }, [refreshFeed, refreshMoments]),
+  );
+
+  const followingCount = store.followingIds.length;
   const feedNote =
     tab === 'following'
       ? `Takip ettiğin ${followingCount} kişinin paylaşımları · ${list.length} gönderi`
@@ -72,29 +83,48 @@ export default function Akis() {
           <SectionHeader
             title="Anlar"
             subtitle="Keşfedenlerin en yeni paylaşımları"
-            onAction={() => router.push(`/an/${moments[0].id}` as Href)}
+            onAction={() => moments[0] && router.push(`/an/${moments[0].id}` as Href)}
           />
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.moments}>
+          {store.myId ? (
+            <Pressable onPress={() => router.push('/an-olustur' as Href)} style={[styles.moment, styles.addMoment]}>
+              <Avatar uri={me.avatar} size={44} />
+              <View style={styles.addBadge}>
+                <Plus size={14} color={Colors.onCyan} strokeWidth={3} />
+              </View>
+              <VText variant="label" style={{ marginTop: 10, fontSize: 12 }}>
+                Anın
+              </VText>
+              <VText variant="caption" style={{ fontSize: 10, textAlign: 'center' }}>
+                24 saat görünür
+              </VText>
+            </Pressable>
+          ) : null}
           {moments.map((m, i) => {
-            const author = userById(m.authorId);
+            const author = m.authorId === ME_ID ? me : store.userOf(m.authorId);
+            const first = m.media?.[0];
             return (
               <Pressable
                 key={m.id}
                 onPress={() => router.push(`/an/${m.id}` as Href)}
-                style={[styles.moment, i < 2 && styles.momentNew]}>
-                <Image source={{ uri: m.items[0] }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                style={[styles.moment, (m.remote || i < 2) && styles.momentNew]}>
+                {first?.type === 'video' ? (
+                  <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.surfaceStrong }]} />
+                ) : (
+                  <Image source={{ uri: m.items[0] }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                )}
                 <BottomFade />
                 <View style={styles.progress}>
                   {m.items.slice(0, 4).map((it, b) => (
-                    <View key={it} style={[styles.progressBar, b === 0 && { backgroundColor: Colors.cyan }]} />
+                    <View key={`${it}-${b}`} style={[styles.progressBar, b === 0 && { backgroundColor: Colors.cyan }]} />
                   ))}
                 </View>
                 <View style={styles.momentBody}>
                   <Avatar uri={author.avatar} size={30} ring />
                   <VText variant="label" style={{ marginTop: 6, fontSize: 12 }} numberOfLines={2}>
-                    {m.title}
+                    {m.title || (m.authorId === ME_ID ? 'Senin anın' : author.name)}
                   </VText>
                   <VText variant="caption" color={Colors.cyan} style={{ fontSize: 10 }}>
                     {m.items.length} yeni paylaşım
@@ -116,6 +146,11 @@ export default function Akis() {
               {feedNote}
             </VText>
           </View>
+          {store.feedError ? (
+            <VText variant="caption" color={Colors.live}>
+              Yeni gönderiler yüklenemedi: {store.feedError}
+            </VText>
+          ) : null}
           {list.length ? (
             list.map((p) => <PostCard key={p.id} post={p} />)
           ) : (
@@ -172,6 +207,27 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   momentNew: { borderColor: Colors.borderStrong, borderWidth: 1.5 },
+  addMoment: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+    borderStyle: 'dashed',
+    borderColor: Colors.borderStrong,
+    backgroundColor: Colors.surface,
+  },
+  addBadge: {
+    position: 'absolute',
+    top: 78,
+    right: 20,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Colors.cyan,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: Colors.bg,
+  },
   progress: { position: 'absolute', top: 8, left: 8, right: 8, flexDirection: 'row', gap: 3 },
   progressBar: { flex: 1, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.35)' },
   momentBody: { position: 'absolute', left: 8, right: 6, bottom: 8 },

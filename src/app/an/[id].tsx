@@ -6,19 +6,22 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { VideoPlayer } from '@/components/ui/media';
 import { Avatar } from '@/components/ui/primitives';
 import { VText } from '@/components/ui/text';
 import { Colors } from '@/constants/theme';
-import { moments, userById } from '@/data/mock';
-import { useStore } from '@/store/app-store';
+import { ME_ID, type Moment } from '@/data/mock';
+import { deleteMoment } from '@/lib/moments-api';
+import { useMe, useStore } from '@/store/app-store';
 
 const DURATION = 5000;
+const VIDEO_DURATION = 15000;
 const TICK = 50;
 
 type Pos = { mi: number; ii: number; done: boolean };
 
 /** Bir sonraki/önceki hikâye ögesinin konumu. */
-function step(p: Pos, dir: 1 | -1): Pos {
+function step(moments: Moment[], p: Pos, dir: 1 | -1): Pos {
   if (dir === 1) {
     if (p.ii < moments[p.mi].items.length - 1) return { ...p, ii: p.ii + 1 };
     if (p.mi < moments.length - 1) return { mi: p.mi + 1, ii: 0, done: false };
@@ -34,27 +37,46 @@ export default function AnGoruntuleyici() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const store = useStore();
+  const me = useMe();
+  // Açıldığı andaki liste sabit kalsın (arkada yenilenirse sıra kaymasın)
+  const [moments] = useState(() => store.allMoments);
 
   const startIndex = Math.max(0, moments.findIndex((m) => m.id === id));
   const [pos, setPos] = useState<Pos>({ mi: startIndex, ii: 0, done: false });
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
   const [liked, setLiked] = useState<Record<string, boolean>>({});
+  const [deleting, setDeleting] = useState(false);
   const elapsed = useRef(0);
 
   const momentIndex = pos.mi;
   const itemIndex = pos.ii;
   const moment = moments[momentIndex];
-  const author = userById(moment.authorId);
+  const isMine = moment?.authorId === ME_ID;
+  const author = isMine ? me : store.userOf(moment?.authorId ?? '');
   const following = store.isFollowing(author.id);
+  const item = moment?.media?.[itemIndex] ?? { type: 'image' as const, uri: moment?.items[itemIndex] ?? '' };
+  const duration = item.type === 'video' ? VIDEO_DURATION : DURATION;
 
   const close = useCallback(() => (router.canGoBack() ? router.back() : router.replace('/akis' as Href)), []);
 
-  const go = useCallback((dir: 1 | -1) => {
-    elapsed.current = 0;
-    setProgress(0);
-    setPos((p) => step(p, dir));
-  }, []);
+  const go = useCallback(
+    (dir: 1 | -1) => {
+      elapsed.current = 0;
+      setProgress(0);
+      setPos((p) => step(moments, p, dir));
+    },
+    [moments],
+  );
+
+  const remove = async () => {
+    if (!moment?.remote || deleting) return;
+    setDeleting(true);
+    setPaused(true);
+    await deleteMoment(moment.id);
+    await store.refreshMoments();
+    close();
+  };
 
   // Son hikâye bitince kapat
   useEffect(() => {
@@ -66,23 +88,31 @@ export default function AnGoruntuleyici() {
     if (paused || pos.done) return;
     const t = setInterval(() => {
       elapsed.current += TICK;
-      setProgress(Math.min(1, elapsed.current / DURATION));
-      if (elapsed.current >= DURATION) {
+      setProgress(Math.min(1, elapsed.current / duration));
+      if (elapsed.current >= duration) {
         clearInterval(t);
         go(1);
       }
     }, TICK);
     return () => clearInterval(t);
-  }, [paused, pos, go]);
+  }, [paused, pos, go, duration]);
 
   const next = () => go(1);
   const prev = () => go(-1);
+
+  if (!moment) return <View style={styles.root} />;
 
   const key = `${moment.id}-${itemIndex}`;
 
   return (
     <View style={styles.root}>
-      <Image source={{ uri: moment.items[itemIndex] }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
+      {item.type === 'video' ? (
+        <View key={key} style={StyleSheet.absoluteFill}>
+          <VideoPlayer uri={item.uri} autoPlay loop={false} controls={false} />
+        </View>
+      ) : (
+        <Image source={{ uri: item.uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
+      )}
       <LinearGradient colors={['rgba(0,0,0,0.6)', 'transparent']} style={styles.topShade} />
       <LinearGradient colors={['transparent', 'rgba(0,0,0,0.7)']} style={styles.bottomShade} />
 
@@ -108,7 +138,9 @@ export default function AnGoruntuleyici() {
           ))}
         </View>
         <View style={styles.header}>
-          <Pressable style={styles.author} onPress={() => router.push(`/kullanici/${author.id}` as Href)}>
+          <Pressable
+            style={styles.author}
+            onPress={() => router.push((isMine ? '/profil' : `/kullanici/${author.id}`) as Href)}>
             <Avatar uri={author.avatar} size={38} ring />
             <View>
               <VText variant="bodyBold">{author.name}</VText>
@@ -127,13 +159,23 @@ export default function AnGoruntuleyici() {
       </View>
 
       <View style={[styles.bottom, { paddingBottom: insets.bottom + 16 }]}>
-        <Pressable
-          onPress={() => store.toggleFollow(author.id)}
-          style={[styles.follow, following && styles.following]}>
-          <VText variant="label" color={following ? Colors.text : Colors.onCyan}>
-            {following ? 'Takip ediliyor' : 'Takip Et'}
-          </VText>
-        </Pressable>
+        {isMine ? (
+          moment.remote ? (
+            <Pressable onPress={remove} style={[styles.follow, styles.following]}>
+              <VText variant="label" color={Colors.text}>
+                {deleting ? 'Siliniyor…' : 'Anı sil'}
+              </VText>
+            </Pressable>
+          ) : null
+        ) : (
+          <Pressable
+            onPress={() => store.toggleFollow(author.id)}
+            style={[styles.follow, following && styles.following]}>
+            <VText variant="label" color={following ? Colors.text : Colors.onCyan}>
+              {following ? 'Takip ediliyor' : 'Takip Et'}
+            </VText>
+          </Pressable>
+        )}
         <View style={{ flex: 1 }} />
         <Pressable
           onPress={() => setLiked((l) => ({ ...l, [key]: !l[key] }))}

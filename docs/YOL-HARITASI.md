@@ -1,6 +1,6 @@
 # VOPILA — Yol Haritası ve Yapılacaklar
 
-> Son güncelleme: 25 Ekim 2026 · `[x]` = bitti, `[ ]` = yapılacak. Adım adım, sırayla ilerlenir.
+> Son güncelleme: 28 Ekim 2026 · `[x]` = bitti, `[ ]` = yapılacak. Adım adım, sırayla ilerlenir.
 > Bu dosyada anahtar / şifre gibi gizli bilgi bulunmaz.
 
 ## Mimari
@@ -33,15 +33,21 @@
 
 ## ⏳ Adım 0 — Beklenen bilgiler (geldikçe hemen yapılır)
 - [x] **Ana e-posta:** vopila36@gmail.com — uygulama/yönetici hesabı ve kod kayıtları değişti (26 Ekim 2026)
-- [ ] Supabase, Expo ve Resend hesaplarının e-postası → vopila36@gmail.com (kullanıcı yapacak, adım adım tarif)
-- [ ] Yeni GitHub hesabı (vopila36@gmail.com) → yeni gizli depo, kod taşınır; eski depo onay alınmadan silinmez
-- [ ] Alan adı → Resend DNS kayıtları → Resend API anahtarı
+- [x] Supabase yeni projeye taşındı (vopila36 hesabı, 28 Ekim 2026): tüm tablolar + güvenlik kuralları kuruldu, uygulama bağlandı, yönetici hesabı vopila36
+- [ ] Expo ve Resend hesaplarının e-postası → vopila36@gmail.com
+- [x] Yeni GitHub hesabı (vopila36-create) → kod yeni gizli depoya taşındı (28 Ekim 2026); eski depo onay alınmadan silinmez
+- [ ] Alan adı (Natro) → Resend DNS kayıtları (4 kayıt; Natro bakımda, sonra) → Resend API anahtarı
 - [ ] Supabase erişim anahtarı → e-posta servisi (SMTP), Türkçe kodlu e-posta şablonları, e-posta sınırı, CAPTCHA, sızmış şifre koruması, iki adımlı doğrulama
 
-## Adım 1 — Aşama 3: Akış ve sosyal
-- [ ] Gerçek foto/video yükleme, akış (Takip Ettiklerin / Sana Özel), beğeni, yorum, kaydet
-- [ ] Yorum yanıtı, @bahsetme, #etiket, paylaş (bağlantı), takip + takip istekleri ekranı
-- [ ] Anlar (24 saat), şikayet ve engelle butonları, telefon bildirimleri (push)
+## Adım 1 — Aşama 3: Akış ve sosyal (kod bitti 28 Ekim 2026 — telefonda test bekliyor)
+- [x] Gerçek foto/video yükleme, akış (Takip Ettiklerin / Sana Özel), beğeni, yorum, kaydet
+- [x] Arenalar + Haberler Reels gibi tam ekran kaydırmalı; arenada yalnızca takip edilen arenalar, kaydırırken yıldızla puan; ilgi algoritması (en çok izlenen konu öne çıkar). Eski sayfalar: Arena Merkezi, Haber Merkezi
+- [x] Gerçek profiller, takip / takip isteği (gizli hesap), takip istekleri ekranı, kişi arama
+- [x] Mesajlaşma (DM): gelen kutusu, sohbet (canlı), uçak simgesiyle gönderiyi arkadaşına gönder, okunmamış rozeti
+- [x] Yorum yanıtı, @bahsetme ve #etiket (bağlantılı + bildirim), etiket sayfası
+- [x] Anlar (24 saat, fotoğraf/video, silme), şikayet ve engelle, engellenenler listesi, gerçek bildirimler
+- [ ] Telefon bildirimleri (push) → mağaza derlemesi aşamasında (Expo Go'da sınırlı)
+- [ ] İlgi algoritmasını sunucuya taşımak (şu an telefonda), Akış'a da uygulamak
 
 ## Adım 2 — Aşama 4: Arenalar
 - [ ] Gerçek oylama, sezonların otomatik kapanması, liderlik tablosu, seviye/rozet

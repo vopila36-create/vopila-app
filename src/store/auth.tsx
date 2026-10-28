@@ -52,7 +52,7 @@ export function normalizeEmail(email: string) {
 export const hasNonAsciiEmail = (email: string) => /[^\x20-\x7E]/.test(email);
 
 /** Supabase'in İngilizce hata mesajlarını sade Türkçeye çevirir. */
-function toTurkish(err: { message?: string; code?: string } | null | undefined): string {
+export function toTurkish(err: { message?: string; code?: string } | null | undefined): string {
   const code = err?.code ?? '';
   const msg = (err?.message ?? '').toLowerCase();
   if (code === 'invalid_credentials' || msg.includes('invalid login credentials')) return 'E-posta veya şifre hatalı.';

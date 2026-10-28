@@ -5,7 +5,9 @@ import { BadgeCheck, ImageOff, Lock, MapPin, PlayCircle, Sparkles, Trophy, UserC
 import { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { RealProfileScreen } from '@/components/real-profile';
 import { Avatar, GlassCard, OutlineButton, PrimaryButton } from '@/components/ui/primitives';
+import { isRealId } from '@/lib/social-api';
 import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Radius, Spacing } from '@/constants/theme';
@@ -17,11 +19,15 @@ export default function KullaniciProfil() {
   const store = useStore();
   const user = users.find((u) => u.id === id);
 
+  const isMe = id === ME_ID || (!!store.myId && id === store.myId);
   useEffect(() => {
-    if (id === ME_ID) router.replace('/profil' as Href);
-  }, [id]);
+    if (isMe) router.replace('/profil' as Href);
+  }, [isMe]);
 
-  if (!user || id === ME_ID) {
+  // Gerçek kullanıcı (Supabase) → sunucudan yüklenen profil
+  if (!isMe && isRealId(String(id))) return <RealProfileScreen id={String(id)} />;
+
+  if (!user || isMe) {
     return (
       <SubScreen title="Profil">
         <EmptyState

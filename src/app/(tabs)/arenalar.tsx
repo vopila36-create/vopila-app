@@ -1,391 +1,275 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, type Href } from 'expo-router';
-import {
-  ArrowRight,
-  BadgeCheck,
-  ChevronDown,
-  ChevronRight,
-  Coins,
-  Crown,
-  MessageCircle,
-  SlidersHorizontal,
-  Trophy,
-  Users,
-} from 'lucide-react-native';
-import { useState } from 'react';
+import { BadgeCheck, Info, PlusSquare, Send, SlidersHorizontal, Star, Trophy } from 'lucide-react-native';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import {
-  Avatar,
-  BottomFade,
-  Chip,
-  GlassCard,
-  PrimaryButton,
-  SectionHeader,
-} from '@/components/ui/primitives';
-import { AppHeader, Screen, SearchButton } from '@/components/ui/screen';
+import { ReelAction, ReelPager } from '@/components/reels';
+import { SendSheet, type SendPayload } from '@/components/send-sheet';
+import { StarRating } from '@/components/ui/media';
+import { Avatar, Chip, OutlineButton } from '@/components/ui/primitives';
+import { EmptyState } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
-import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { arenaByKey, arenas, levelInfo, ME_ID, MY_LEVEL_XP, userById, type ArenaKey } from '@/data/mock';
-import { formatCount, formatTokens, useStore } from '@/store/app-store';
+import { Colors, Fonts, Gradients, Radius, Spacing, TabBarHeight } from '@/constants/theme';
+import { arenaByKey, ME_ID, type ArenaKey } from '@/data/mock';
+import { rankByInterest } from '@/lib/feed-rank';
+import { formatCount, useMe, useStore, type RankedEntry } from '@/store/app-store';
 
+const topicOf = (e: { arenaKey: ArenaKey }) => `arena:${e.arenaKey}`;
+
+/**
+ * Arenalar sekmesi: takip edilen arenaların gönderileri tam ekran, dikey kaydırmalı.
+ * Sıra kullanıcının en çok izlediği arenalara göre ağırlıklıdır; kaydırırken puan verilir.
+ */
 export default function Arenalar() {
   const store = useStore();
-  const [active, setActive] = useState<ArenaKey>('otomobil');
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const arena = arenaByKey(active);
-  const ranked = store.rankedEntries(active);
-  const mine = ranked.find((e) => e.authorId === ME_ID);
-  const top5 = ranked.slice(0, 5);
+  const insets = useSafeAreaInsets();
+  const joined = store.state.joinedArenas;
+  const [filter, setFilter] = useState<ArenaKey | 'all'>('all');
 
-  const { current: level, next, progress, toNext } = levelInfo(MY_LEVEL_XP);
+  const { rankedEntries } = store;
+  const allEntries = useMemo(() => joined.flatMap((k) => rankedEntries(k)), [joined, rankedEntries]);
 
-  const go = (href: string) => router.push(href as Href);
+  // Sıra yalnızca açılışta ve filtre değişince hesaplanır; oy verince ya da izledikçe
+  // içerik yer değiştirip kullanıcının elinden kaçmasın.
+  const computeOrder = (f: ArenaKey | 'all') =>
+    rankByInterest(
+      allEntries.filter((e) => f === 'all' || e.arenaKey === f),
+      {
+        idOf: (e) => e.id,
+        topicOf,
+        interests: store.state.interests,
+        seen: store.state.seenReels,
+        seed: Math.floor(Math.random() * 1e9),
+        // Yüksek puanlı gönderiler biraz daha öne
+        boost: (e) => 0.7 + (e.average || 3) / 5,
+      },
+    ).map((e) => e.id);
+  const [order, setOrder] = useState<string[]>(() => computeOrder('all'));
 
-  const onCategory = (key: ArenaKey) => {
-    if (key === active) go(`/arena/${key}`);
-    else setActive(key);
+  const byId = useMemo(() => new Map(allEntries.map((e) => [e.id, e])), [allEntries]);
+  const items = useMemo(() => {
+    const inFilter = (e: RankedEntry) => filter === 'all' || e.arenaKey === filter;
+    const ordered = order.map((id) => byId.get(id)).filter((e): e is RankedEntry => !!e && inFilter(e));
+    // Sonradan katılınan arenaların gönderileri sona eklenir
+    const extra = allEntries.filter((e) => inFilter(e) && !order.includes(e.id));
+    return [...ordered, ...extra];
+  }, [order, byId, allEntries, filter]);
+
+  const pickFilter = (f: ArenaKey | 'all') => {
+    setFilter(f);
+    setOrder(computeOrder(f));
   };
 
-  return (
-    <Screen
-      header={
-        <AppHeader
-          right={
-            <>
-              <SearchButton />
-              <Pressable style={styles.tokenPill} onPress={() => go('/magaza')} accessibilityLabel="Mağaza">
-                <Coins size={15} color={Colors.gold} />
-                <VText variant="label" color={Colors.gold} style={{ fontSize: 12 }}>
-                  {formatTokens(store.balance)}
-                </VText>
-              </Pressable>
-              <Pressable hitSlop={8} onPress={() => go('/arena-listesi')} accessibilityLabel="Tüm arenalar">
-                <SlidersHorizontal size={22} color={Colors.text} strokeWidth={1.8} />
-              </Pressable>
-            </>
-          }
-        />
-      }>
-      <View style={styles.pad}>
-        <VText variant="title">Arenalar</VText>
-        <VText variant="body">Tutkularını paylaş, yarış, keşfet.</VText>
-
-        {/* Haftalık sıralama */}
-        <GlassCard style={styles.rankCard}>
-          <VText variant="bodyBold">Bu Haftaki Sıralaman</VText>
-          <View style={styles.rankRow}>
-            <VText style={styles.rankBig}>{mine ? `#${mine.rank}` : '—'}</VText>
-            <View>
-              <VText style={styles.points}>{mine ? formatCount(Math.round(mine.totalScore)) : '0'}</VText>
-              <VText variant="caption">Puan</VText>
-            </View>
-            <View style={{ flex: 1 }} />
-            <Pressable style={styles.activeArena} onPress={() => go(`/arena/${active}`)}>
-              <Image source={{ uri: arena.image }} style={styles.activeThumb} contentFit="cover" />
-              <View style={{ flexShrink: 1 }}>
-                <VText variant="caption" style={{ fontSize: 10 }}>
-                  Aktif Arenan
-                </VText>
-                <VText variant="label" style={{ fontSize: 12 }} numberOfLines={1}>
-                  {arena.name}
-                </VText>
-              </View>
-              <ChevronRight size={14} color={Colors.textSecondary} />
-            </Pressable>
-          </View>
-          <Pressable style={styles.levelRow} onPress={() => go('/seviye')}>
-            <View style={styles.track}>
-              <View style={[styles.fill, { width: `${Math.round(progress * 100)}%` }]} />
-            </View>
-            <Crown size={14} color={Colors.gold} fill={Colors.gold} />
-            <VText variant="label" style={{ fontSize: 12 }}>
-              Seviye {level.number}
-            </VText>
-          </Pressable>
-          <VText variant="caption">
-            {mine ? '' : 'Bu arenada henüz gönderin yok. '}
-            {next ? `Sonraki seviyeye ${toNext} puan kaldı.` : 'En üst seviyedesin!'}
-          </VText>
-        </GlassCard>
-      </View>
-
-      {/* Kategoriler */}
-      <View style={[styles.pad, { marginTop: Spacing.xl }]}>
-        <SectionHeader title="Arena Kategorileri" onAction={() => go('/arena-listesi')} />
-        <View style={styles.grid}>
-          {arenas.map((c, i) => {
-            const selected = c.key === active;
-            return (
-              <Pressable
-                key={c.key}
-                onPress={() => onCategory(c.key)}
-                onLongPress={() => go(`/arena/${c.key}`)}
-                style={[styles.cat, i >= 4 && styles.catWide, selected && styles.catSelected]}>
-                <Image source={{ uri: c.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                <BottomFade />
-                <VText variant="label" style={styles.catLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-                  {c.name}
-                </VText>
-              </Pressable>
-            );
-          })}
-        </View>
-        <VText variant="caption" style={{ marginTop: 8 }}>
-          Seçili kategoriye tekrar dokunarak arenaya girebilirsin.
+  const overlay = (
+    <View style={{ paddingTop: insets.top + 6 }}>
+      <View style={styles.topRow}>
+        <VText variant="title" style={styles.shadow}>
+          Arenalar
         </VText>
-      </View>
-
-      {/* Seçili arena */}
-      <View style={[styles.pad, { marginTop: Spacing.lg }]}>
-        <Pressable onPress={() => go(`/arena/${active}`)}>
-          <GlassCard style={styles.arenaCard}>
-            <Image source={{ uri: arena.image }} style={styles.arenaBg} contentFit="cover" />
-            <LinearGradient
-              colors={['rgba(11,26,49,1)', 'rgba(11,26,49,0.2)']}
-              start={{ x: 0.35, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <VText variant="heading" style={{ fontSize: 21, flexShrink: 1 }} numberOfLines={1}>
-                {arena.name} Arenası
-              </VText>
-              <BadgeCheck size={18} color="#fff" fill={Colors.cyan} />
-            </View>
-            <VText variant="body" numberOfLines={2}>
-              {arena.tagline}
-            </VText>
-            <View style={styles.arenaFoot}>
-              <View style={{ gap: 4 }}>
-                <View style={styles.inline}>
-                  <Users size={14} color={Colors.textSecondary} />
-                  <VText variant="caption" color={Colors.textSecondary} numberOfLines={1}>
-                    {formatCount(arena.members)} Üye
-                  </VText>
-                </View>
-                <View style={styles.inline}>
-                  <MessageCircle size={14} color={Colors.textSecondary} />
-                  <VText variant="caption" color={Colors.textSecondary} numberOfLines={1}>
-                    {ranked.length} Gönderi
-                  </VText>
-                </View>
-              </View>
-              <View style={{ flex: 1 }} />
-              <PrimaryButton
-                label="Gönderi Paylaş"
-                icon={<ArrowRight size={16} color={Colors.onCyan} />}
-                onPress={() => go(`/olustur?arena=${active}`)}
-              />
-            </View>
-          </GlassCard>
+        <View style={{ flex: 1 }} />
+        <Pressable hitSlop={8} onPress={() => router.push(`/olustur${filter === 'all' ? '' : `?arena=${filter}`}` as Href)} accessibilityLabel="Arenaya gönderi paylaş">
+          <PlusSquare size={24} color="#fff" />
+        </Pressable>
+        <Pressable hitSlop={8} onPress={() => router.push('/arena-merkezi' as Href)} accessibilityLabel="Arena Merkezi">
+          <Trophy size={24} color={Colors.gold} />
+        </Pressable>
+        <Pressable hitSlop={8} onPress={() => router.push('/arena-listesi' as Href)} accessibilityLabel="Takip ettiğin arenalar">
+          <SlidersHorizontal size={22} color="#fff" />
         </Pressable>
       </View>
+      {joined.length ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+          <Chip label="Tümü" active={filter === 'all'} onPress={() => pickFilter('all')} />
+          {joined.map((k) => (
+            <Chip key={k} label={arenaByKey(k).name} active={filter === k} onPress={() => pickFilter(k)} />
+          ))}
+        </ScrollView>
+      ) : null}
+    </View>
+  );
 
-      {/* Liderlik tablosu */}
-      <View style={[styles.pad, { marginTop: Spacing.lg }]}>
-        <GlassCard style={{ padding: 12 }}>
-          <View style={styles.lbHead}>
-            <VText variant="heading">Liderlik Tablosu</VText>
-            <Pressable style={[styles.inline, { flexShrink: 1 }]} onPress={() => setPickerOpen((v) => !v)} hitSlop={6}>
-              <VText variant="label" color={Colors.cyan} numberOfLines={1} style={{ flexShrink: 1 }}>
-                {arena.name} Arenası
+  if (!joined.length || !items.length) {
+    return (
+      <View style={{ flex: 1 }}>
+        <LinearGradient colors={Gradients.screen} style={StyleSheet.absoluteFill} />
+        {overlay}
+        <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: Spacing.screen }}>
+          <EmptyState
+            icon={<Trophy size={44} color={Colors.gold} />}
+            title={joined.length ? 'Bu arenada henüz gönderi yok' : 'Henüz bir arena takip etmiyorsun'}
+            text={
+              joined.length
+                ? 'İlk paylaşan sen ol, topluluk puanlasın.'
+                : 'Takip ettiğin arenaların gönderileri burada tam ekran akar. Hemen birkaç arenaya katıl.'
+            }
+            action={
+              <OutlineButton
+                label={joined.length ? 'Gönderi Paylaş' : 'Arenaları Keşfet'}
+                onPress={() =>
+                  router.push((joined.length ? `/olustur${filter === 'all' ? '' : `?arena=${filter}`}` : '/arena-listesi') as Href)
+                }
+              />
+            }
+          />
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <ReelPager
+      data={items}
+      keyOf={(e) => e.id}
+      overlay={overlay}
+      onDwell={(e, secs) => store.addInterest(topicOf(e), secs, e.id)}
+      renderItem={(e) => <EntryReel entry={e} bottom={TabBarHeight + Math.max(insets.bottom, 10) + 12} />}
+    />
+  );
+}
+
+function EntryReel({ entry, bottom }: { entry: RankedEntry; bottom: number }) {
+  const store = useStore();
+  const me = useMe();
+  const arena = arenaByKey(entry.arenaKey);
+  const isMine = entry.authorId === ME_ID;
+  const author = isMine ? me : store.userOf(entry.authorId);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const vote = (score: number) => {
+    const res = store.vote(entry, score);
+    if (!res.ok) {
+      setMessage(res.error ?? 'Oy verilemedi.');
+      return;
+    }
+    // Puan vermek güçlü bir ilgi işaretidir
+    store.addInterest(topicOf(entry), 8, entry.id);
+    setMessage(`${score} yıldız verdin. Teşekkürler!`);
+  };
+
+  const [sendPayload, setSendPayload] = useState<SendPayload | null>(null);
+  const send = () =>
+    setSendPayload({
+      title: `${author.name} — "${entry.title}" · ${arena.name} Arenası (VOPILA)`,
+      link: `vopila://arena/giris/${entry.id}`,
+    });
+
+  return (
+    <View style={{ flex: 1 }}>
+      <Image source={{ uri: entry.image }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
+      <LinearGradient
+        colors={['rgba(0,0,0,0.55)', 'transparent', 'transparent', 'rgba(0,0,0,0.85)']}
+        locations={[0, 0.22, 0.5, 1]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+
+      {/* Sağ sütun */}
+      <View style={[styles.side, { bottom: bottom + 120 }]}>
+        <ReelAction icon={<Send size={22} color="#fff" />} label="Gönder" onPress={send} />
+        <ReelAction
+          icon={<Info size={22} color="#fff" />}
+          label="Detay"
+          onPress={() => router.push(`/arena/giris/${entry.id}` as Href)}
+        />
+        <ReelAction
+          icon={<Trophy size={22} color={Colors.gold} />}
+          label={entry.qualified ? `#${entry.rank}` : 'Sıra'}
+          onPress={() => router.push(`/liderlik?arena=${entry.arenaKey}` as Href)}
+        />
+      </View>
+
+      {/* Alt bilgi + puanlama */}
+      <View style={[styles.bottom, { paddingBottom: bottom }]}>
+        <Pressable onPress={() => router.push(`/arena/${entry.arenaKey}` as Href)} style={styles.arenaChip}>
+          <Trophy size={13} color={Colors.gold} />
+          <VText variant="caption" color={Colors.gold} style={{ fontFamily: Fonts.semibold }}>
+            {arena.name} Arenası
+          </VText>
+        </Pressable>
+
+        <Pressable
+          style={styles.authorRow}
+          onPress={() => router.push((isMine ? '/profil' : `/kullanici/${entry.authorId}`) as Href)}>
+          <Avatar uri={author.avatar} size={34} />
+          <VText variant="bodyBold" color="#fff" style={styles.shadow} numberOfLines={1}>
+            {isMine ? 'Sen' : author.name}
+          </VText>
+          {author.verified ? <BadgeCheck size={15} color="#fff" fill={Colors.cyan} /> : null}
+        </Pressable>
+
+        <VText variant="heading" color="#fff" style={[styles.shadow, { marginTop: 6 }]} numberOfLines={2}>
+          {entry.title}
+        </VText>
+        <View style={styles.stats}>
+          <Star size={14} color={Colors.gold} fill={Colors.gold} />
+          <VText variant="caption" color="#fff">
+            {entry.votes ? entry.average.toFixed(1) : '—'} · {formatCount(entry.votes)} oy
+          </VText>
+        </View>
+
+        <View style={styles.rateBox}>
+          {isMine ? (
+            <VText variant="caption" color={Colors.textSecondary}>
+              Bu senin gönderin. Diğer kâşifler puanlıyor.
+            </VText>
+          ) : entry.myVote ? (
+            <View style={styles.rateRow}>
+              <VText variant="label" color="#fff">
+                Puanın
               </VText>
-              <ChevronDown size={16} color={Colors.cyan} />
-            </Pressable>
-          </View>
-          {pickerOpen ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8, paddingBottom: 10 }}>
-              {arenas.map((a) => (
-                <Chip
-                  key={a.key}
-                  label={a.name}
-                  active={a.key === active}
-                  onPress={() => {
-                    setActive(a.key);
-                    setPickerOpen(false);
-                  }}
-                />
-              ))}
-            </ScrollView>
-          ) : null}
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <View style={{ flex: 1, gap: 4 }}>
-              {top5.map((r) => {
-                const u = userById(r.authorId);
-                const isMe = r.authorId === ME_ID;
-                return (
-                  <Pressable
-                    key={r.id}
-                    onPress={() => go(`/arena/giris/${r.id}`)}
-                    style={[styles.lbRow, isMe && styles.lbMe]}>
-                    <View style={{ width: 22, alignItems: 'center' }}>
-                      {r.rank === 1 ? (
-                        <Crown size={18} color={Colors.gold} fill={Colors.gold} />
-                      ) : (
-                        <VText variant="bodyBold">{r.rank}</VText>
-                      )}
-                    </View>
-                    <Avatar uri={u.avatar} size={28} />
-                    <VText variant="label" style={{ flex: 1, fontSize: 12.5 }} numberOfLines={1}>
-                      {isMe ? `Sen (${u.name.split(' ')[0]})` : u.name}
-                    </VText>
-                    <Crown size={12} color={Colors.gold} fill={Colors.gold} />
-                    <VText variant="label" style={{ fontSize: 12.5 }}>
-                      {formatCount(Math.round(r.totalScore))}
-                    </VText>
-                  </Pressable>
-                );
-              })}
-              {!top5.length ? (
-                <VText variant="caption" style={{ padding: 8 }}>
-                  Bu arenada henüz gönderi yok. İlk sen paylaş!
-                </VText>
-              ) : null}
+              <StarRating value={entry.myVote} size={22} disabled />
             </View>
-            <Pressable style={styles.lbImage} onPress={() => go(`/liderlik?arena=${active}`)}>
-              <Image source={{ uri: arena.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
-              <View style={styles.lbArrow}>
-                <ChevronRight size={18} color="#fff" />
-              </View>
-            </Pressable>
-          </View>
-          <Pressable style={styles.lbAll} onPress={() => go(`/liderlik?arena=${active}`)}>
-            <Trophy size={14} color={Colors.cyan} />
-            <VText variant="label" color={Colors.cyan}>
-              Tüm sıralamayı gör
+          ) : (
+            <View style={styles.rateRow}>
+              <VText variant="label" color="#fff">
+                Puan ver
+              </VText>
+              <StarRating onChange={vote} size={30} />
+            </View>
+          )}
+          {message ? (
+            <VText variant="caption" color={Colors.cyan} style={{ marginTop: 4 }}>
+              {message}
             </VText>
-          </Pressable>
-        </GlassCard>
+          ) : null}
+        </View>
       </View>
-
-      {/* Tüm arenalar */}
-      <View style={[styles.pad, { marginTop: Spacing.xl }]}>
-        <SectionHeader title="Tüm Arenalarda Gez" onAction={() => go('/arena-listesi')} />
-      </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: Spacing.screen, gap: 8 }}>
-        {arenas.map((a) => (
-          <Pressable key={a.key} style={styles.tile} onPress={() => go(`/arena/${a.key}`)}>
-            <Image source={{ uri: a.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
-            <BottomFade />
-            <VText variant="label" style={styles.tileLabel} numberOfLines={1}>
-              {a.name}
-            </VText>
-          </Pressable>
-        ))}
-      </ScrollView>
-    </Screen>
+      <SendSheet payload={sendPayload} onClose={() => setSendPayload(null)} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  pad: { paddingHorizontal: Spacing.screen },
-  tokenPill: {
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: Spacing.screen },
+  chips: { gap: 8, paddingHorizontal: Spacing.screen, paddingVertical: 10 },
+  shadow: { textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 6 },
+  side: { position: 'absolute', right: 12, gap: 18, alignItems: 'center' },
+  bottom: { position: 'absolute', left: 0, right: 72, bottom: 0, paddingHorizontal: Spacing.screen },
+  arenaChip: {
+    alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
     paddingHorizontal: 10,
-    height: 30,
+    paddingVertical: 4,
     borderRadius: Radius.pill,
     borderWidth: 1,
-    borderColor: Colors.gold,
-    backgroundColor: Colors.goldSoft,
+    borderColor: 'rgba(245,182,66,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.35)',
   },
-  rankCard: { padding: 14, marginTop: Spacing.lg, gap: 6 },
-  rankRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginVertical: 4 },
-  rankBig: { fontFamily: Fonts.extrabold, fontSize: 38, color: Colors.text },
-  points: { fontFamily: Fonts.bold, fontSize: 22, color: Colors.text },
-  activeArena: {
-    flexShrink: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    padding: 6,
-    borderRadius: Radius.sm,
+  authorRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
+  stats: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
+  rateBox: {
+    marginTop: 12,
+    padding: 10,
+    borderRadius: Radius.md,
+    backgroundColor: 'rgba(0,0,0,0.45)',
     borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surfaceRaised,
+    borderColor: 'rgba(255,255,255,0.12)',
+    alignSelf: 'flex-start',
   },
-  activeThumb: { width: 44, height: 30, borderRadius: 6 },
-  levelRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  track: { flex: 1, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.1)' },
-  fill: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.cyan,
-    shadowColor: Colors.cyan,
-    shadowOpacity: 0.8,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 0 },
-  },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  cat: {
-    width: '23.3%',
-    height: 72,
-    borderRadius: Radius.sm,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  catWide: { width: '31.6%' },
-  catSelected: {
-    borderColor: Colors.cyan,
-    borderWidth: 2,
-    shadowColor: Colors.cyan,
-    shadowOpacity: 0.7,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 0 },
-  },
-  catLabel: { position: 'absolute', left: 6, right: 4, bottom: 6, fontSize: 11, letterSpacing: -0.2 },
-  arenaCard: { padding: 16, gap: 4 },
-  arenaBg: { position: 'absolute', right: 0, top: 0, bottom: 0, left: 0, opacity: 0.6 },
-  arenaFoot: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10 },
-  inline: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  lbHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-    gap: 8,
-  },
-  lbRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 5,
-    paddingHorizontal: 6,
-    borderRadius: Radius.sm,
-  },
-  lbMe: { backgroundColor: Colors.cyanDim, borderWidth: 1, borderColor: Colors.borderStrong },
-  lbImage: { width: 96, borderRadius: Radius.md, overflow: 'hidden' },
-  lbArrow: {
-    position: 'absolute',
-    right: 8,
-    bottom: '42%',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.3)',
-  },
-  lbAll: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10 },
-  tile: {
-    width: 92,
-    height: 104,
-    borderRadius: Radius.sm,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  tileLabel: { position: 'absolute', left: 6, right: 6, bottom: 6, fontSize: 11.5 },
+  rateRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
 });

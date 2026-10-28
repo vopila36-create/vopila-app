@@ -14,7 +14,7 @@ import { useState } from 'react';
 import {
   Pressable,
   ScrollView,
-  Share,
+
   StyleSheet,
   View,
   type LayoutChangeEvent,
@@ -22,21 +22,24 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 
+import { ReportSheet, type ReportTarget } from '@/components/report-sheet';
+import { RichText } from '@/components/rich-text';
+import { SendSheet, type SendPayload } from '@/components/send-sheet';
 import { MediaView } from '@/components/ui/media';
 import { Avatar, GlassCard } from '@/components/ui/primitives';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius } from '@/constants/theme';
-import { arenaByKey, ME_ID, userById, type Post } from '@/data/mock';
+import { arenaByKey, ME_ID, type Post } from '@/data/mock';
 import { formatCount, useMe, useStore } from '@/store/app-store';
 
 /** Akış ve gönderi detayında kullanılan gönderi kartı. */
 export function PostCard({ post, detail }: { post: Post; detail?: boolean }) {
   const store = useStore();
   const me = useMe();
-  const author = post.authorId === ME_ID ? me : userById(post.authorId);
+  const author = post.authorId === ME_ID ? me : store.userOf(post.authorId);
   const liked = store.isLiked(post.id);
   const saved = store.isSaved(post.id);
-  const commentCount = store.commentsFor(post).length;
+  const commentCount = store.commentCount(post);
 
   const [page, setPage] = useState(0);
   const [width, setWidth] = useState(0);
@@ -49,15 +52,15 @@ export function PostCard({ post, detail }: { post: Post; detail?: boolean }) {
     if (!detail) router.push(`/gonderi/${post.id}` as Href);
   };
 
-  const share = async () => {
-    try {
-      await Share.share({
-        message: `${author.name} VOPILA'da paylaştı: "${post.caption}" — vopila://gonderi/${post.id}`,
-      });
-    } catch {
-      setFeedback('Paylaşım açılamadı.');
-    }
-  };
+  // Uçak simgesi: arkadaşına mesajla gönder (ya da diğer uygulamalarla paylaş)
+  const [sendPayload, setSendPayload] = useState<SendPayload | null>(null);
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
+  const share = () =>
+    setSendPayload({
+      postId: post.id,
+      title: `${author.name} VOPILA'da paylaştı: "${post.caption}"`,
+      link: `vopila://gonderi/${post.id}`,
+    });
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (!width) return;
@@ -105,7 +108,7 @@ export function PostCard({ post, detail }: { post: Post; detail?: boolean }) {
           />
           <MenuItem
             icon={<Link2 size={16} color={Colors.text} />}
-            label="Bağlantıyı paylaş"
+            label="Arkadaşına gönder / paylaş"
             onPress={() => {
               setMenuOpen(false);
               share();
@@ -116,7 +119,10 @@ export function PostCard({ post, detail }: { post: Post; detail?: boolean }) {
               icon={<Flag size={16} color={Colors.live} />}
               label="Şikayet et"
               danger
-              onPress={() => flash('Şikayetin alındı. Ekibimiz inceleyecek.')}
+              onPress={() => {
+                setMenuOpen(false);
+                setReportTarget({ type: 'post', id: post.id });
+              }}
             />
           ) : null}
         </View>
@@ -170,9 +176,7 @@ export function PostCard({ post, detail }: { post: Post; detail?: boolean }) {
       ) : null}
 
       <Pressable onPress={openDetail} disabled={detail}>
-        <VText style={{ color: Colors.text, marginTop: 10 }} numberOfLines={detail ? undefined : 3}>
-          {post.caption}
-        </VText>
+        <RichText text={post.caption} style={{ marginTop: 10 }} numberOfLines={detail ? undefined : 3} />
       </Pressable>
 
       <View style={styles.actions}>
@@ -200,6 +204,8 @@ export function PostCard({ post, detail }: { post: Post; detail?: boolean }) {
           </VText>
         </View>
       ) : null}
+      <SendSheet payload={sendPayload} onClose={() => setSendPayload(null)} />
+      <ReportSheet target={reportTarget} onClose={() => setReportTarget(null)} />
     </GlassCard>
   );
 }
