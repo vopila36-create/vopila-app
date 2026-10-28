@@ -199,6 +199,8 @@ const styles = StyleSheet.create({
   root: { flex: 1, alignItems: 'center', paddingHorizontal: Spacing.screen, backgroundColor: Colors.bg },
   center: { textAlign: 'center', marginTop: 16 },
   input: {
+    // Web'de arka plan geçişinin (mutlak konumlu) altında kalmasın
+    position: 'relative',
     marginTop: 24,
     width: 240,
     height: 58,

@@ -119,6 +119,8 @@ export function MfaGate({ children }: { children: ReactNode }) {
 const styles = StyleSheet.create({
   root: { flex: 1, alignItems: 'center', paddingHorizontal: Spacing.screen, backgroundColor: Colors.bg },
   input: {
+    // Web'de arka plan geçişinin (mutlak konumlu) altında kalmasın
+    position: 'relative',
     marginTop: 24,
     width: 220,
     height: 58,
