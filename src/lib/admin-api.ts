@@ -277,7 +277,7 @@ export async function fetchOpenReports(): Promise<ApiResult<ReportGroup[]>> {
   return ok(list);
 }
 
-export async function resolveReport(reportId: string, decision: 'remove' | 'dismiss'): Promise<ApiResult> {
+export async function resolveReport(reportId: string, decision: 'remove' | 'dismiss' | 'sensitive'): Promise<ApiResult> {
   const { error } = await supabase.rpc('admin_resolve_report', { p_report: reportId, p_decision: decision });
   if (error) return { ok: false, error: err(error) };
   return ok(undefined);

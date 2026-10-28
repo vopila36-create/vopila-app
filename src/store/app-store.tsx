@@ -1028,6 +1028,7 @@ function useBuildStore() {
             time: 'şimdi',
             media: input.media,
             caption: input.caption,
+            sensitive: input.sensitive,
             likes: 0,
             comments: [],
             arenaKey: input.arenaKey,

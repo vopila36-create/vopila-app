@@ -39,7 +39,7 @@ export function hiddenUser(id: string): User {
   };
 }
 const POST_SELECT =
-  `id, author_id, caption, location, arena_key, created_at, ` +
+  `id, author_id, caption, location, arena_key, created_at, sensitive, ` +
   `post_media(type, storage_path, poster_path, position), ` +
   `author:profiles!posts_author_id_fkey(${AUTHOR}), likes(count), comments(count)`;
 const COMMENT_SELECT = `id, text, created_at, author_id, parent_id, author:profiles!comments_author_id_fkey(${AUTHOR})`;
@@ -170,6 +170,7 @@ async function mapPostRows(rows: any[], myId: string): Promise<{ posts: Post[]; 
       comments: [],
       commentCount: countOf(r.comments),
       arenaKey: r.arena_key ?? undefined,
+      sensitive: !!r.sensitive,
       remote: true,
     };
   });
@@ -205,7 +206,15 @@ export async function uploadMedia(myId: string, m: Media, index: number) {
   return path;
 }
 
-export type NewPost = { media: Media[]; caption: string; location?: string; arenaKey?: ArenaKey; title?: string };
+export type NewPost = {
+  media: Media[];
+  caption: string;
+  location?: string;
+  arenaKey?: ArenaKey;
+  title?: string;
+  /** Hassas içerik (18 altına gösterilmez) */
+  sensitive?: boolean;
+};
 
 /**
  * Dosyaları yükler, gönderiyi ve medya satırlarını yazar; arena seçildiyse açık sezona katılır.
@@ -224,6 +233,7 @@ export async function createRemotePost(myId: string, input: NewPost): Promise<Ap
         caption: input.caption,
         location: input.location ?? '',
         arena_key: input.arenaKey ?? null,
+        sensitive: !!input.sensitive,
       })
       .select('id')
       .single();

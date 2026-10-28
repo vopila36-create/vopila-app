@@ -3,6 +3,7 @@ import {
   Archive,
   BadgeCheck,
   Bookmark,
+  EyeOff,
   Flag,
   Heart,
   Link2,
@@ -47,6 +48,8 @@ export function PostCard({ post, detail }: { post: Post; detail?: boolean }) {
   const commentCount = store.commentCount(post);
 
   const [page, setPage] = useState(0);
+  // Hassas içerik: dokunana kadar örtülü (kendi gönderin hariç)
+  const [revealed, setRevealed] = useState(false);
   const [width, setWidth] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -171,6 +174,17 @@ export function PostCard({ post, detail }: { post: Post; detail?: boolean }) {
             {post.media[0] ? <MediaView type="image" uri={post.media[0].uri} /> : null}
           </Pressable>
         )}
+        {post.sensitive && !revealed && post.authorId !== ME_ID ? (
+          <Pressable style={styles.sensitive} onPress={() => setRevealed(true)} accessibilityLabel="Hassas içeriği göster">
+            <EyeOff size={30} color="#fff" />
+            <VText variant="bodyBold" color="#fff">
+              Hassas içerik
+            </VText>
+            <VText variant="caption" color={Colors.textSecondary} style={{ textAlign: 'center' }}>
+              Bu gönderi rahatsız edici olabilir. Görmek için dokun.
+            </VText>
+          </Pressable>
+        ) : null}
         {post.media.length > 1 ? (
           <>
             <View style={styles.counter} pointerEvents="none">
@@ -253,6 +267,19 @@ function MenuItem({
 }
 
 const styles = StyleSheet.create({
+  sensitive: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 32,
+    backgroundColor: 'rgba(4,8,16,0.97)',
+  },
   head: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   authorRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   menu: {

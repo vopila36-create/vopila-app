@@ -54,7 +54,7 @@ function ReportCard({ g, onDone }: { g: ReportGroup; onDone: () => void }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
-  const decide = async (d: 'remove' | 'dismiss') => {
+  const decide = async (d: 'remove' | 'dismiss' | 'sensitive') => {
     setBusy(d);
     const r = await resolveReport(g.firstReportId, d);
     setBusy(null);
@@ -116,6 +116,9 @@ function ReportCard({ g, onDone }: { g: ReportGroup; onDone: () => void }) {
       ))}
       <View style={styles.actions}>
         <SmallButton label="İçeriği kaldır" color={Colors.live} filled onPress={() => decide('remove')} busy={busy === 'remove'} />
+        {g.targetType === 'post' ? (
+          <SmallButton label="Hassas işaretle" color={Colors.gold} onPress={() => decide('sensitive')} busy={busy === 'sensitive'} />
+        ) : null}
         <SmallButton label="Sorun yok" onPress={() => decide('dismiss')} busy={busy === 'dismiss'} />
         {g.preview?.authorId ? (
           <SmallButton label="Hesabı askıya al" color={Colors.gold} onPress={suspend} busy={busy === 'suspend'} />

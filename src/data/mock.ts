@@ -218,6 +218,8 @@ export type Post = {
   remote?: boolean;
   /** Gerçek gönderide sunucudaki yorum sayısı (yorumlar ayrıca yüklenir). */
   commentCount?: number;
+  /** Hassas içerik: yetişkinlere örtülü gösterilir, 18 altına hiç gösterilmez (sunucuda). */
+  sensitive?: boolean;
 };
 
 export const posts: Post[] = [

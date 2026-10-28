@@ -2,7 +2,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import { Camera, ImagePlus, MapPin, Trophy, Video, X } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 
 import { MediaView } from '@/components/ui/media';
 import { Chip, GlassCard, OutlineButton, PrimaryButton } from '@/components/ui/primitives';
@@ -25,6 +25,7 @@ export default function Olustur() {
   const [location, setLocation] = useState('');
   const [arenaKey, setArenaKey] = useState<ArenaKey | undefined>(initialArena);
   const [title, setTitle] = useState('');
+  const [sensitive, setSensitive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
 
@@ -88,6 +89,7 @@ export default function Olustur() {
       location: location.trim() || undefined,
       arenaKey,
       title: title.trim() || undefined,
+      sensitive,
     });
     setPublishing(false);
     if (!res.ok) {
@@ -238,6 +240,22 @@ export default function Olustur() {
           </>
         ) : null}
 
+        <View style={styles.sensitiveRow}>
+          <View style={{ flex: 1 }}>
+            <VText variant="label">Hassas içerik</VText>
+            <VText variant="caption">
+              Şiddet, kan, korkutucu ya da rahatsız edici görüntü içeriyorsa işaretle. 18 yaş altına gösterilmez, diğerlerine
+              örtülü görünür.
+            </VText>
+          </View>
+          <Switch
+            value={sensitive}
+            onValueChange={setSensitive}
+            trackColor={{ true: Colors.cyan, false: 'rgba(255,255,255,0.15)' }}
+            thumbColor="#fff"
+          />
+        </View>
+
         {error ? (
           <View style={styles.error}>
             <VText variant="label" color={Colors.live}>
@@ -262,6 +280,17 @@ export default function Olustur() {
 }
 
 const styles = StyleSheet.create({
+  sensitiveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: Spacing.lg,
+    padding: 14,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
   pad: { paddingHorizontal: Spacing.screen, paddingTop: Spacing.sm },
   picker: { alignItems: 'center', padding: 24 },
   pickerRow: { flexDirection: 'row', gap: 10, marginTop: 16, alignSelf: 'stretch' },
