@@ -8,13 +8,12 @@ import { GlassCard, OutlineButton, PrimaryButton } from '@/components/ui/primiti
 import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { productById } from '@/data/mock';
 import { formatTokens, useStore } from '@/store/app-store';
 
 export default function UrunDetay() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const product = productById(id ?? '');
   const store = useStore();
+  const product = store.productOf(id ?? '');
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
 

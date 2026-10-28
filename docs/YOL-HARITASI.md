@@ -56,9 +56,13 @@
 - [ ] SMS doğrulama (ilk oy/katılım) → Netgsm / İleti Merkezi hesabı açılınca
 - [ ] Rozet kuralları (şu an örnek rozetler)
 
-## Adım 3 — Aşama 5: Token ve Mağaza
-- [ ] Gerçek cüzdan; Adreslerim, İl → İlçe → Mahalle listesi, kurye notu
-- [ ] Siparişte adres sabitleme, KVKK onayı, SMS (ilk sipariş), kargo firması + takip no, durum bildirimleri
+## Adım 3 — Aşama 5: Token ve Mağaza (kod bitti 28 Ekim 2026)
+- [x] Gerçek cüzdan (token hareketleri sunucuda); ürünler, fiyat ve stok sunucudan
+- [x] Adreslerim (en fazla 10, bir varsayılan); İl → İlçe → Mahalle/Köy resmî listeden (81 il, 973 ilçe, 32 bin mahalle, 18 bin köy — uygulamaya gömülü, kaynak: ubeydeozdmr/turkiye-api, MIT); cadde/sokak, bina, daire ayrı; kurye notu
+- [x] Siparişte adres sabitleme (yalnızca "Hazırlanıyor"ken değişir), KVKK onayı zorunlu, kargo firması + takip no, Hazırlanıyor → Kargoda → Teslim edildi (+ Sorunlu, İptal = token ve stok iadesi), her değişiklikte bildirim
+- [ ] SMS doğrulama (ilk sipariş) → SMS sağlayıcısı açılınca
+- [ ] Teslim edilen siparişlerde adresi maskeleme süresi → muhasebeci cevabından sonra
+- [ ] Haritadan konum seçme (isteğe bağlı)
 - [ ] Muhasebeciye sorulacak: ödül vergisi, e-arşiv fatura, T.C. kimlik no gerekli mi
 
 ## Adım 4 — Aşama 6: Yönetici paneli

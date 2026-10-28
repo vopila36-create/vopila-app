@@ -8,15 +8,16 @@ import { Chip, GlassCard } from '@/components/ui/primitives';
 import { SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { products, type Product } from '@/data/mock';
+import type { Product } from '@/data/mock';
 import { formatTokens, useStore } from '@/store/app-store';
 
-const CATEGORIES = ['Tümü', ...Array.from(new Set(products.map((p) => p.category)))] as const;
 
 export default function Magaza() {
   const store = useStore();
   const [cat, setCat] = useState<string>('Tümü');
   const [added, setAdded] = useState<string | null>(null);
+  const products = store.catalog;
+  const CATEGORIES = ['Tümü', ...Array.from(new Set(products.map((p) => p.category)))];
   const list = cat === 'Tümü' ? products : products.filter((p) => p.category === cat);
   const go = (href: string) => router.push(href as Href);
 
@@ -70,7 +71,7 @@ export default function Magaza() {
           <VText variant="label" style={{ flex: 1 }}>
             Siparişlerim
           </VText>
-          <VText variant="caption">{store.state.orders.length} sipariş</VText>
+          <VText variant="caption">{store.orders.length} sipariş</VText>
         </Pressable>
       </View>
 

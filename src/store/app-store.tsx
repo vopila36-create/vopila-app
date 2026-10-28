@@ -26,7 +26,7 @@ import {
   MIN_VOTES_FOR_RANK,
   MY_LEVEL_XP,
   posts as seedPosts,
-  productById,
+  products as demoProducts,
   userById,
   type ArenaEntry,
   type ArenaKey,
@@ -35,6 +35,7 @@ import {
   type Media,
   type Moment,
   type Post,
+  type Product,
   type User,
 } from '@/data/mock';
 import {
@@ -64,6 +65,16 @@ import {
 import { fetchConversations, subscribeToInbox, type Conversation } from '@/lib/messages-api';
 import { createMoment as createRemoteMoment, fetchMoments } from '@/lib/moments-api';
 import { fetchRelationIds, setRelation } from '@/lib/settings-api';
+import {
+  fetchAddresses,
+  fetchLedger,
+  fetchOrders,
+  fetchProducts,
+  placeOrder as placeRemoteOrder,
+  type LedgerRow,
+  type RemoteOrder,
+  type SavedAddress,
+} from '@/lib/shop-api';
 import { fetchNotifications, markNotificationsRead as markRemoteNotificationsRead } from '@/lib/notifications-api';
 import { fetchMyFollowing, follow, isRealId, unfollow, type FollowStatus } from '@/lib/social-api';
 import { isSupabaseConfigured } from '@/lib/supabase';
@@ -136,6 +147,13 @@ const initialState: State = {
 
 const EMPTY_FOLLOWS: Record<string, 'pending' | 'accepted'> = {};
 const EMPTY_INBOX: Conversation[] = [];
+const EMPTY_SHOP = {
+  owner: null as string | null,
+  ledger: [] as LedgerRow[],
+  orders: [] as RemoteOrder[],
+  products: null as Product[] | null,
+  addresses: [] as SavedAddress[],
+};
 const EMPTY_ARENA = {
   owner: null as string | null,
   entries: [] as ArenaEntry[],
@@ -163,6 +181,7 @@ type Action =
   | { type: 'vote'; entryId: string; score: number }
   | { type: 'toggleJoinArena'; key: ArenaKey }
   | { type: 'setCartQty'; productId: string; qty: number }
+  | { type: 'clearCart' }
   | { type: 'placeOrder'; order: Order; ledgerItem: LedgerItem }
   | { type: 'setAddress'; address: Address }
   | { type: 'updateProfile'; profile: Partial<Profile> }
@@ -209,6 +228,8 @@ function reducer(state: State, action: Action): State {
           ? state.joinedArenas.filter((k) => k !== action.key)
           : [...state.joinedArenas, action.key],
       };
+    case 'clearCart':
+      return { ...state, cart: {} };
     case 'setCartQty': {
       const cart = { ...state.cart };
       if (action.qty <= 0) delete cart[action.productId];
@@ -263,9 +284,6 @@ const EMPTY_REMOTE = {
   comments: {} as Record<string, Comment[]>,
 };
 
-const today = () =>
-  new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' });
-
 const newId = (prefix: string) => `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 /** 12400 → "12.4K" */
@@ -306,7 +324,7 @@ function useBuildStore() {
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch(() => {});
   }, [state]);
 
-  const balance = useMemo(() => state.ledger.reduce((sum, l) => sum + l.amount, 0), [state.ledger]);
+  const localBalance = useMemo(() => state.ledger.reduce((sum, l) => sum + l.amount, 0), [state.ledger]);
 
   // ─── Gerçek gönderiler (Supabase) ─────────────────────────────────────────
   // Giriş yapılmışsa gerçek gönderiler akışın en üstünde, örnek gönderiler altında görünür.
@@ -874,15 +892,82 @@ function useBuildStore() {
     [myId, arena.joined],
   );
 
+  // ─── Mağaza ve cüzdan (gerçek) ────────────────────────────────────────────
+  const [rawShop, setShop] = useState<{
+    owner: string | null;
+    ledger: LedgerRow[];
+    orders: RemoteOrder[];
+    products: Product[] | null;
+    addresses: SavedAddress[];
+  }>(EMPTY_SHOP);
+  const shop = rawShop.owner === myId ? rawShop : EMPTY_SHOP;
+
+  const loadShop = useCallback(async (owner: string) => {
+    const [ledger, orders, products, addresses] = await Promise.all([
+      fetchLedger(owner),
+      fetchOrders(owner),
+      fetchProducts(),
+      fetchAddresses(owner),
+    ]);
+    return { owner, ledger, orders, products, addresses };
+  }, []);
+
+  const refreshShop = useCallback(async () => {
+    if (!myId) return;
+    setShop(await loadShop(myId));
+  }, [myId, loadShop]);
+
+  useEffect(() => {
+    if (!myId) return;
+    let cancelled = false;
+    loadShop(myId).then((r) => {
+      if (!cancelled) setShop(r);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [myId, loadShop]);
+
+  /** Token bakiyesi: giriş yapılmışsa sunucudaki gerçek hareketlerin toplamı. */
+  const balance = useMemo(
+    () => (myId ? shop.ledger.reduce((sum, l) => sum + l.amount, 0) : localBalance),
+    [myId, shop.ledger, localBalance],
+  );
+  const ledger = myId ? shop.ledger : state.ledger;
+
+  /** Ürün kataloğu: giriş yapılmışsa sunucudaki güncel fiyat ve stok. */
+  const catalog: Product[] = (myId && shop.products) || demoProducts;
+  const productOf = useCallback((id: string) => catalog.find((p) => p.id === id), [catalog]);
+
   const cartItems = useMemo(
     () =>
       Object.entries(state.cart)
-        .map(([productId, qty]) => ({ product: productById(productId)!, qty }))
+        .map(([productId, qty]) => ({ product: productOf(productId)!, qty }))
         .filter((x) => x.product),
-    [state.cart],
+    [state.cart, productOf],
   );
   const cartTotal = cartItems.reduce((s, x) => s + x.product.price * x.qty, 0);
   const cartCount = cartItems.reduce((s, x) => s + x.qty, 0);
+
+  /** Sipariş: kayıtlı adres + KVKK onayı; stok, bakiye ve token düşümü sunucuda tek işlemde. */
+  const placeOrder = useCallback(
+    async (addressId: string, consent: boolean): Promise<{ ok: true; orderId: string } | { ok: false; error: string }> => {
+      if (!myId) return { ok: false, error: 'Sipariş vermek için giriş yapmalısın.' };
+      if (!cartItems.length) return { ok: false, error: 'Sepetin boş.' };
+      if (cartTotal > balance)
+        return { ok: false, error: `Yetersiz bakiye. ${formatTokens(cartTotal - balance)} token daha kazanmalısın.` };
+      const res = await placeRemoteOrder(
+        cartItems.map((x) => ({ productId: x.product.id, qty: x.qty })),
+        addressId,
+        consent,
+      );
+      if (!res.ok) return res;
+      dispatch({ type: 'clearCart' });
+      await refreshShop();
+      return { ok: true, orderId: res.data };
+    },
+    [myId, cartItems, cartTotal, balance, refreshShop],
+  );
 
   const actions = useMemo(
     () => ({
@@ -937,31 +1022,11 @@ function useBuildStore() {
         return { ok: true, post };
       },
       setCartQty: (productId: string, qty: number) => {
-        const p = productById(productId);
+        const p = productOf(productId);
         if (!p) return;
         dispatch({ type: 'setCartQty', productId, qty: Math.min(qty, p.stock) });
       },
       addToCart: (productId: string) => dispatch({ type: 'setCartQty', productId, qty: (state.cart[productId] ?? 0) + 1 }),
-      /** Bakiye kontrolü → token düşümü → sipariş: tek adımda. */
-      placeOrder: (address: Address): { ok: boolean; error?: string; order?: Order } => {
-        if (!cartItems.length) return { ok: false, error: 'Sepetin boş.' };
-        if (cartTotal > balance)
-          return { ok: false, error: `Yetersiz bakiye. ${formatTokens(cartTotal - balance)} token daha kazanmalısın.` };
-        const order: Order = {
-          id: newId('SP').toUpperCase(),
-          items: cartItems.map((x) => ({ productId: x.product.id, qty: x.qty, price: x.product.price })),
-          total: cartTotal,
-          address,
-          status: 'Hazırlanıyor',
-          date: today(),
-        };
-        dispatch({
-          type: 'placeOrder',
-          order,
-          ledgerItem: { id: newId('l'), amount: -cartTotal, reason: `Mağaza siparişi #${order.id}`, date: order.date },
-        });
-        return { ok: true, order };
-      },
       setAddress: (address: Address) => dispatch({ type: 'setAddress', address }),
       updateProfile: (profile: Partial<Profile>) => dispatch({ type: 'updateProfile', profile }),
       updateSettings: (settings: Partial<Settings>) => dispatch({ type: 'updateSettings', settings }),
@@ -973,12 +1038,19 @@ function useBuildStore() {
         dispatch({ type: 'addInterest', topic, amount, seenId }),
       resetDemo: () => dispatch({ type: 'reset' }),
     }),
-    [state.profile.location, state.cart, cartItems, cartTotal, balance, myId, refreshFeed, refreshArenas],
+    [state.profile.location, state.cart, myId, refreshFeed, refreshArenas, productOf],
   );
 
   return {
     state,
     balance,
+    ledger,
+    orders: shop.orders,
+    addresses: shop.addresses,
+    catalog,
+    productOf,
+    refreshShop,
+    placeOrder,
     allPosts,
     getPost,
     loadPost,

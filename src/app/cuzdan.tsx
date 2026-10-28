@@ -9,9 +9,9 @@ import { Colors, Fonts, Spacing } from '@/constants/theme';
 import { formatTokens, useStore } from '@/store/app-store';
 
 export default function Cuzdan() {
-  const { state, balance, pendingRewards } = useStore();
-  const earned = state.ledger.filter((l) => l.amount > 0).reduce((s, l) => s + l.amount, 0);
-  const spent = Math.abs(state.ledger.filter((l) => l.amount < 0).reduce((s, l) => s + l.amount, 0));
+  const { ledger, balance, pendingRewards } = useStore();
+  const earned = ledger.filter((l) => l.amount > 0).reduce((s, l) => s + l.amount, 0);
+  const spent = Math.abs(ledger.filter((l) => l.amount < 0).reduce((s, l) => s + l.amount, 0));
 
   return (
     <SubScreen title="Cüzdanım">
@@ -81,7 +81,7 @@ export default function Cuzdan() {
         <View style={{ marginTop: Spacing.xl }}>
           <SectionHeader title="Hareketler" action={null} />
           <GlassCard style={{ paddingHorizontal: 12 }}>
-            {state.ledger.map((l, i) => {
+            {ledger.map((l, i) => {
               const plus = l.amount > 0;
               return (
                 <View key={l.id} style={[styles.row, i > 0 && styles.rowBorder]}>

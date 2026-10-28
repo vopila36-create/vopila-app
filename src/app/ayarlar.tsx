@@ -22,6 +22,7 @@ import {
   LifeBuoy,
   Lock,
   LogOut,
+  MapPin,
   MessageCircle,
   MonitorSmartphone,
   Package,
@@ -118,6 +119,7 @@ export default function Ayarlar() {
           <Row icon={<UserPen size={20} color={Colors.cyan} />} label="Profili düzenle" onPress={() => go('/profil-duzenle')} />
           <Row icon={<Coins size={20} color={Colors.gold} />} label="Token cüzdanım" onPress={() => go('/cuzdan')} />
           <Row icon={<Package size={20} color={Colors.cyanSoft} />} label="Siparişlerim" onPress={() => go('/siparisler')} />
+          <Row icon={<MapPin size={20} color={Colors.cyanSoft} />} label="Adreslerim" onPress={() => go('/adreslerim')} />
           <Row icon={<Award size={20} color={Colors.gold} />} label="Rozetlerim" onPress={() => go('/rozetler')} last />
         </Section>
 
