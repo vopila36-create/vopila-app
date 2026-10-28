@@ -24,10 +24,11 @@ import {
   PlayBadge,
   SectionHeader,
 } from '@/components/ui/primitives';
+import { HomeDiscover } from '@/components/home-discover';
 import { AppHeader, Screen } from '@/components/ui/screen';
 import { OnDark, VText } from '@/components/ui/text';
 import { Colors, Fonts, OnImage, Radius, scrim, Spacing } from '@/constants/theme';
-import { img, interests, newsById } from '@/data/mock';
+import { img, interests } from '@/data/mock';
 
 const QUICK: { title: string; sub: string; Icon: LucideIcon; color: string; href: string }[] = [
   { title: 'Akış', sub: 'Topluluklarla bağlan', Icon: Waves, color: Colors.cyan, href: '/akis' },
@@ -44,7 +45,6 @@ const INTEREST_ICONS: Record<string, LucideIcon> = {
 };
 
 export default function AnaSahne() {
-  const featured = newsById('n6');
 
   return (
     <Screen header={<AppHeader tagline />}>
@@ -147,29 +147,9 @@ export default function AnaSahne() {
         })}
       </ScrollView>
 
-      {/* Öne çıkanlar */}
-      <View style={styles.section}>
-        <SectionHeader title="Öne Çıkan Keşifler" onAction={() => router.navigate('/akis' as Href)} />
-        <Pressable style={styles.featured} onPress={() => router.push('/haber/n6' as Href)}>
-          <Image source={{ uri: featured?.image ?? img.whale }} style={StyleSheet.absoluteFill} contentFit="cover" />
-          <BottomFade />
-          <OnDark>
-          <View style={styles.badge}>
-            <VText style={styles.badgeText}>VOPILA ÖZEL</VText>
-          </View>
-          <View style={styles.featuredBody}>
-            <View style={{ flex: 1 }}>
-              <VText variant="heading">Mavi Dünyanın Sırları</VText>
-              <VText variant="caption" color={OnImage.textSecondary}>
-                Okyanusların derinliklerinde keşfedilmeyi bekleyen yaşam.
-              </VText>
-            </View>
-            <PlayBadge size={48}>
-              <Play size={20} color="#fff" fill="#fff" />
-            </PlayBadge>
-          </View>
-          </OnDark>
-        </Pressable>
+      {/* Keşif: gerçek veri (haber, gündem, etiketler, arena liderleri, öneriler) */}
+      <View style={{ marginTop: Spacing.xl }}>
+        <HomeDiscover />
       </View>
     </Screen>
   );
