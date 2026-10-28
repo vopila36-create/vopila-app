@@ -33,19 +33,16 @@ begin
     select na.id, na.source_key, na.source_url
     from public.news_articles na
     left join private.news_image_tries t on t.article_id = na.id
-    where na.auto and na.image_url is null and na.source_url is not null
+    -- Güvenlik (SSRF): yalnızca DW, adresi bizim kurduğumuz sabit kalıpla istenir
+    where na.auto and na.image_url is null and na.source_key = 'dw' and na.source_url ~ '/a-[0-9]{4,12}([/?#]|$)'
       and coalesce(t.tries, 0) < 2
       and not exists (select 1 from private.news_image_requests r where r.article_id = na.id)
     order by na.published_at desc
     limit 20
   loop
-    v_url := case
-      when a.source_key = 'dw' and a.source_url ~ '/a-[0-9]+' then
-        'https://www.dw.com/tr/' || substring(a.source_url from '(a-[0-9]+)')
-      else a.source_url
-    end;
-    -- Yalnızca düz ASCII adresler (Türkçe karakterli adresler kodlanmadan istenemez)
-    continue when v_url !~ '^https://[A-Za-z0-9./_?=&%:-]+$';
+    -- Haberin numarasından sabit DW adresi kurulur; dış kaynaktan gelen adres hiç istenmez
+    v_url := 'https://www.dw.com/tr/' || substring(a.source_url from '/(a-[0-9]{4,12})');
+    continue when v_url !~ '^https://www\.dw\.com/tr/a-[0-9]{4,12}$';
     v_id := net.http_get(
       url := v_url,
       headers := jsonb_build_object('User-Agent', 'VOPILA-Haber/1.0 (+https://vopila.app)'),
