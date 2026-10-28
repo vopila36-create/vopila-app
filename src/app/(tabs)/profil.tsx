@@ -35,7 +35,7 @@ import { Avatar, GlassCard, OutlineButton, SectionHeader } from '@/components/ui
 import { AppHeader, Screen } from '@/components/ui/screen';
 import { EmptyState } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
-import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { bgAlpha, Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { arenaByKey, badges, levelInfo, ME_ID, myFollowerIds, type ArenaKey, type Post } from '@/data/mock';
 import { formatCount, formatTokens, useMe, useStore } from '@/store/app-store';
 
@@ -94,7 +94,7 @@ export default function Profil() {
       <View style={styles.top}>
         <Image source={{ uri: me.cover }} style={styles.cover} contentFit="cover" />
         <LinearGradient
-          colors={['rgba(4,10,23,0.92)', 'rgba(4,10,23,0.45)']}
+          colors={[bgAlpha(0.92), bgAlpha(0.45)]}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
           style={StyleSheet.absoluteFill}

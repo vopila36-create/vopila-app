@@ -2,6 +2,7 @@
  * Ayarlar (Instagram düzenine göre): Hesap · Etkinliğin · Bildirimler · Gizlilik · Etkileşimler ·
  * Güvenlik · Tercihler · Destek · Yasal · Hesap işlemleri.
  */
+import { reloadAppAsync } from 'expo';
 import { router, type Href } from 'expo-router';
 import {
   Archive,
@@ -41,10 +42,10 @@ import {
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Switch, TextInput, View } from 'react-native';
 
-import { Row, Section, ToggleRow } from '@/components/settings-ui';
+import { ChoiceList, Row, Section, ToggleRow } from '@/components/settings-ui';
 import { SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
-import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { Colors, Fonts, Radius, saveThemePref, Spacing, themePref, type ThemePref } from '@/constants/theme';
 import { fetchAdminStatus, type AdminStatus } from '@/lib/admin-api';
 import { signOutEverywhere } from '@/lib/settings-api';
 import { useStore } from '@/store/app-store';
@@ -55,6 +56,15 @@ const go = (p: string) => router.push(p as Href);
 export default function Ayarlar() {
   const { state, updateSettings, resetDemo, myId } = useStore();
   const [confirmReset, setConfirmReset] = useState(false);
+  const [themeNote, setThemeNote] = useState('');
+  // Tema açılışta okunur: seçim kaydedilir ve uygulama yeniden başlatılır
+  const changeTheme = (pref: ThemePref) => {
+    if (pref === themePref) return;
+    saveThemePref(pref);
+    reloadAppAsync('Tema değişti').catch(() =>
+      setThemeNote('Yeni tema, uygulamayı kapatıp açtığında görünecek.'),
+    );
+  };
   const [confirmEverywhere, setConfirmEverywhere] = useState(false);
   const [note, setNote] = useState('');
   const auth = useAuth();
@@ -228,6 +238,24 @@ export default function Ayarlar() {
               />
             )}
           </Section>
+        ) : null}
+
+        <Section title="Tema" note="Tema değişince uygulama bir saniyeliğine yeniden açılır.">
+          <ChoiceList<ThemePref>
+            value={themePref}
+            onChange={changeTheme}
+            options={[
+              { key: 'dark', label: 'Koyu', desc: 'Lacivert zemin, turkuaz vurgular' },
+              { key: 'light', label: 'Açık', desc: 'Beyaz zemin' },
+              { key: 'pink', label: 'Pembe', desc: 'Açık pembe zemin, pembe vurgular' },
+              { key: 'system', label: 'Telefona göre', desc: 'Telefonun açık/koyu ayarını izler' },
+            ]}
+          />
+        </Section>
+        {themeNote ? (
+          <VText variant="caption" color={Colors.gold} style={{ marginTop: -8, marginBottom: 8 }}>
+            {themeNote}
+          </VText>
         ) : null}
 
         <Section title="Uygulama tercihleri">

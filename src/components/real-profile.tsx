@@ -30,7 +30,7 @@ import { ReportSheet, type ReportTarget } from '@/components/report-sheet';
 import { Avatar, GlassCard, OutlineButton, PrimaryButton } from '@/components/ui/primitives';
 import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { bgAlpha, Colors, Radius, Spacing } from '@/constants/theme';
 import type { Post } from '@/data/mock';
 import { fetchPosts } from '@/lib/posts-api';
 import { useScreenshotGuard } from '@/lib/screen-guard';
@@ -167,7 +167,7 @@ export function RealProfileScreen({ id }: { id: string }) {
 
       <View style={styles.top}>
         {profile.cover ? <Image source={{ uri: profile.cover }} style={StyleSheet.absoluteFill} contentFit="cover" /> : null}
-        <LinearGradient colors={['rgba(4,10,23,0.35)', Colors.bg]} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={[bgAlpha(0.35), Colors.bg]} style={StyleSheet.absoluteFill} />
         <View style={styles.topRow}>
           <Avatar uri={profile.avatar} size={92} ring />
           <View style={{ flex: 1 }}>

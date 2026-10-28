@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/primitives';
 import { AppHeader, Screen } from '@/components/ui/screen';
 import { VText } from '@/components/ui/text';
-import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { bgAlpha, Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { img, interests, newsById } from '@/data/mock';
 
 const QUICK: { title: string; sub: string; Icon: LucideIcon; color: string; href: string }[] = [
@@ -52,7 +52,7 @@ export default function AnaSahne() {
       <View style={styles.hero}>
         <Image source={{ uri: img.mountain2 }} style={styles.heroImage} contentFit="cover" />
         <LinearGradient
-          colors={['rgba(4,10,23,0.95)', 'rgba(4,10,23,0.55)', 'rgba(4,10,23,0.1)']}
+          colors={[bgAlpha(0.95), bgAlpha(0.55), bgAlpha(0.1)]}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
           style={StyleSheet.absoluteFill}
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     borderWidth: 1,
     borderColor: Colors.borderStrong,
-    backgroundColor: 'rgba(4,10,23,0.6)',
+    backgroundColor: bgAlpha(0.6),
   },
   badgeText: { fontFamily: Fonts.bold, fontSize: 10, letterSpacing: 1, color: Colors.text },
   featuredBody: {

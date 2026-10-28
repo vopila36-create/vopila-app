@@ -27,7 +27,7 @@ import {
 import { SearchButton } from '@/components/ui/screen';
 import { SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
-import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { bgAlpha, Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { arenaByKey, arenas, levelInfo, ME_ID, userById, type ArenaKey } from '@/data/mock';
 import { formatCount, formatTokens, useStore } from '@/store/app-store';
 
@@ -141,7 +141,7 @@ export default function ArenaMerkezi() {
           <GlassCard style={styles.arenaCard}>
             <Image source={{ uri: arena.image }} style={styles.arenaBg} contentFit="cover" />
             <LinearGradient
-              colors={['rgba(11,26,49,1)', 'rgba(11,26,49,0.2)']}
+              colors={[bgAlpha(1), bgAlpha(0.2)]}
               start={{ x: 0.35, y: 0.5 }}
               end={{ x: 1, y: 0.5 }}
               style={StyleSheet.absoluteFill}

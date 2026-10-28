@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { VText } from '@/components/ui/text';
-import { Colors, Fonts, TabBarHeight } from '@/constants/theme';
+import { bgAlpha, Colors, Fonts, TabBarHeight } from '@/constants/theme';
 
 const ICONS: Record<string, LucideIcon> = {
   index: Home,
@@ -22,7 +22,7 @@ export function VopilaTabBar({ state, descriptors, emitter, navigateToTab }: Bot
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 10) }]}>
       <LinearGradient
-        colors={['rgba(6,14,30,0.92)', 'rgba(3,8,18,0.99)']}
+        colors={[bgAlpha(0.94), bgAlpha(0.99)]}
         style={StyleSheet.absoluteFill}
       />
       <View style={styles.row}>

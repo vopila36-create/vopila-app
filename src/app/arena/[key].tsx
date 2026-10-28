@@ -19,7 +19,7 @@ import { GlassCard, OutlineButton, PrimaryButton, SectionHeader } from '@/compon
 import { SubScreen } from '@/components/ui/sub-screen';
 import { WinnersCard } from '@/components/winners-card';
 import { VText } from '@/components/ui/text';
-import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { bgAlpha, Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { arenaByKey, ME_ID, MIN_VOTES_FOR_RANK, userById } from '@/data/mock';
 import { formatCount, useStore } from '@/store/app-store';
 
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: Radius.pill,
-    backgroundColor: 'rgba(4,10,23,0.75)',
+    backgroundColor: bgAlpha(0.75),
     borderWidth: 1,
     borderColor: Colors.borderStrong,
   },

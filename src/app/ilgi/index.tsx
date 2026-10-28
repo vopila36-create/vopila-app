@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { BottomFade } from '@/components/ui/primitives';
 import { SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { bgAlpha, Colors, Radius, Spacing } from '@/constants/theme';
 import { arenaByKey, interests } from '@/data/mock';
 
 export default function IlgiAlanlari() {
@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: Radius.pill,
     borderWidth: 1,
-    backgroundColor: 'rgba(4,10,23,0.6)',
+    backgroundColor: bgAlpha(0.6),
   },
   body: { position: 'absolute', left: 14, right: 14, bottom: 14, flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
   circle: {

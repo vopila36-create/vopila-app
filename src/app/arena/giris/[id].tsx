@@ -8,7 +8,7 @@ import { StarRating } from '@/components/ui/media';
 import { Avatar, GlassCard, OutlineButton, PrimaryButton } from '@/components/ui/primitives';
 import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { bgAlpha, Colors, Radius, Spacing } from '@/constants/theme';
 import { arenaByKey, arenas, ME_ID, MIN_VOTES_FOR_RANK } from '@/data/mock';
 import { useMe, useStore } from '@/store/app-store';
 
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: Radius.pill,
-    backgroundColor: 'rgba(4,10,23,0.75)',
+    backgroundColor: bgAlpha(0.75),
     borderWidth: 1,
     borderColor: Colors.borderStrong,
   },

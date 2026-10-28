@@ -6,7 +6,7 @@ import {
   Manrope_800ExtraBold,
   useFonts,
 } from '@expo-google-fonts/manrope';
-import { DarkTheme, router, Stack, ThemeProvider, useSegments, type Href } from 'expo-router';
+import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider, useSegments, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, type ReactNode } from 'react';
@@ -14,7 +14,7 @@ import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { AgeGate } from '@/components/age-gate';
 import { MfaGate } from '@/components/mfa-gate';
-import { Colors } from '@/constants/theme';
+import { Colors, isLight } from '@/constants/theme';
 import { useUsageTracker } from '@/lib/usage';
 import { AppStoreProvider } from '@/store/app-store';
 import { AgeProvider } from '@/store/age';
@@ -23,8 +23,15 @@ import { AuthProvider, useAuth } from '@/store/auth';
 SplashScreen.preventAutoHideAsync();
 
 const theme = {
-  ...DarkTheme,
-  colors: { ...DarkTheme.colors, background: Colors.bg, primary: Colors.cyan, card: Colors.bg },
+  ...(isLight ? DefaultTheme : DarkTheme),
+  colors: {
+    ...(isLight ? DefaultTheme : DarkTheme).colors,
+    background: Colors.bg,
+    primary: Colors.cyan,
+    card: Colors.bg,
+    text: Colors.text,
+    border: Colors.border,
+  },
 };
 
 export default function RootLayout() {
@@ -43,7 +50,7 @@ export default function RootLayout() {
       <AgeProvider>
       <AppStoreProvider>
         <ThemeProvider value={theme}>
-          <StatusBar style="light" />
+          <StatusBar style={isLight ? 'dark' : 'light'} />
           <WebPhoneFrame>
             <RootStack />
           </WebPhoneFrame>

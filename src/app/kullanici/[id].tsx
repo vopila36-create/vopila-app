@@ -10,7 +10,7 @@ import { Avatar, GlassCard, OutlineButton, PrimaryButton } from '@/components/ui
 import { isRealId } from '@/lib/social-api';
 import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { bgAlpha, Colors, Radius, Spacing } from '@/constants/theme';
 import { arenaByKey, arenaEntries, earnedBadgesOf, followerIdsOf, followingIdsOf, ME_ID, privateUserIds, users } from '@/data/mock';
 import { formatCount, useStore } from '@/store/app-store';
 
@@ -48,7 +48,7 @@ export default function KullaniciProfil() {
     <SubScreen title={`@${user.username}`}>
       <View style={styles.top}>
         <Image source={{ uri: user.cover }} style={StyleSheet.absoluteFill} contentFit="cover" />
-        <LinearGradient colors={['rgba(4,10,23,0.35)', Colors.bg]} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={[bgAlpha(0.35), Colors.bg]} style={StyleSheet.absoluteFill} />
         <View style={styles.topRow}>
           <Avatar uri={user.avatar} size={92} ring />
           <View style={{ flex: 1 }}>

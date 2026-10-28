@@ -60,7 +60,8 @@
         {
           "faceIDPermission": "VOPILA, hesabına hızlı ve güvenli giriş yapabilmen için Face ID kullanmak istiyor."
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true,

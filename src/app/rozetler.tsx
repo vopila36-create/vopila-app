@@ -10,7 +10,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { GlassCard } from '@/components/ui/primitives';
 import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
-import { Colors, Spacing } from '@/constants/theme';
+import { bgAlpha, Colors, Spacing } from '@/constants/theme';
 import { badges, earnedBadgesOf, ME_ID, userById, users } from '@/data/mock';
 
 export default function Rozetler() {
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
   badge: { width: 56, height: 56, borderRadius: 16, overflow: 'hidden', borderWidth: 2 },
   lock: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(4,10,23,0.6)',
+    backgroundColor: bgAlpha(0.6),
     alignItems: 'center',
     justifyContent: 'center',
   },

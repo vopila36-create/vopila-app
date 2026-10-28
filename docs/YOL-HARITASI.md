@@ -75,7 +75,8 @@
 - [x] Hesabı sil (siparişler kimliksiz saklanır), engellenenler, verilerimi indir (KVKK), yardım ve sorun bildir, topluluk kuralları
 - [x] İki adımlı doğrulama (doğrulama uygulaması), tüm cihazlardan çıkış, ayrıntılı bildirimler, yorum/bahsetme/mesaj izinleri, kısıtla/sessize al, gizli kelimeler
 - [x] Kaydedilenler, Arşiv, Hareketlerin (beğendiklerin, yorumların), geçirdiğin süre + günlük sınır
-- [ ] E-posta değiştir (Resend bağlanınca), dil/tema/yazı boyutu, beğeni sayılarını gizle, ayarlarda arama; "Demo verilerini sıfırla" yayından önce kaldırılır
+- [x] Tema (28 Ekim 2026): Ayarlar > Tema — Koyu · Açık · Pembe · Telefona göre (seçim telefonda saklanır, uygulama yeniden açılır)
+- [ ] E-posta değiştir (Resend bağlanınca), dil/yazı boyutu, beğeni sayılarını gizle, ayarlarda arama; "Demo verilerini sıfırla" yayından önce kaldırılır
 - [ ] Destek taleplerini yanıtlama ekranı (yönetici paneli, Adım 4)
 
 ## Adım 6 — Yasal paket (yayından önce şart)

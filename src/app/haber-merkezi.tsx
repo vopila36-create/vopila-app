@@ -7,7 +7,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { BottomFade, Chip, GlassCard, PlayBadge, SectionHeader } from '@/components/ui/primitives';
 import { SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
-import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { bgAlpha, Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { newsCategories, type NewsArticle, type NewsCategory } from '@/data/mock';
 import { useStore } from '@/store/app-store';
 
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.live,
     backgroundColor: 'rgba(239,68,68,0.18)',
   },
-  catTag: { borderColor: Colors.border, backgroundColor: 'rgba(4,10,23,0.6)' },
+  catTag: { borderColor: Colors.border, backgroundColor: bgAlpha(0.6) },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.live },
   liveText: { fontFamily: Fonts.bold, fontSize: 11, color: '#fff', letterSpacing: 0.5 },
   devTag: {
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
-    backgroundColor: 'rgba(4,10,23,0.6)',
+    backgroundColor: bgAlpha(0.6),
     borderWidth: 1,
     borderColor: Colors.border,
   },
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     borderWidth: 1,
     borderColor: Colors.borderStrong,
-    backgroundColor: 'rgba(4,10,23,0.6)',
+    backgroundColor: bgAlpha(0.6),
   },
   badgeText: { fontFamily: Fonts.bold, fontSize: 10, letterSpacing: 1, color: Colors.text },
 });
