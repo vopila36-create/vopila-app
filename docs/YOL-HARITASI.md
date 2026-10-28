@@ -82,7 +82,9 @@
 - [x] 15 yaş sınırı (28 Ekim 2026): kayıtta doğum tarihi (saklanmaz, yalnızca yaş grubu); 15 altı kayıt sunucuda reddedilir; eski hesaplara bir kez sorulur; 15 altı hesap kilitlenir (itiraz + hesap silme açık), itirazı yönetici inceler (Kullanıcılar > Yaş)
 - [x] 15–18 yaş (sunucuda): hesap gizli açılır, takipçi/takip listesi yalnızca kendisine, yalnızca takip ettiği kişiler mesaj atabilir, aramada yalnızca ilişkisi olanlara çıkar; uygulamada video otomatik oynamaz, Reels 20 içerikte durur. "Görüldü" bilgisi zaten yok, reklam yok, canlı yayın henüz yok (açılınca 15–18'e kapalı olacak)
 - [ ] e-Devlet yaş belirteci (Siber Güvenlik Başkanlığı servisi) → servise başvuru/erişim gerekiyor; mevcut hesaplar 31 Mart 2027'ye kadar doğrulanmalı
-- [ ] Ebeveyn denetim araçları (zorunlu, md. 9), 15–18 içeriklerinde ekran görüntüsü koruması, zararlı içerik filtresi, uygulama dışı doğrudan tablo aramasını kapatmak
+- [x] Ebeveyn denetimi (28 Ekim 2026, md. 9): genç 8 haneli tek kullanımlık kod üretir (15 dk), ebeveyn (18+) girer; günlük süre sınırı (dolunca uygulama o gün kilitlenir), hesap gizli kalsın, yalnızca takip edilenler yorum yapsın; genç denetimi ebeveyn onayı olmadan kaldıramaz; her değişiklikte bildirim
+- [x] 18 altı profiller veri katmanında gizli (yalnızca kendisi, takip ilişkisi, ortak sohbet, ebeveyn, yönetici); gizli yazar "VOPILA kullanıcısı" görünür. 18 altı gönderi/an/profillerde ekran görüntüsü engeli (expo-screen-capture; Android tam, iOS 13+)
+- [ ] Zararlı içerik filtresi (md. 8), 18'ini dolduranın ebeveyn bağlantısının otomatik kalkması
 - [ ] Yönetmelik md. 8/6: alınan önlemleri web sitesinde yayımlamak; md. 10: yıllık itiraz istatistiği
 - [ ] KVKK metinleri, 5651 sayılı Kanun yükümlülükleri, hukukçu görüşü (token ödülleri / promosyon)
 

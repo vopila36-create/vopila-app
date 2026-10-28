@@ -49,6 +49,7 @@ import {
   fetchFeed,
   fetchMyFlags,
   fetchPosts,
+  hiddenUser,
   setLike,
   setSave,
   type NewPost,
@@ -432,7 +433,11 @@ function useBuildStore() {
   );
 
   /** Gönderi / yorum sahibinin bilgisi: gerçek kullanıcıysa sunucudan, değilse örnek veriden. */
-  const userOf = useCallback((id: string) => remote.authors[id] ?? userById(id), [remote.authors]);
+  // Gerçek kimlikli ama profili gelmeyen yazar = sunucunun gizlediği 18 yaş altı hesap
+  const userOf = useCallback(
+    (id: string) => remote.authors[id] ?? (isRealId(id) ? hiddenUser(id) : userById(id)),
+    [remote.authors],
+  );
 
   const commentsFor = useCallback(
     (post: Post) =>

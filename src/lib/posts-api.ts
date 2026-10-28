@@ -9,9 +9,35 @@ import { toTurkish } from '@/store/auth';
 
 export type ApiResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
-export type DbAuthor = { id: string; username: string; name: string; avatar_url: string | null; verified: boolean };
+export type DbAuthor = {
+  id: string;
+  username: string;
+  name: string;
+  avatar_url: string | null;
+  verified: boolean;
+  protected_media?: boolean;
+};
 
-export const AUTHOR = 'id, username, name, avatar_url, verified';
+export const AUTHOR = 'id, username, name, avatar_url, verified, protected_media';
+
+/** Profili sunucuda gizlenen yazar (18 yaş altı, ilişki yok): adı ve fotoğrafı gösterilmez. */
+export function hiddenUser(id: string): User {
+  return {
+    id,
+    name: 'VOPILA kullanıcısı',
+    username: 'vopila',
+    avatar: '',
+    verified: false,
+    bio: '',
+    location: '',
+    cover: '',
+    followers: 0,
+    following: 0,
+    discoveryPoints: 0,
+    protected: true,
+    hidden: true,
+  };
+}
 const POST_SELECT =
   `id, author_id, caption, location, arena_key, created_at, ` +
   `post_media(type, storage_path, poster_path, position), ` +
@@ -42,6 +68,7 @@ export function toUser(a: DbAuthor): User {
     followers: 0,
     following: 0,
     discoveryPoints: 0,
+    protected: !!a.protected_media,
   };
 }
 

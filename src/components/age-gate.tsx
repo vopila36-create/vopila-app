@@ -7,14 +7,15 @@
  */
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useSegments, type Href } from 'expo-router';
-import { CalendarDays, ShieldAlert } from 'lucide-react-native';
-import { useState, type ReactNode } from 'react';
+import { CalendarDays, Hourglass, ShieldAlert } from 'lucide-react-native';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Gradients, Radius, Spacing } from '@/constants/theme';
 import { checkBirthDate, declareBirthDate } from '@/lib/age-api';
+import { dayKey, todaySeconds } from '@/lib/usage';
 import { useAge } from '@/store/age';
 import { useAuth } from '@/store/auth';
 
@@ -23,18 +24,56 @@ const OPEN_ROUTES = ['destek', 'hesap-sil', 'giris', 'auth-callback'];
 
 export function AgeGate({ children }: { children: ReactNode }) {
   const { session } = useAuth();
-  const { age } = useAge();
+  const { age, parentLimit } = useAge();
   const segments = useSegments();
+  const overLimit = useOverLimit(session ? parentLimit : null);
   const first = segments[0] as string | undefined;
 
   let cover: ReactNode = null;
   if (session && age?.group === 'unknown') cover = <DeclareAge />;
   else if (session && age?.group === 'under15' && !OPEN_ROUTES.includes(first ?? '')) cover = <Under15 />;
+  else if (overLimit && parentLimit) cover = <TimeUp minutes={parentLimit} />;
 
   return (
     <View style={{ flex: 1 }}>
       {children}
       {cover ? <View style={StyleSheet.absoluteFill}>{cover}</View> : null}
+    </View>
+  );
+}
+
+/** Ebeveyn sınırı: bugün geçen süre sınırı aştı mı (yarım dakikada bir bakılır). */
+function useOverLimit(limit: number | null) {
+  const [over, setOver] = useState<{ limit: number; day: string; over: boolean } | null>(null);
+  useEffect(() => {
+    if (!limit) return;
+    let alive = true;
+    const check = () =>
+      todaySeconds().then((s) => {
+        if (alive) setOver({ limit, day: dayKey(), over: s >= limit * 60 });
+      });
+    check();
+    const t = setInterval(check, 30_000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [limit]);
+  return !!limit && !!over && over.limit === limit && over.over;
+}
+
+function TimeUp({ minutes }: { minutes: number }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={[styles.root, { paddingTop: insets.top + 40 }]}>
+      <LinearGradient colors={Gradients.screen} style={StyleSheet.absoluteFill} />
+      <Hourglass size={48} color={Colors.gold} />
+      <VText variant="title" style={styles.center}>
+        Bugünlük süren doldu
+      </VText>
+      <VText style={[styles.center, { marginTop: 8 }]}>
+        Ebeveynin VOPILA için günlük {minutes} dakika sınır koydu. Yarın tekrar görüşmek üzere!
+      </VText>
     </View>
   );
 }

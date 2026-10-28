@@ -44,6 +44,12 @@ export async function lastWeek(): Promise<{ day: string; minutes: number }[]> {
   return out;
 }
 
+/** Bugün uygulamada geçen süre (saniye). */
+export async function todaySeconds(): Promise<number> {
+  const u = await read();
+  return u.days[dayKey()] ?? 0;
+}
+
 export async function getDailyLimit(): Promise<number | null> {
   const raw = await AsyncStorage.getItem(LIMIT_KEY).catch(() => null);
   const n = raw ? Number(raw) : NaN;

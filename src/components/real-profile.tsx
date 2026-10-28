@@ -33,12 +33,15 @@ import { VText } from '@/components/ui/text';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import type { Post } from '@/data/mock';
 import { fetchPosts } from '@/lib/posts-api';
+import { useScreenshotGuard } from '@/lib/screen-guard';
 import { fetchProfile, setBlocked, type RealProfile } from '@/lib/social-api';
 import { formatCount, useStore } from '@/store/app-store';
 
 export function RealProfileScreen({ id }: { id: string }) {
   const store = useStore();
   const [profile, setProfile] = useState<RealProfile | null | undefined>(undefined);
+  // 18 yaş altı profilinde ekran görüntüsü alınamaz
+  useScreenshotGuard(!!profile?.protected);
   const [posts, setPosts] = useState<Post[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);

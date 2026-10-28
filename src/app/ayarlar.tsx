@@ -185,6 +185,7 @@ export default function Ayarlar() {
             <Row icon={<KeyRound size={20} color={Colors.cyan} />} label="Şifreyi değiştir" onPress={() => go('/yeni-sifre')} />
             <Row icon={<ShieldCheck size={20} color={Colors.success} />} label="İki adımlı doğrulama" onPress={() => go('/iki-adimli')} />
             <Row icon={<CalendarDays size={20} color={Colors.cyanSoft} />} label="Yaş doğrulama" onPress={() => go('/yas-dogrulama')} />
+            <Row icon={<Users size={20} color={Colors.cyanSoft} />} label="Ebeveyn denetimi" onPress={() => go('/ebeveyn-denetimi')} />
             {auth.biometric.available ? (
               <View style={[styles.row, { flexWrap: 'wrap' }]}>
                 <ScanFace size={20} color={Colors.cyanSoft} />

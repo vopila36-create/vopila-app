@@ -11,6 +11,7 @@ import { Avatar } from '@/components/ui/primitives';
 import { VText } from '@/components/ui/text';
 import { Colors } from '@/constants/theme';
 import { ME_ID, type Moment } from '@/data/mock';
+import { useScreenshotGuard } from '@/lib/screen-guard';
 import { deleteMoment } from '@/lib/moments-api';
 import { useMe, useStore } from '@/store/app-store';
 
@@ -54,6 +55,7 @@ export default function AnGoruntuleyici() {
   const moment = moments[momentIndex];
   const isMine = moment?.authorId === ME_ID;
   const author = isMine ? me : store.userOf(moment?.authorId ?? '');
+  useScreenshotGuard(!isMine && !!author.protected);
   const following = store.isFollowing(author.id);
   const item = moment?.media?.[itemIndex] ?? { type: 'image' as const, uri: moment?.items[itemIndex] ?? '' };
   const duration = item.type === 'video' ? VIDEO_DURATION : DURATION;

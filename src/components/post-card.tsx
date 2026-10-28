@@ -31,6 +31,7 @@ import { Avatar, GlassCard } from '@/components/ui/primitives';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius } from '@/constants/theme';
 import { arenaByKey, ME_ID, type Post } from '@/data/mock';
+import { useScreenshotGuard } from '@/lib/screen-guard';
 import { setArchived } from '@/lib/settings-api';
 import { formatCount, useMe, useStore } from '@/store/app-store';
 
@@ -39,6 +40,8 @@ export function PostCard({ post, detail }: { post: Post; detail?: boolean }) {
   const store = useStore();
   const me = useMe();
   const author = post.authorId === ME_ID ? me : store.userOf(post.authorId);
+  // 18 yaş altı birinin gönderisine bakarken ekran görüntüsü alınamaz
+  useScreenshotGuard(post.authorId !== ME_ID && !!author.protected);
   const liked = store.isLiked(post.id);
   const saved = store.isSaved(post.id);
   const commentCount = store.commentCount(post);

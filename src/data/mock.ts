@@ -61,6 +61,10 @@ export type User = {
   followers: number;
   following: number;
   discoveryPoints: number;
+  /** 18 yaş altı: görsellerinde ekran görüntüsü engellenir (Yaş Doğrulama Yönetmeliği). */
+  protected?: boolean;
+  /** Profili sana gizli (18 yaş altı, aranızda ilişki yok): adı gösterilmez. */
+  hidden?: boolean;
 };
 
 /** Giriş yapmış kullanıcının kimliği. */
@@ -652,7 +656,7 @@ export const interests: Interest[] = [
 
 export type AppNotification = {
   id: string;
-  kind: 'like' | 'comment' | 'follow' | 'arena' | 'token' | 'order' | 'mention' | 'reply' | 'support';
+  kind: 'like' | 'comment' | 'follow' | 'arena' | 'token' | 'order' | 'mention' | 'reply' | 'support' | 'parent';
   actorId?: string;
   text: string;
   time: string;

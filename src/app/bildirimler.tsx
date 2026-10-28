@@ -7,6 +7,7 @@ import {
   LifeBuoy,
   MessageCircle,
   Package,
+  ShieldCheck,
   Trophy,
   UserPlus,
   type LucideIcon,
@@ -31,6 +32,7 @@ const KIND: Record<AppNotification['kind'], { Icon: LucideIcon; color: string }>
   mention: { Icon: AtSign, color: Colors.cyan },
   reply: { Icon: CornerDownRight, color: Colors.cyan },
   support: { Icon: LifeBuoy, color: Colors.cyan },
+  parent: { Icon: ShieldCheck, color: Colors.success },
 };
 
 /** Bildirimler: gerçek bildirimler (sunucu) üstte, örnek bildirimler altta. */

@@ -80,6 +80,11 @@ export function toTurkish(err: { message?: string; code?: string } | null | unde
   // Yaş kuralları (0017_age_rules.sql)
   if (msg.includes('minor_dm_not_allowed'))
     return 'Bu kişi 18 yaşından küçük; ona yalnızca onun takip ettiği hesaplar mesaj gönderebilir.';
+  if (msg.includes('parent_locked')) return 'Bu ayar ebeveyn denetimi nedeniyle kilitli.';
+  if (msg.includes('parent_code_invalid')) return 'Kod hatalı ya da süresi dolmuş. Çocuğundan yeni kod iste.';
+  if (msg.includes('parent_must_be_adult')) return 'Ebeveyn denetimini yalnızca 18 yaşından büyükler bağlayabilir.';
+  if (msg.includes('parent_only_for_teens')) return 'Ebeveyn kodu yalnızca 15–18 yaş hesaplar için oluşturulur.';
+  if (msg.includes('parent_already_linked')) return 'Hesabın zaten bir ebeveyne bağlı.';
   if (msg.includes('under_15')) return "VOPILA'yı kullanmak için en az 15 yaşında olmalısın.";
   if (msg.includes('invalid_birth_date')) return 'Geçerli bir doğum tarihi yaz.';
   if (msg.includes('age_already_set')) return 'Yaş bilgin zaten kayıtlı. Değiştirmek için Destek üzerinden itiraz et.';
