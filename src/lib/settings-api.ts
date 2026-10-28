@@ -155,7 +155,14 @@ export const TICKET_TOPICS: { key: TicketTopic; label: string }[] = [
   { key: 'diger', label: 'Diğer' },
 ];
 
-export type Ticket = { id: string; topic: TicketTopic; message: string; status: 'open' | 'answered' | 'closed'; time: string };
+export type Ticket = {
+  id: string;
+  topic: TicketTopic;
+  message: string;
+  status: 'open' | 'answered' | 'closed';
+  time: string;
+  reply: string | null;
+};
 
 export async function sendTicket(myId: string, topic: TicketTopic, message: string): Promise<ApiResult> {
   const { error } = await supabase.from('support_tickets').insert({ user_id: myId, topic, message: message.trim() });
@@ -166,13 +173,20 @@ export async function sendTicket(myId: string, topic: TicketTopic, message: stri
 export async function fetchMyTickets(myId: string): Promise<ApiResult<Ticket[]>> {
   const { data, error } = await supabase
     .from('support_tickets')
-    .select('id, topic, message, status, created_at')
+    .select('id, topic, message, status, created_at, admin_reply')
     .eq('user_id', myId)
     .order('created_at', { ascending: false });
   if (error) return { ok: false, error: toTurkish(error) };
   return {
     ok: true,
-    data: (data ?? []).map((t) => ({ id: t.id, topic: t.topic, message: t.message, status: t.status, time: timeAgo(t.created_at) })),
+    data: (data ?? []).map((t) => ({
+      id: t.id,
+      topic: t.topic,
+      message: t.message,
+      status: t.status,
+      time: timeAgo(t.created_at),
+      reply: t.admin_reply ?? null,
+    })),
   };
 }
 

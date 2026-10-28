@@ -38,13 +38,14 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react-native';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Switch, TextInput, View } from 'react-native';
 
 import { Row, Section, ToggleRow } from '@/components/settings-ui';
 import { SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { fetchAdminStatus, type AdminStatus } from '@/lib/admin-api';
 import { signOutEverywhere } from '@/lib/settings-api';
 import { useStore } from '@/store/app-store';
 import { useAuth } from '@/store/auth';
@@ -74,6 +75,19 @@ export default function Ayarlar() {
   const [bioBusy, setBioBusy] = useState(false);
   const bioLabel = auth.biometric.label;
   const signedIn = !!auth.session;
+
+  // Yönetici hesabıysa panel satırı gösterilir
+  const [adminStatus, setAdminStatus] = useState<AdminStatus>('none');
+  useEffect(() => {
+    if (!myId) return;
+    let alive = true;
+    fetchAdminStatus().then((s) => {
+      if (alive) setAdminStatus(s);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [myId]);
 
   const toggleBiometric = async (on: boolean) => {
     setNote('');
@@ -115,6 +129,17 @@ export default function Ayarlar() {
   return (
     <SubScreen title="Ayarlar ve Etkinlik">
       <View style={styles.pad}>
+        {adminStatus !== 'none' ? (
+          <Section title="Yönetim">
+            <Row
+              icon={<ShieldCheck size={20} color={Colors.gold} />}
+              label="Yönetici Paneli"
+              value={adminStatus === 'needs_2fa' ? '2FA gerekli' : undefined}
+              onPress={() => go('/yonetim')}
+              last
+            />
+          </Section>
+        ) : null}
         <Section title="Hesap">
           <Row icon={<UserPen size={20} color={Colors.cyan} />} label="Profili düzenle" onPress={() => go('/profil-duzenle')} />
           <Row icon={<Coins size={20} color={Colors.gold} />} label="Token cüzdanım" onPress={() => go('/cuzdan')} />

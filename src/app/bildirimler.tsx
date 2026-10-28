@@ -4,6 +4,7 @@ import {
   Coins,
   CornerDownRight,
   Heart,
+  LifeBuoy,
   MessageCircle,
   Package,
   Trophy,
@@ -29,6 +30,7 @@ const KIND: Record<AppNotification['kind'], { Icon: LucideIcon; color: string }>
   order: { Icon: Package, color: Colors.success },
   mention: { Icon: AtSign, color: Colors.cyan },
   reply: { Icon: CornerDownRight, color: Colors.cyan },
+  support: { Icon: LifeBuoy, color: Colors.cyan },
 };
 
 /** Bildirimler: gerçek bildirimler (sunucu) üstte, örnek bildirimler altta. */

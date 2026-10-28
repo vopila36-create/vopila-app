@@ -139,6 +139,11 @@ export default function Destek() {
                       <VText variant="caption">
                         {TICKET_TOPICS.find((x) => x.key === t.topic)?.label} · {STATUS[t.status]} · {t.time}
                       </VText>
+                      {t.reply ? (
+                        <VText variant="caption" color={Colors.cyan} style={{ marginTop: 4 }}>
+                          VOPILA Destek: {t.reply}
+                        </VText>
+                      ) : null}
                     </View>
                   </View>
                 ))}

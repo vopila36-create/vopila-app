@@ -65,9 +65,11 @@
 - [ ] Haritadan konum seçme (isteğe bağlı)
 - [ ] Muhasebeciye sorulacak: ödül vergisi, e-arşiv fatura, T.C. kimlik no gerekli mi
 
-## Adım 4 — Aşama 6: Yönetici paneli
-- [ ] Ürün, sipariş ve kargo yönetimi; arena ve haber yönetimi
-- [ ] Şikayet kuyruğu, bekleyen ödül onayı, kullanıcı askı/ban, denetim kaydı
+## Adım 4 — Aşama 6: Yönetici paneli (kod bitti 28 Ekim 2026)
+- [x] Yalnızca yönetici + **iki adımlı doğrulama** ile açılır (sunucuda zorunlu); Ayarlar > Yönetim > Yönetici Paneli
+- [x] Özet sayılar; siparişler (durum, kargo firması, takip no, iptal = iade); ürünler (ekle/düzenle, görsel yükleme, stok, satıştan kaldır)
+- [x] Arenalar (ad, açıklama, görsel, 1./2./3. ödül); haberler (ekle/düzenle/sil)
+- [x] Şikayet kuyruğu (içerik önizleme, kaldır / sorun yok / hesabı askıya al), bekleyen ödül onayı (hile işaretleri açıklamalı), kullanıcı arama ve askı/yasak, destek talebi yanıtlama (kullanıcıya bildirim), denetim kaydı
 
 ## Adım 5 — Ayarlar paketi (Instagram karşılaştırması, kod bitti 28 Ekim 2026)
 - [x] Hesabı sil (siparişler kimliksiz saklanır), engellenenler, verilerimi indir (KVKK), yardım ve sorun bildir, topluluk kuralları
