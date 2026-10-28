@@ -32,6 +32,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Avatar, GlassCard, OutlineButton, SectionHeader } from '@/components/ui/primitives';
+import { HighlightsRow } from '@/components/highlights-row';
 import { AppHeader, Screen } from '@/components/ui/screen';
 import { EmptyState } from '@/components/ui/sub-screen';
 import { OnDark, VText } from '@/components/ui/text';
@@ -144,6 +145,9 @@ export default function Profil() {
         </View>
         </OnDark>
       </View>
+
+      {/* Öne Çıkanlar */}
+      <HighlightsRow ownerId={store.myId} own />
 
       {/* İstatistikler */}
       <View style={styles.pad}>

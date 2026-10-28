@@ -33,6 +33,7 @@ import { OnDark, VText } from '@/components/ui/text';
 import { Colors, OnImage, Radius, scrim, Spacing } from '@/constants/theme';
 import type { Post } from '@/data/mock';
 import { fetchPosts } from '@/lib/posts-api';
+import { HighlightsRow } from '@/components/highlights-row';
 import { useScreenshotGuard } from '@/lib/screen-guard';
 import { fetchProfile, setBlocked, type RealProfile } from '@/lib/social-api';
 import { formatCount, useStore } from '@/store/app-store';
@@ -217,6 +218,9 @@ export function RealProfileScreen({ id }: { id: string }) {
         ) : null}
         </OnDark>
       </View>
+
+      {/* Öne Çıkanlar (profili görebilene açık; gizli hesapta sunucu göstermez) */}
+      <HighlightsRow ownerId={id} />
 
       <View style={styles.pad}>
         <GlassCard style={styles.stats}>
