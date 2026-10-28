@@ -348,6 +348,12 @@ export type ArenaEntry = {
   /** Diğer kullanıcılardan gelen oy sayısı ve toplam puan (1-5 yıldız). */
   votes: number;
   totalScore: number;
+  /** Sunucudan gelen gerçek giriş mi (oylar ve sıralama sunucuda). */
+  remote?: boolean;
+  /** Gerçek girişin gönderisi. */
+  postId?: string;
+  /** Gerçek girişe benim verdiğim puan (sunucudan). */
+  myVote?: number;
 };
 
 export const arenaEntries: ArenaEntry[] = [

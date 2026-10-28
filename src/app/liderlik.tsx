@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Avatar, Chip, GlassCard } from '@/components/ui/primitives';
 import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
+import { WinnersCard } from '@/components/winners-card';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { arenaByKey, arenas, ME_ID, MIN_VOTES_FOR_RANK, userById, type ArenaKey } from '@/data/mock';
 import { useStore, type RankedEntry } from '@/store/app-store';
@@ -32,8 +33,11 @@ export default function Liderlik() {
 
       <View style={styles.pad}>
         <VText variant="caption">
-          {arena.name} Arenası · Sezon bitimine {arena.endsIn} · Sıralama için en az {MIN_VOTES_FOR_RANK} oy
+          {arena.name} Arenası · Ay sonuna {store.arenaMeta(key).endsIn} · Sıralama için en az {MIN_VOTES_FOR_RANK} oy
         </VText>
+        <View style={{ marginTop: Spacing.md }}>
+          <WinnersCard arenaKey={key} />
+        </View>
 
         {ranked.length ? (
           <>

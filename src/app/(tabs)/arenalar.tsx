@@ -1,8 +1,8 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, type Href } from 'expo-router';
+import { router, useFocusEffect, type Href } from 'expo-router';
 import { BadgeCheck, Info, PlusSquare, Send, SlidersHorizontal, Star, Trophy } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -26,10 +26,16 @@ const topicOf = (e: { arenaKey: ArenaKey }) => `arena:${e.arenaKey}`;
 export default function Arenalar() {
   const store = useStore();
   const insets = useSafeAreaInsets();
-  const joined = store.state.joinedArenas;
+  const joined = store.joinedArenas;
   const [filter, setFilter] = useState<ArenaKey | 'all'>('all');
 
-  const { rankedEntries } = store;
+  const { rankedEntries, refreshArenas } = store;
+  // Sekmeye her gelişte gerçek sıralama ve oylar tazelensin
+  useFocusEffect(
+    useCallback(() => {
+      refreshArenas();
+    }, [refreshArenas]),
+  );
   const allEntries = useMemo(() => joined.flatMap((k) => rankedEntries(k)), [joined, rankedEntries]);
 
   // Sıra yalnızca açılışta ve filtre değişince hesaplanır; oy verince ya da izledikçe
@@ -138,8 +144,12 @@ function EntryReel({ entry, bottom }: { entry: RankedEntry; bottom: number }) {
   const author = isMine ? me : store.userOf(entry.authorId);
   const [message, setMessage] = useState<string | null>(null);
 
-  const vote = (score: number) => {
-    const res = store.vote(entry, score);
+  const [voting, setVoting] = useState(false);
+  const vote = async (score: number) => {
+    if (voting) return;
+    setVoting(true);
+    const res = await store.vote(entry, score);
+    setVoting(false);
     if (!res.ok) {
       setMessage(res.error ?? 'Oy verilemedi.');
       return;
@@ -158,7 +168,7 @@ function EntryReel({ entry, bottom }: { entry: RankedEntry; bottom: number }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <Image source={{ uri: entry.image }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
+      <Image source={{ uri: entry.image || arena.image }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
       <LinearGradient
         colors={['rgba(0,0,0,0.55)', 'transparent', 'transparent', 'rgba(0,0,0,0.85)']}
         locations={[0, 0.22, 0.5, 1]}

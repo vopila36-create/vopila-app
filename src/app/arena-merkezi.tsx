@@ -28,7 +28,7 @@ import { SearchButton } from '@/components/ui/screen';
 import { SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { arenaByKey, arenas, levelInfo, ME_ID, MY_LEVEL_XP, userById, type ArenaKey } from '@/data/mock';
+import { arenaByKey, arenas, levelInfo, ME_ID, userById, type ArenaKey } from '@/data/mock';
 import { formatCount, formatTokens, useStore } from '@/store/app-store';
 
 /** Arena Merkezi: sıralaman, kategoriler, liderlik tablosu (Arenalar sekmesindeki kupa simgesinden açılır). */
@@ -41,7 +41,7 @@ export default function ArenaMerkezi() {
   const mine = ranked.find((e) => e.authorId === ME_ID);
   const top5 = ranked.slice(0, 5);
 
-  const { current: level, next, progress, toNext } = levelInfo(MY_LEVEL_XP);
+  const { current: level, next, progress, toNext } = levelInfo(store.myXp);
 
   const go = (href: string) => router.push(href as Href);
 
@@ -72,7 +72,7 @@ export default function ArenaMerkezi() {
 
         {/* Haftalık sıralama */}
         <GlassCard style={styles.rankCard}>
-          <VText variant="bodyBold">Bu Haftaki Sıralaman</VText>
+          <VText variant="bodyBold">Bu Ayki Sıralaman</VText>
           <View style={styles.rankRow}>
             <VText style={styles.rankBig}>{mine ? `#${mine.rank}` : '—'}</VText>
             <View>
@@ -160,7 +160,7 @@ export default function ArenaMerkezi() {
                 <View style={styles.inline}>
                   <Users size={14} color={Colors.textSecondary} />
                   <VText variant="caption" color={Colors.textSecondary} numberOfLines={1}>
-                    {formatCount(arena.members)} Üye
+                    {formatCount(store.arenaMeta(active).members)} Üye
                   </VText>
                 </View>
                 <View style={styles.inline}>

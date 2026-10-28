@@ -11,7 +11,7 @@ import { arenas } from '@/data/mock';
 import { formatCount, useStore } from '@/store/app-store';
 
 export default function ArenaListesi() {
-  const { state } = useStore();
+  const { joinedArenas, arenaMeta } = useStore();
 
   return (
     <SubScreen title="Tüm Arenalar">
@@ -21,7 +21,7 @@ export default function ArenaListesi() {
           kazanılır; mağazada ürünlere harcanır.
         </VText>
         {arenas.map((a) => {
-          const joined = state.joinedArenas.includes(a.key);
+          const joined = joinedArenas.includes(a.key);
           return (
             <Pressable key={a.key} style={styles.card} onPress={() => router.push(`/arena/${a.key}` as Href)}>
               <Image source={{ uri: a.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
@@ -44,13 +44,13 @@ export default function ArenaListesi() {
                     <View style={styles.inline}>
                       <Users size={12} color={Colors.textSecondary} />
                       <VText variant="caption" color={Colors.textSecondary}>
-                        {formatCount(a.members)}
+                        {formatCount(arenaMeta(a.key).members)}
                       </VText>
                     </View>
                     <View style={styles.inline}>
                       <Clock size={12} color={Colors.cyan} />
                       <VText variant="caption" color={Colors.textSecondary}>
-                        {a.endsIn}
+                        {arenaMeta(a.key).endsIn}
                       </VText>
                     </View>
                     <View style={styles.inline}>

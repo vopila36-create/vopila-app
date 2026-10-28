@@ -6,7 +6,8 @@ import { GlassCard, PrimaryButton, SectionHeader } from '@/components/ui/primiti
 import { SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Spacing } from '@/constants/theme';
-import { levelInfo, levels, MY_LEVEL_XP as XP } from '@/data/mock';
+import { levelInfo, levels } from '@/data/mock';
+import { useStore } from '@/store/app-store';
 
 const WAYS = [
   { Icon: Upload, text: 'Arenaya gönderi paylaş', points: '+20 puan' },
@@ -17,6 +18,7 @@ const WAYS = [
 ];
 
 export default function Seviye() {
+  const XP = useStore().myXp;
   const { current: level, next, inLevel, span } = levelInfo(XP);
   const idx = levels.indexOf(level);
 

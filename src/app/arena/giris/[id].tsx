@@ -9,16 +9,18 @@ import { Avatar, GlassCard, OutlineButton, PrimaryButton } from '@/components/ui
 import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Radius, Spacing } from '@/constants/theme';
-import { arenaByKey, arenaEntries, ME_ID, MIN_VOTES_FOR_RANK, userById } from '@/data/mock';
-import { useStore } from '@/store/app-store';
+import { arenaByKey, arenas, ME_ID, MIN_VOTES_FOR_RANK } from '@/data/mock';
+import { useMe, useStore } from '@/store/app-store';
 
 export default function EntryDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const store = useStore();
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
 
-  // Gönderinin hangi arenada olduğunu bul (benim yeni gönderilerim dahil)
-  const base = [...store.state.myEntries, ...arenaEntries].find((e) => e.id === id);
+  const me = useMe();
+  const [voting, setVoting] = useState(false);
+  // Gönderinin hangi arenada olduğunu bul (gerçek girişler, benim yerel girişlerim ve örnekler)
+  const base = arenas.flatMap((a) => store.rankedEntries(a.key)).find((e) => e.id === id);
   if (!base) {
     return (
       <SubScreen title="Gönderi">
@@ -36,8 +38,8 @@ export default function EntryDetail() {
   const ranked = store.rankedEntries(base.arenaKey);
   const idx = ranked.findIndex((e) => e.id === id);
   const entry = ranked[idx];
-  const author = userById(entry.authorId);
   const isMine = entry.authorId === ME_ID;
+  const author = isMine ? me : store.userOf(entry.authorId);
   const prev = ranked[idx - 1];
   const next = ranked[idx + 1];
   const nextUnvoted = ranked.find((e, i) => i !== idx && !e.myVote && e.authorId !== ME_ID);
@@ -47,8 +49,11 @@ export default function EntryDetail() {
     router.replace(`/arena/giris/${entryId}` as Href);
   };
 
-  const onVote = (score: number) => {
-    const res = store.vote(entry, score);
+  const onVote = async (score: number) => {
+    if (voting) return;
+    setVoting(true);
+    const res = await store.vote(entry, score);
+    setVoting(false);
     setFeedback(res.ok ? { ok: true, text: `${score} yıldız verdin. Teşekkürler!` } : { ok: false, text: res.error ?? 'Oy verilemedi.' });
   };
 
@@ -56,7 +61,7 @@ export default function EntryDetail() {
     <SubScreen title={`${arena.name} Arenası`}>
       <View style={styles.pad}>
         <View style={styles.imageWrap}>
-          <Image source={{ uri: entry.image }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+          <Image source={{ uri: entry.image || arena.image }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
           <View style={styles.rank}>
             {entry.rank <= 3 ? <Crown size={14} color={Colors.gold} fill={Colors.gold} /> : null}
             <VText variant="label">#{entry.rank}</VText>
@@ -67,7 +72,7 @@ export default function EntryDetail() {
           {entry.title}
         </VText>
 
-        <Pressable style={styles.author} onPress={() => router.push(`/kullanici/${author.id}` as Href)}>
+        <Pressable style={styles.author} onPress={() => router.push((isMine ? "/profil" : `/kullanici/${author.id}`) as Href)}>
           <Avatar uri={author.avatar} size={36} />
           <View style={{ flex: 1 }}>
             <VText variant="bodyBold">{isMine ? 'Sen' : author.name}</VText>

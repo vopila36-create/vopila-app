@@ -36,7 +36,7 @@ import { AppHeader, Screen } from '@/components/ui/screen';
 import { EmptyState } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { arenaByKey, badges, levelInfo, ME_ID, MY_LEVEL_XP, myFollowerIds, type ArenaKey, type Post } from '@/data/mock';
+import { arenaByKey, badges, levelInfo, ME_ID, myFollowerIds, type ArenaKey, type Post } from '@/data/mock';
 import { formatCount, formatTokens, useMe, useStore } from '@/store/app-store';
 
 const TABS = [
@@ -58,7 +58,7 @@ export default function Profil() {
   const myPosts = useMemo(() => store.allPosts.filter((p) => p.authorId === ME_ID), [store.allPosts]);
   const totalLikes = myPosts.reduce((s, p) => s + store.likeCount(p), 0) + 600;
   const savedPosts = store.savedPostList;
-  const lvl = levelInfo(MY_LEVEL_XP);
+  const lvl = levelInfo(store.myXp);
   const current = lvl.current;
   const levelPct = `${Math.round(lvl.progress * 100)}%` as const;
   const impact = period === 30 ? { views: 48200, eng: 3600, growth: '+%72' } : { views: 11900, eng: 940, growth: '+%18' };
@@ -183,9 +183,9 @@ export default function Profil() {
       <View style={[styles.pad, { marginTop: Spacing.xl }]}>
         <SectionHeader title="Arenalarım" action="Tüm Arenalarım" onAction={() => go('/arena-listesi')} />
       </View>
-      {store.state.joinedArenas.length ? (
+      {store.joinedArenas.length ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hList}>
-          {store.state.joinedArenas.map((key) => {
+          {store.joinedArenas.map((key) => {
             const a = arenaByKey(key);
             return (
               <Pressable key={key} style={styles.myArena} onPress={() => go(`/arena/${key}`)}>

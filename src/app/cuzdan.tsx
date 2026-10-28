@@ -1,5 +1,5 @@
 import { router, type Href } from 'expo-router';
-import { ArrowDownLeft, ArrowUpRight, Coins, ShoppingBag, Trophy } from 'lucide-react-native';
+import { ArrowDownLeft, ArrowUpRight, Coins, ShieldCheck, ShoppingBag, Trophy } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
 import { GlassCard, OutlineButton, PrimaryButton, SectionHeader } from '@/components/ui/primitives';
@@ -9,13 +9,26 @@ import { Colors, Fonts, Spacing } from '@/constants/theme';
 import { formatTokens, useStore } from '@/store/app-store';
 
 export default function Cuzdan() {
-  const { state, balance } = useStore();
+  const { state, balance, pendingRewards } = useStore();
   const earned = state.ledger.filter((l) => l.amount > 0).reduce((s, l) => s + l.amount, 0);
   const spent = Math.abs(state.ledger.filter((l) => l.amount < 0).reduce((s, l) => s + l.amount, 0));
 
   return (
     <SubScreen title="Cüzdanım">
       <View style={styles.pad}>
+        {pendingRewards.length ? (
+          <GlassCard style={styles.pending}>
+            <ShieldCheck size={22} color={Colors.gold} />
+            <View style={{ flex: 1 }}>
+              <VText variant="bodyBold" color={Colors.text}>
+                {pendingRewards.reduce((s, r) => s + r.amount, 0)} token ödülün inceleniyor
+              </VText>
+              <VText variant="caption">
+                {pendingRewards.map((r) => r.reason).join(' · ')} — Kısa bir güvenlik incelemesinden sonra hesabına geçecek.
+              </VText>
+            </View>
+          </GlassCard>
+        ) : null}
         <GlassCard style={styles.hero} highlighted>
           <View style={styles.coin}>
             <Coins size={34} color={Colors.gold} />
@@ -100,6 +113,7 @@ export default function Cuzdan() {
 }
 
 const styles = StyleSheet.create({
+  pending: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, marginBottom: Spacing.md, borderColor: 'rgba(245,182,66,0.5)' },
   pad: { paddingHorizontal: Spacing.screen },
   hero: { alignItems: 'center', paddingVertical: 22, paddingHorizontal: 16 },
   coin: {

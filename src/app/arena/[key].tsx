@@ -17,6 +17,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { GlassCard, OutlineButton, PrimaryButton, SectionHeader } from '@/components/ui/primitives';
 import { SubScreen } from '@/components/ui/sub-screen';
+import { WinnersCard } from '@/components/winners-card';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { arenaByKey, ME_ID, MIN_VOTES_FOR_RANK, userById } from '@/data/mock';
@@ -28,7 +29,7 @@ export default function ArenaDetail() {
   const { key } = useLocalSearchParams<{ key: string }>();
   const arena = arenaByKey(key ?? '');
   const store = useStore();
-  const joined = store.state.joinedArenas.includes(arena.key);
+  const joined = store.joinedArenas.includes(arena.key);
   const entries = store.rankedEntries(arena.key);
   const go = (href: string) => router.push(href as Href);
 
@@ -51,13 +52,13 @@ export default function ArenaDetail() {
             <View style={styles.row}>
               <Users size={14} color={Colors.textSecondary} />
               <VText variant="caption" color={Colors.textSecondary}>
-                {formatCount(arena.members + (joined ? 1 : 0))} Üye
+                {formatCount(store.arenaMeta(arena.key).members)} Üye
               </VText>
             </View>
             <View style={styles.row}>
               <Clock size={14} color={Colors.cyan} />
               <VText variant="caption" color={Colors.textSecondary}>
-                Sezon bitimine: {arena.endsIn}
+                Ay sonuna (gece 12): {store.arenaMeta(arena.key).endsIn}
               </VText>
             </View>
           </View>
@@ -91,9 +92,14 @@ export default function ArenaDetail() {
           {arena.description}
         </VText>
 
+        {/* Geçen ayın kazananları */}
+        <View style={{ marginTop: Spacing.lg }}>
+          <WinnersCard arenaKey={arena.key} />
+        </View>
+
         {/* Ödüller */}
         <GlassCard style={styles.card}>
-          <SectionHeader title="Sezon Ödülleri" action={null} icon={<Trophy size={18} color={Colors.gold} />} />
+          <SectionHeader title="Bu Ayın Ödülleri" action={null} icon={<Trophy size={18} color={Colors.gold} />} />
           <View style={{ flexDirection: 'row', gap: 8 }}>
             {arena.prizes.map((p, i) => (
               <View key={i} style={[styles.prize, { borderColor: PRIZE_COLORS[i] }]}>
@@ -116,7 +122,9 @@ export default function ArenaDetail() {
             'Kendi gönderine oy veremezsin.',
             'Her gönderiye yalnızca bir kez 1-5 yıldız verebilirsin.',
             `Sıralamaya girmek için en az ${MIN_VOTES_FOR_RANK} oy gerekir.`,
-            'Sezon bitince ilk 3 otomatik belirlenir ve token ödülleri cüzdana yüklenir.',
+            'Her sezon ayın 1’inde başlar, ayın son günü gece 12’de biter; ertesi ayın sezonu hemen açılır.',
+            'Sezon bitince ilk 3 otomatik belirlenir, kazananlar ve ödülleri burada yayınlanır, tokenler cüzdana yüklenir.',
+            'Hile önlemi: oy verebilmek için hesabın en az 3 günlük olmalı; şüpheli oylar incelenir.',
           ].map((r) => (
             <View key={r} style={styles.rule}>
               <View style={styles.bullet} />

@@ -49,9 +49,12 @@
 - [ ] Telefon bildirimleri (push) → mağaza derlemesi aşamasında (Expo Go'da sınırlı)
 - [ ] İlgi algoritmasını sunucuya taşımak (şu an telefonda), Akış'a da uygulamak
 
-## Adım 2 — Aşama 4: Arenalar
-- [ ] Gerçek oylama, sezonların otomatik kapanması, liderlik tablosu, seviye/rozet
-- [ ] SMS doğrulama (ilk oy/katılım), Türkçe hata mesajları, "ödülün inceleniyor" gösterimi
+## Adım 2 — Aşama 4: Arenalar (kod bitti 28 Ekim 2026)
+- [x] Gerçek oylama, arena üyeliği, gerçek sıralama/liderlik, seviye puanı (oy, katılım, ödül) ve keşif puanı
+- [x] **Aylık sezon:** her ay 1'inde başlar, ayın son günü gece 12'de (Türkiye saati) biter; ilk 3 + ödülleri herkese açık "Kazananlar" listesinde, üyelere bildirim, yeni ay otomatik açılır (her 15 dk kontrol)
+- [x] Türkçe hata mesajları, "ödülün inceleniyor" (Cüzdan + Kazananlar)
+- [ ] SMS doğrulama (ilk oy/katılım) → Netgsm / İleti Merkezi hesabı açılınca
+- [ ] Rozet kuralları (şu an örnek rozetler)
 
 ## Adım 3 — Aşama 5: Token ve Mağaza
 - [ ] Gerçek cüzdan; Adreslerim, İl → İlçe → Mahalle listesi, kurye notu

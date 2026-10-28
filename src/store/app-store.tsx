@@ -17,12 +17,14 @@ import {
 } from 'react';
 
 import {
+  arenaByKey,
   arenaEntries as seedEntries,
   initialLedger,
   moments as demoMoments,
   notifications as demoNotifications,
   ME_ID,
   MIN_VOTES_FOR_RANK,
+  MY_LEVEL_XP,
   posts as seedPosts,
   productById,
   userById,
@@ -46,6 +48,19 @@ import {
   setSave,
   type NewPost,
 } from '@/lib/posts-api';
+import {
+  fetchArenaEntries,
+  fetchArenaStats,
+  fetchLatestWinners,
+  fetchMyArenas,
+  fetchMyPendingRewards,
+  setArenaMember,
+  timeLeft,
+  voteEntry,
+  type ArenaStat,
+  type PendingReward,
+  type SeasonResult,
+} from '@/lib/arena-api';
 import { fetchConversations, subscribeToInbox, type Conversation } from '@/lib/messages-api';
 import { createMoment as createRemoteMoment, fetchMoments } from '@/lib/moments-api';
 import { fetchRelationIds, setRelation } from '@/lib/settings-api';
@@ -121,6 +136,14 @@ const initialState: State = {
 
 const EMPTY_FOLLOWS: Record<string, 'pending' | 'accepted'> = {};
 const EMPTY_INBOX: Conversation[] = [];
+const EMPTY_ARENA = {
+  owner: null as string | null,
+  entries: [] as ArenaEntry[],
+  stats: {} as Record<string, ArenaStat>,
+  joined: [] as ArenaKey[],
+  pending: [] as PendingReward[],
+  winners: {} as Record<string, SeasonResult>,
+};
 const EMPTY_NOTIFS: AppNotification[] = [];
 const EMPTY_MOMENTS: Moment[] = [];
 const EMPTY_REL = { owner: null as string | null, muted: [] as string[], restricted: [] as string[] };
@@ -288,7 +311,7 @@ function useBuildStore() {
   // ─── Gerçek gönderiler (Supabase) ─────────────────────────────────────────
   // Giriş yapılmışsa gerçek gönderiler akışın en üstünde, örnek gönderiler altında görünür.
   // Yalnızca doğrulanmış kullanıcı (iki adımlı kod gerekiyorsa girilene kadar null)
-  const { userId: verifiedUserId } = useAuth();
+  const { userId: verifiedUserId, profile: authProfile } = useAuth();
   const myId = isSupabaseConfigured ? verifiedUserId : null;
   type RemoteState = {
     /** Bu verinin ait olduğu kullanıcı: hesap değişince eski kişinin verisi gösterilmez. */
@@ -716,14 +739,90 @@ function useBuildStore() {
     [state.following, followMap],
   );
 
-  /** Bir arenadaki gönderiler; benim oyum dahil edilerek sıralanmış. */
+  // ─── Arenalar (gerçek) ────────────────────────────────────────────────────
+  const [rawArena, setArena] = useState<{
+    owner: string | null;
+    entries: ArenaEntry[];
+    stats: Record<string, ArenaStat>;
+    joined: ArenaKey[];
+    pending: PendingReward[];
+    winners: Record<string, SeasonResult>;
+  }>(EMPTY_ARENA);
+  const arena = rawArena.owner === myId ? rawArena : EMPTY_ARENA;
+
+  const loadArenas = useCallback(async (owner: string) => {
+    const stats = await fetchArenaStats();
+    const statMap = stats.ok ? stats.data : {};
+    const seasonIds = Object.values(statMap)
+      .map((s) => s.seasonId)
+      .filter((x): x is string => !!x);
+    const [entries, joined, pending, winners] = await Promise.all([
+      fetchArenaEntries(owner, seasonIds),
+      fetchMyArenas(owner),
+      fetchMyPendingRewards(owner),
+      fetchLatestWinners(),
+    ]);
+    return { statMap, entries, joined, pending, winners };
+  }, []);
+
+  const applyArenas = useCallback((owner: string, r: Awaited<ReturnType<typeof loadArenas>>) => {
+    setArena({
+      owner,
+      stats: r.statMap,
+      entries: r.entries.ok ? r.entries.data.entries : [],
+      joined: r.joined,
+      pending: r.pending,
+      winners: r.winners,
+    });
+    if (r.entries.ok) {
+      const authors = r.entries.data.authors;
+      setRemote((x) => (x.owner === owner ? { ...x, authors: addAuthors(authors)(x.authors) } : x));
+    }
+  }, []);
+
+  const refreshArenas = useCallback(async () => {
+    if (!myId) return;
+    applyArenas(myId, await loadArenas(myId));
+  }, [myId, loadArenas, applyArenas]);
+
+  useEffect(() => {
+    if (!myId) return;
+    let cancelled = false;
+    loadArenas(myId).then((r) => {
+      if (!cancelled) applyArenas(myId, r);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [myId, loadArenas, applyArenas]);
+
+  /** Takip ettiğim arenalar: giriş yapılmışsa sunucuda (arena_members), değilse telefonda. */
+  const joinedArenas = myId ? arena.joined : state.joinedArenas;
+
+  /** Arenanın üye sayısı ve sezon bitişine kalan süre (örnek sayılar yayından önce kaldırılır). */
+  const arenaMeta = useCallback(
+    (key: ArenaKey) => {
+      const base = arenaByKey(key);
+      const st = arena.stats[key];
+      return {
+        members: base.members + (st?.members ?? 0),
+        endsIn: st?.endsAt ? timeLeft(st.endsAt) : base.endsIn,
+      };
+    },
+    [arena.stats],
+  );
+
+  /** Bir arenadaki gönderiler; gerçekler + örnekler birlikte, oylar dahil sıralanmış. */
   const rankedEntries = useCallback(
     (arenaKey: ArenaKey): RankedEntry[] => {
-      const list = [...state.myEntries, ...seedEntries].filter((e) => e.arenaKey === arenaKey);
-      const scored = list.map((e) => {
-        const myVote = state.votes[e.id];
-        const votes = e.votes + (myVote ? 1 : 0);
-        const total = e.totalScore + (myVote ?? 0);
+      const real = arena.entries.filter((e) => e.arenaKey === arenaKey);
+      const local = myId ? [] : state.myEntries.filter((e) => e.arenaKey === arenaKey);
+      const demo = seedEntries.filter((e) => e.arenaKey === arenaKey);
+      const scored = [...real, ...local, ...demo].map((e) => {
+        // Gerçek girişlerde oy sayısı sunucudan (benim oyum dahil) gelir
+        const myVote = e.remote ? e.myVote : state.votes[e.id];
+        const votes = e.remote ? e.votes : e.votes + (myVote ? 1 : 0);
+        const total = e.remote ? e.totalScore : e.totalScore + (myVote ?? 0);
         const average = votes ? total / votes : 0;
         return { ...e, votes, totalScore: total, average, myVote, qualified: votes >= MIN_VOTES_FOR_RANK, rank: 0 };
       });
@@ -731,7 +830,48 @@ function useBuildStore() {
       scored.sort((a, b) => Number(b.qualified) - Number(a.qualified) || b.average - a.average || b.votes - a.votes);
       return scored.map((e, i) => ({ ...e, rank: i + 1 }));
     },
-    [state.myEntries, state.votes],
+    [arena.entries, myId, state.myEntries, state.votes],
+  );
+
+  /** Oy ver: gerçek girişte sunucu kuralları (kendi gönderin, tek oy, 3 günlük hesap, açık sezon). */
+  const vote = useCallback(
+    async (entry: ArenaEntry, score: number): Promise<{ ok: boolean; error?: string }> => {
+      if (entry.authorId === ME_ID) return { ok: false, error: 'Kendi gönderine oy veremezsin.' };
+      if (score < 1 || score > 5) return { ok: false, error: 'Puan 1 ile 5 arasında olmalı.' };
+      if (!entry.remote) {
+        if (state.votes[entry.id]) return { ok: false, error: 'Bu gönderiye zaten oy verdin.' };
+        dispatch({ type: 'vote', entryId: entry.id, score });
+        return { ok: true };
+      }
+      if (entry.myVote) return { ok: false, error: 'Bu gönderiye zaten oy verdin.' };
+      const res = await voteEntry(entry.id, score);
+      if (!res.ok) return { ok: false, error: res.error };
+      setArena((a) => ({
+        ...a,
+        entries: a.entries.map((e) =>
+          e.id === entry.id ? { ...e, votes: e.votes + 1, totalScore: e.totalScore + score, myVote: score } : e,
+        ),
+      }));
+      return { ok: true };
+    },
+    [state.votes],
+  );
+
+  /** Arenayı takip et / bırak (Arenalar sekmesinde yalnızca takip edilenler görünür). */
+  const toggleJoinArena = useCallback(
+    async (key: ArenaKey) => {
+      if (!myId) {
+        dispatch({ type: 'toggleJoinArena', key });
+        return;
+      }
+      const on = !arena.joined.includes(key);
+      const flip = (v: boolean) =>
+        setArena((a) => ({ ...a, joined: v ? [...a.joined, key] : a.joined.filter((k) => k !== key) }));
+      flip(on);
+      const res = await setArenaMember(myId, key, on);
+      if (!res.ok) flip(!on);
+    },
+    [myId, arena.joined],
   );
 
   const cartItems = useMemo(
@@ -754,22 +894,7 @@ function useBuildStore() {
         if (myId) {
           const res = await createRemotePost(myId, input);
           if (!res.ok) return res;
-          // Arena ekranı 4. aşamaya kadar yerel listeyi gösterdiği için girişi oraya da ekle
-          if (input.arenaKey) {
-            const cover = input.media[0];
-            dispatch({
-              type: 'addEntry',
-              entry: {
-                id: newId('e'),
-                arenaKey: input.arenaKey,
-                authorId: ME_ID,
-                image: cover.type === 'video' ? cover.poster ?? cover.uri : cover.uri,
-                title: input.title || input.caption.slice(0, 30) || 'Yeni gönderi',
-                votes: 0,
-                totalScore: 0,
-              },
-            });
-          }
+          if (input.arenaKey) refreshArenas();
           await refreshFeed();
           const post: Post = {
             id: res.data.id,
@@ -811,15 +936,6 @@ function useBuildStore() {
         dispatch({ type: 'addPost', post, entry });
         return { ok: true, post };
       },
-      /** Oy verme kuralları: kendi gönderine oy yok, her gönderiye tek oy, 1-5 arası. */
-      vote: (entry: ArenaEntry, score: number): { ok: boolean; error?: string } => {
-        if (entry.authorId === ME_ID) return { ok: false, error: 'Kendi gönderine oy veremezsin.' };
-        if (state.votes[entry.id]) return { ok: false, error: 'Bu gönderiye zaten oy verdin.' };
-        if (score < 1 || score > 5) return { ok: false, error: 'Puan 1 ile 5 arasında olmalı.' };
-        dispatch({ type: 'vote', entryId: entry.id, score });
-        return { ok: true };
-      },
-      toggleJoinArena: (key: ArenaKey) => dispatch({ type: 'toggleJoinArena', key }),
       setCartQty: (productId: string, qty: number) => {
         const p = productById(productId);
         if (!p) return;
@@ -857,7 +973,7 @@ function useBuildStore() {
         dispatch({ type: 'addInterest', topic, amount, seenId }),
       resetDemo: () => dispatch({ type: 'reset' }),
     }),
-    [state.profile.location, state.votes, state.cart, cartItems, cartTotal, balance, myId, refreshFeed],
+    [state.profile.location, state.cart, cartItems, cartTotal, balance, myId, refreshFeed, refreshArenas],
   );
 
   return {
@@ -871,6 +987,16 @@ function useBuildStore() {
     commentCount,
     likeCount,
     rankedEntries,
+    vote,
+    toggleJoinArena,
+    joinedArenas,
+    arenaMeta,
+    refreshArenas,
+    pendingRewards: arena.pending,
+    /** Her arenanın geçen ay kazananları */
+    latestWinners: arena.winners,
+    /** Arena seviye puanı: giriş yapılmışsa sunucudaki gerçek puan */
+    myXp: authProfile?.level_xp ?? MY_LEVEL_XP,
     cartItems,
     cartTotal,
     cartCount,
@@ -931,5 +1057,6 @@ export function useMe() {
     location: profile.location,
     avatar: profile.avatar_url ?? '',
     verified: profile.verified,
+    discoveryPoints: profile.discovery_points,
   };
 }
