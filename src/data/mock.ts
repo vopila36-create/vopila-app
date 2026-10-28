@@ -220,6 +220,8 @@ export type Post = {
   commentCount?: number;
   /** Hassas içerik: yetişkinlere örtülü gösterilir, 18 altına hiç gösterilmez (sunucuda). */
   sensitive?: boolean;
+  /** Paylaşan "yapay zekâ ile üretildi" olarak işaretledi */
+  aiGenerated?: boolean;
 };
 
 export const posts: Post[] = [

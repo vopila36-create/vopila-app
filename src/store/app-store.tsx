@@ -1068,6 +1068,7 @@ function useBuildStore() {
             media: input.media,
             caption: input.caption,
             sensitive: input.sensitive,
+            aiGenerated: input.aiGenerated,
             likes: 0,
             comments: [],
             arenaKey: input.arenaKey,

@@ -39,7 +39,7 @@ export function hiddenUser(id: string): User {
   };
 }
 const POST_SELECT =
-  `id, author_id, caption, location, arena_key, created_at, sensitive, ` +
+  `id, author_id, caption, location, arena_key, created_at, sensitive, ai_generated, ` +
   `post_media(type, storage_path, poster_path, position), ` +
   `author:profiles!posts_author_id_fkey(${AUTHOR}), likes(count), comments(count)`;
 const COMMENT_SELECT = `id, text, created_at, author_id, parent_id, author:profiles!comments_author_id_fkey(${AUTHOR})`;
@@ -171,6 +171,7 @@ async function mapPostRows(rows: any[], myId: string): Promise<{ posts: Post[]; 
       commentCount: countOf(r.comments),
       arenaKey: r.arena_key ?? undefined,
       sensitive: !!r.sensitive,
+      aiGenerated: !!r.ai_generated,
       remote: true,
     };
   });
@@ -214,6 +215,8 @@ export type NewPost = {
   title?: string;
   /** Hassas içerik (18 altına gösterilmez) */
   sensitive?: boolean;
+  /** Yapay zekâ ile üretildi */
+  aiGenerated?: boolean;
 };
 
 /**
@@ -234,6 +237,7 @@ export async function createRemotePost(myId: string, input: NewPost): Promise<Ap
         location: input.location ?? '',
         arena_key: input.arenaKey ?? null,
         sensitive: !!input.sensitive,
+        ai_generated: !!input.aiGenerated,
       })
       .select('id')
       .single();

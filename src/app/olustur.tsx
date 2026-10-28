@@ -1,7 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import { Camera, ImagePlus, MapPin, Trophy, Video, X } from 'lucide-react-native';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 
 import { MediaView } from '@/components/ui/media';
@@ -10,13 +10,14 @@ import { SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { arenas, type ArenaKey, type Media } from '@/data/mock';
+import { deleteDraft, getDraft, listDrafts, saveDraft } from '@/lib/drafts';
 import { useStore } from '@/store/app-store';
 import { takePendingMedia } from '@/store/capture-bridge';
 
 const MAX_MEDIA = 5;
 
 export default function Olustur() {
-  const params = useLocalSearchParams<{ arena?: string }>();
+  const params = useLocalSearchParams<{ arena?: string; draft?: string }>();
   const store = useStore();
   const initialArena = arenas.find((a) => a.key === params.arena)?.key;
 
@@ -26,6 +27,59 @@ export default function Olustur() {
   const [arenaKey, setArenaKey] = useState<ArenaKey | undefined>(initialArena);
   const [title, setTitle] = useState('');
   const [sensitive, setSensitive] = useState(false);
+  const [aiGenerated, setAiGenerated] = useState(false);
+  // Taslak: açık taslağın kimliği ve kayıtlı taslak sayısı
+  const [draftId, setDraftId] = useState<string | undefined>(params.draft);
+  const [draftCount, setDraftCount] = useState(0);
+  const [draftNote, setDraftNote] = useState<string | null>(null);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const uid = store.myId;
+
+  // Taslaktan açıldıysa içeriği yükle
+  useEffect(() => {
+    if (!params.draft) return;
+    let alive = true;
+    getDraft(uid, params.draft).then((d) => {
+      if (!alive || !d) return;
+      setMedia(d.media);
+      setCaption(d.caption);
+      setLocation(d.location);
+      setArenaKey(d.arenaKey);
+      setTitle(d.title);
+      setSensitive(d.sensitive);
+      setAiGenerated(d.aiGenerated);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [params.draft, uid]);
+
+  // Kayıtlı taslak sayısı (kısayol için)
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+      listDrafts(uid).then((l) => {
+        if (alive) setDraftCount(l.length);
+      });
+      return () => {
+        alive = false;
+      };
+    }, [uid]),
+  );
+
+  const saveAsDraft = async () => {
+    if (savingDraft) return;
+    if (!media.length && !caption.trim()) {
+      setError('Taslak için en az bir fotoğraf seç ya da açıklama yaz.');
+      return;
+    }
+    setSavingDraft(true);
+    const id = await saveDraft(uid, { id: draftId, media, caption, location, arenaKey, title, sensitive, aiGenerated });
+    setSavingDraft(false);
+    setDraftId(id);
+    setError(null);
+    setDraftNote('Taslak kaydedildi. Ayarlar > Taslaklar’dan istediğin zaman devam edebilirsin.');
+  };
   const [error, setError] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
 
@@ -90,12 +144,15 @@ export default function Olustur() {
       arenaKey,
       title: title.trim() || undefined,
       sensitive,
+      aiGenerated,
     });
     setPublishing(false);
     if (!res.ok) {
       setError(res.error);
       return;
     }
+    // Paylaşılan taslak silinir
+    if (draftId) await deleteDraft(uid, draftId);
     router.replace((arenaKey ? `/arena/${arenaKey}` : `/gonderi/${res.post.id}`) as Href);
   };
 
@@ -256,6 +313,22 @@ export default function Olustur() {
           />
         </View>
 
+        <View style={styles.sensitiveRow}>
+          <View style={{ flex: 1 }}>
+            <VText variant="label">Yapay zekâ ile üretildi</VText>
+            <VText variant="caption">
+              Görsel ya da video yapay zekâ ile oluşturulduysa veya büyük ölçüde değiştirildiyse işaretle. Gönderide
+              etiket olarak görünür (Kullanım Koşulları).
+            </VText>
+          </View>
+          <Switch
+            value={aiGenerated}
+            onValueChange={setAiGenerated}
+            trackColor={{ true: Colors.cyan, false: 'rgba(255,255,255,0.15)' }}
+            thumbColor="#fff"
+          />
+        </View>
+
         {error ? (
           <View style={styles.error}>
             <VText variant="label" color={Colors.live}>
@@ -269,6 +342,23 @@ export default function Olustur() {
           onPress={publish}
           style={{ marginTop: Spacing.xl, opacity: publishing ? 0.6 : 1 }}
         />
+        <OutlineButton
+          label={savingDraft ? 'Kaydediliyor…' : draftId ? 'Taslağı güncelle' : 'Taslağa kaydet'}
+          onPress={saveAsDraft}
+          style={{ marginTop: 10 }}
+        />
+        {draftNote ? (
+          <VText variant="caption" color={Colors.success} style={{ textAlign: 'center', marginTop: 8 }}>
+            {draftNote}
+          </VText>
+        ) : null}
+        {draftCount && !params.draft ? (
+          <Pressable onPress={() => router.push('/taslaklar' as Href)} style={{ alignSelf: 'center', marginTop: 12 }}>
+            <VText variant="label" color={Colors.cyan}>
+              Taslaklar ({draftCount})
+            </VText>
+          </Pressable>
+        ) : null}
         {publishing ? (
           <VText variant="caption" style={{ textAlign: 'center', marginTop: 8 }}>
             Fotoğraf ve videolar yükleniyor, bu birkaç saniye sürebilir.

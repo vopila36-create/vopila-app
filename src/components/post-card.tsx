@@ -94,7 +94,7 @@ export function PostCard({ post, detail }: { post: Post; detail?: boolean }) {
               {author.verified ? <BadgeCheck size={16} color="#fff" fill={Colors.cyan} /> : null}
             </View>
             <VText variant="caption" numberOfLines={1}>
-              {post.location}
+              {post.aiGenerated ? `Yapay zekâ ile üretildi${post.location ? ` · ${post.location}` : ''}` : post.location}
             </VText>
           </View>
         </Pressable>

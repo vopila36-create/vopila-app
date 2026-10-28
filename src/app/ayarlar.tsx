@@ -14,6 +14,7 @@ import {
   Bookmark,
   Coins,
   Download,
+  FileEdit,
   FileText,
   History,
   Info,
@@ -154,6 +155,7 @@ export default function Ayarlar() {
         <Section title="VOPILA'yı nasıl kullanıyorsun">
           <Row icon={<Bookmark size={20} color={Colors.cyan} />} label="Kaydedilenler" onPress={() => go('/kaydedilenler')} />
           <Row icon={<Archive size={20} color={Colors.cyanSoft} />} label="Arşiv" onPress={() => go('/arsiv')} />
+          <Row icon={<FileEdit size={20} color={Colors.cyanSoft} />} label="Taslaklar" onPress={() => go('/taslaklar')} />
           <Row icon={<History size={20} color={Colors.cyanSoft} />} label="Hareketlerin" onPress={() => go('/hareketlerin')} />
           <Row icon={<Timer size={20} color={Colors.cyanSoft} />} label="Geçirdiğin süre" onPress={() => go('/hareketlerin?tab=sure')} />
           <Row icon={<Sparkles size={20} color={Colors.cyan} />} label="İlgi alanların" onPress={() => go('/ilgi-alanlarim')} />
