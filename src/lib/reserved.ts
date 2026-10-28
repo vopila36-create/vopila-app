@@ -12,7 +12,7 @@ export function isReservedName(text: string): boolean {
     .replace(/./g, (c) => LOOKALIKE[c] ?? c)
     .replace(/[^a-z]/g, '')
     .replace(/([a-z])\1+/g, '$1');
-  return /[vw]op[il]+a/.test(flat);
+  return /[vw]+o+p+[il]+a/.test(flat);
 }
 
 export const RESERVED_NAME_ERROR = '“VOPILA” adı resmî hesaplara ayrılmıştır; kullanıcı adında ya da adında kullanılamaz.';

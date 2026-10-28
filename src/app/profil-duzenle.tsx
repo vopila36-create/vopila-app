@@ -9,6 +9,7 @@ import { SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { isReservedName, RESERVED_NAME_ERROR } from '@/lib/reserved';
+import { cleanUsername, useUsernameCheck, UsernameHint, USERNAME_MESSAGES, usernameStatus } from '@/lib/username';
 import { useMe, useStore } from '@/store/app-store';
 import { useAuth, type PickedImage } from '@/store/auth';
 
@@ -23,6 +24,8 @@ export default function ProfilDuzenle() {
   const [saveError, setSaveError] = useState('');
   const [name, setName] = useState(me.name);
   const [username, setUsername] = useState(me.username);
+  // Kullanıcı adı başkasına aitse anında "alınmış" uyarısı (Instagram gibi)
+  const unameCheck = useUsernameCheck(username, username === me.username);
   const [bio, setBio] = useState(me.bio);
   const [location, setLocation] = useState(me.location);
   const [avatar, setAvatar] = useState(me.avatar);
@@ -62,6 +65,10 @@ export default function ProfilDuzenle() {
     // "VOPILA" adı resmî hesaplara ayrılmış; yönetici Yönetim Paneli'nden verir (sunucu da kontrol eder)
     if (!next.name && name.trim() !== me.name && isReservedName(name)) next.name = RESERVED_NAME_ERROR;
     if (!next.username && username !== me.username && isReservedName(username)) next.username = RESERVED_NAME_ERROR;
+    if (!next.username && username !== me.username) {
+      const st = await usernameStatus(username);
+      if (st && st !== 'ok') next.username = USERNAME_MESSAGES[st];
+    }
     setErrors(next);
     if (next.name || next.username) return;
 
@@ -109,12 +116,17 @@ export default function ProfilDuzenle() {
         <Field
           label="Kullanıcı Adı"
           value={username}
-          onChangeText={(t) => setUsername(t.toLowerCase().replace(/\s/g, ''))}
+          onChangeText={(t) => setUsername(cleanUsername(t))}
           error={errors.username}
           autoCapitalize="none"
           prefix="@"
           maxLength={20}
         />
+        {!errors.username && username !== me.username ? (
+          <View style={{ marginTop: 8 }}>
+            <UsernameHint status={unameCheck} />
+          </View>
+        ) : null}
         <Field label="Hakkında" value={bio} onChangeText={setBio} multiline maxLength={150} hint={`${bio.length}/150`} />
         <Field label="Konum" value={location} onChangeText={setLocation} maxLength={40} />
 

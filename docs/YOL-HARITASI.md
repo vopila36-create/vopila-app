@@ -88,6 +88,7 @@
 - [ ] Fotoğraf/video/canlı yayında otomatik görüntü denetimi (pornografi yüklenemesin) → docs/ICERIK-DENETIMI.md. **AWS Rekognition daha sonra incelenecek** (kullanıcı kararı, 28 Ekim 2026)
 - [x] "VOPILA" adı ayrılmış (28 Ekim 2026): kullanıcı adında/adında "vopila" ve benzer yazımlar (v0pila, wopila, vo.pila…) ile kayıt ve ad değişikliği yapılamaz; resmî ad yalnızca Yönetim Paneli > Kullanıcılar > Ad ver
 - [x] Doğum tarihi kayıtta zorunlu (sunucuda da)
+- [x] Kullanıcı adı (Instagram gibi): kayıtta kişi seçer, her ad yalnızca bir kişiye ait (büyük/küçük harf farkı yok), yazarken anında "✓ Kullanılabilir" / "Bu kullanıcı adı alınmış"
 - [ ] Yönetmelik md. 8/6: alınan önlemleri web sitesinde yayımlamak; md. 10: yıllık itiraz istatistiği
 - [x] Yasal metin taslakları (28 Ekim 2026, src/data/legal.ts): Aydınlatma Metni ve Gizlilik, Kullanım Koşulları, Çocukları Koruma Önlemleri (md. 8/6), Telif ve İçerik Bildirimi; Ayarlar > Yasal ve kayıt ekranında bağlantı; giriş yapmadan okunabilir. "Taslak" uyarısı LEGAL_DRAFT ile kapatılır
 - [ ] Hukukçu: metinleri onaylasın; köşeli parantezleri doldur (şirket ünvanı, adres, MERSİS, KEP, yetkili mahkeme, Supabase sunucu ülkesi + KVKK md. 9 yurt dışı aktarım güvencesi), token ödülleri / promosyon / çekiliş mevzuatı, haber kaynaklarından yazılı izin, VERBİS kaydı gerekiyor mu, 5651 temsilci / trafik kaydı yükümlülükleri, e-Devlet yaş belirteci başvurusu

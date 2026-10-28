@@ -92,14 +92,15 @@ export function toTurkish(err: { message?: string; code?: string } | null | unde
   if (msg.includes('parent_only_for_teens')) return 'Ebeveyn kodu yalnızca 15–18 yaş hesaplar için oluşturulur.';
   if (msg.includes('parent_already_linked')) return 'Hesabın zaten bir ebeveyne bağlı.';
   if (msg.includes('under_15')) return "VOPILA'yı kullanmak için en az 15 yaşında olmalısın.";
-  if (msg.includes('reserved_name'))
+  if (msg.includes('username_taken')) return 'Bu kullanıcı adı alınmış. Başka bir tane dene.';
+  if (msg.includes('username_reserved') || msg.includes('reserved_name'))
     return '“VOPILA” adı resmî hesaplara ayrılmıştır; kullanıcı adında ya da adında kullanılamaz.';
-  if (msg.includes('invalid_username')) return 'Kullanıcı adı 3-20 karakter olmalı; yalnızca küçük harf, rakam ve _ içerebilir.';
+  if (msg.includes('invalid_username') || msg.includes('username_invalid')) return 'Kullanıcı adı 3-20 karakter olmalı; yalnızca küçük harf, rakam ve _ içerebilir.';
   if (msg.includes('birth_date_required')) return 'Doğum tarihini yaz. Kayıt için zorunlu.';
   if (msg.includes('invalid_birth_date')) return 'Geçerli bir doğum tarihi yaz.';
   if (msg.includes('age_already_set')) return 'Yaş bilgin zaten kayıtlı. Değiştirmek için Destek üzerinden itiraz et.';
   if (msg.includes('database error saving new user'))
-    return 'Hesap oluşturulamadı. Doğum tarihini kontrol edip tekrar dene.';
+    return 'Hesap oluşturulamadı. Kullanıcı adının ve doğum tarihinin doğru olduğunu kontrol edip tekrar dene.';
   if (msg.includes('provider is not enabled')) return 'Google ile giriş henüz açılmadı. Şimdilik e-posta ile devam et.';
   if (code === '23505' || msg.includes('duplicate key')) return 'Bu kullanıcı adı alınmış, başka bir tane dene.';
   if (msg.includes('network') || msg.includes('fetch')) return 'İnternet bağlantısı yok gibi görünüyor. Bağlantını kontrol et.';
@@ -323,12 +324,16 @@ function useBuildAuth() {
     return error ? { ok: false, error: toTurkish(error) } : { ok: true };
   }, [biometric.enabled, biometric.label, disableBiometric]);
 
-  const signUp = useCallback(async (name: string, email: string, password: string, birthDate: string): Promise<Result> => {
+  const signUp = useCallback(
+    async (name: string, username: string, email: string, password: string, birthDate: string): Promise<Result> => {
     const { data, error } = await supabase.auth.signUp({
       email: normalizeEmail(email),
       password,
       // Doğum tarihi yalnızca yaş grubunu hesaplamak için gider; sunucu tarihi hemen siler (0017)
-      options: { data: { full_name: name.trim(), birth_date: birthDate }, emailRedirectTo: authRedirectUrl() },
+      options: {
+        data: { full_name: name.trim(), username, birth_date: birthDate },
+        emailRedirectTo: authRedirectUrl(),
+      },
     });
     if (error) return { ok: false, error: toTurkish(error), code: error.code };
     // E-posta doğrulaması açıkken var olan bir adres hata vermez, kimliksiz kullanıcı döner

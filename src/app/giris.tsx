@@ -25,6 +25,7 @@ import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Gradients, Radius, Spacing } from '@/constants/theme';
 import { checkBirthDate } from '@/lib/age-api';
 import { isReservedName, RESERVED_NAME_ERROR } from '@/lib/reserved';
+import { cleanUsername, useUsernameCheck, UsernameHint, USERNAME_MESSAGES, usernameStatus } from '@/lib/username';
 import { hasNonAsciiEmail, normalizeEmail, useAuth, type CodePurpose, type Result } from '@/store/auth';
 
 type Mode = 'giris' | 'kayit';
@@ -44,6 +45,8 @@ export default function Giris() {
   const [purpose, setPurpose] = useState<CodePurpose>('login');
   const [name, setName] = useState('');
   const [birth, setBirth] = useState('');
+  const [username, setUsername] = useState('');
+  const usernameCheck = useUsernameCheck(username, mode !== 'kayit');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
@@ -121,6 +124,11 @@ export default function Giris() {
     run(async () => {
       if (mode === 'kayit' && !name.trim()) return setError('Adını yaz.');
       if (mode === 'kayit' && isReservedName(name)) return setError(RESERVED_NAME_ERROR);
+      if (mode === 'kayit') {
+        // Kullanıcı adı: her ad yalnızca bir kişiye ait (Instagram gibi)
+        const st = username.length < 3 ? 'invalid' : await usernameStatus(username);
+        if (st && st !== 'ok') return setError(USERNAME_MESSAGES[st]);
+      }
       const addr = checkedEmail();
       if (!addr) return;
       if (password.length < 6) return setError('Şifre en az 6 karakter olmalı.');
@@ -129,7 +137,7 @@ export default function Giris() {
         // 5651 s. Kanun: 15 yaşını doldurmamış kişiye hesap açılmaz (sunucu da kontrol eder)
         const age = checkBirthDate(birth);
         if (!age.ok) return setError(age.error);
-        const res = await auth.signUp(name, addr, password, age.iso);
+        const res = await auth.signUp(name, username, addr, password, age.iso);
         if (!res.ok) setError(res.error);
         else if (res.needsCode) openCodeStep('signup', res.info);
         return;
@@ -283,6 +291,17 @@ export default function Giris() {
               {mode === 'kayit' ? (
                 <>
                   <Field label="Ad Soyad" value={name} onChangeText={setName} maxLength={60} autoComplete="name" />
+                  <Field
+                    label="Kullanıcı adı"
+                    value={username}
+                    onChangeText={(t) => setUsername(cleanUsername(t))}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="username-new"
+                    maxLength={20}
+                    placeholder="ornek_kullanici"
+                  />
+                  <UsernameHint status={usernameCheck} />
                   <Field
                     label="Doğum tarihi (zorunlu)"
                     value={birth}
