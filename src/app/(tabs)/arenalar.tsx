@@ -11,8 +11,8 @@ import { SendSheet, type SendPayload } from '@/components/send-sheet';
 import { StarRating } from '@/components/ui/media';
 import { Avatar, Chip, OutlineButton } from '@/components/ui/primitives';
 import { EmptyState } from '@/components/ui/sub-screen';
-import { VText } from '@/components/ui/text';
-import { Colors, Fonts, Gradients, Radius, Spacing, TabBarHeight } from '@/constants/theme';
+import { OnDark, VText } from '@/components/ui/text';
+import { DarkScreenGradient, Fonts, OnImage, Radius, Spacing, TabBarHeight } from '@/constants/theme';
 import { arenaByKey, ME_ID, type ArenaKey } from '@/data/mock';
 import { rankByInterest } from '@/lib/feed-rank';
 import { formatCount, useMe, useStore, type RankedEntry } from '@/store/app-store';
@@ -80,7 +80,7 @@ export default function Arenalar() {
           <PlusSquare size={24} color="#fff" />
         </Pressable>
         <Pressable hitSlop={8} onPress={() => router.push('/arena-merkezi' as Href)} accessibilityLabel="Arena Merkezi">
-          <Trophy size={24} color={Colors.gold} />
+          <Trophy size={24} color={OnImage.gold} />
         </Pressable>
         <Pressable hitSlop={8} onPress={() => router.push('/arena-listesi' as Href)} accessibilityLabel="Takip ettiğin arenalar">
           <SlidersHorizontal size={22} color="#fff" />
@@ -99,12 +99,13 @@ export default function Arenalar() {
 
   if (!joined.length || !items.length) {
     return (
+      <OnDark>
       <View style={{ flex: 1 }}>
-        <LinearGradient colors={Gradients.screen} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={DarkScreenGradient} style={StyleSheet.absoluteFill} />
         {overlay}
         <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: Spacing.screen }}>
           <EmptyState
-            icon={<Trophy size={44} color={Colors.gold} />}
+            icon={<Trophy size={44} color={OnImage.gold} />}
             title={joined.length ? 'Bu arenada henüz gönderi yok' : 'Henüz bir arena takip etmiyorsun'}
             text={
               joined.length
@@ -122,6 +123,7 @@ export default function Arenalar() {
           />
         </View>
       </View>
+      </OnDark>
     );
   }
 
@@ -185,7 +187,7 @@ function EntryReel({ entry, bottom }: { entry: RankedEntry; bottom: number }) {
           onPress={() => router.push(`/arena/giris/${entry.id}` as Href)}
         />
         <ReelAction
-          icon={<Trophy size={22} color={Colors.gold} />}
+          icon={<Trophy size={22} color={OnImage.gold} />}
           label={entry.qualified ? `#${entry.rank}` : 'Sıra'}
           onPress={() => router.push(`/liderlik?arena=${entry.arenaKey}` as Href)}
         />
@@ -194,8 +196,8 @@ function EntryReel({ entry, bottom }: { entry: RankedEntry; bottom: number }) {
       {/* Alt bilgi + puanlama */}
       <View style={[styles.bottom, { paddingBottom: bottom }]}>
         <Pressable onPress={() => router.push(`/arena/${entry.arenaKey}` as Href)} style={styles.arenaChip}>
-          <Trophy size={13} color={Colors.gold} />
-          <VText variant="caption" color={Colors.gold} style={{ fontFamily: Fonts.semibold }}>
+          <Trophy size={13} color={OnImage.gold} />
+          <VText variant="caption" color={OnImage.gold} style={{ fontFamily: Fonts.semibold }}>
             {arena.name} Arenası
           </VText>
         </Pressable>
@@ -207,14 +209,14 @@ function EntryReel({ entry, bottom }: { entry: RankedEntry; bottom: number }) {
           <VText variant="bodyBold" color="#fff" style={styles.shadow} numberOfLines={1}>
             {isMine ? 'Sen' : author.name}
           </VText>
-          {author.verified ? <BadgeCheck size={15} color="#fff" fill={Colors.cyan} /> : null}
+          {author.verified ? <BadgeCheck size={15} color="#fff" fill={OnImage.accent} /> : null}
         </Pressable>
 
         <VText variant="heading" color="#fff" style={[styles.shadow, { marginTop: 6 }]} numberOfLines={2}>
           {entry.title}
         </VText>
         <View style={styles.stats}>
-          <Star size={14} color={Colors.gold} fill={Colors.gold} />
+          <Star size={14} color={OnImage.gold} fill={OnImage.gold} />
           <VText variant="caption" color="#fff">
             {entry.votes ? entry.average.toFixed(1) : '—'} · {formatCount(entry.votes)} oy
           </VText>
@@ -222,7 +224,7 @@ function EntryReel({ entry, bottom }: { entry: RankedEntry; bottom: number }) {
 
         <View style={styles.rateBox}>
           {isMine ? (
-            <VText variant="caption" color={Colors.textSecondary}>
+            <VText variant="caption" color={OnImage.textSecondary}>
               Bu senin gönderin. Diğer kâşifler puanlıyor.
             </VText>
           ) : entry.myVote ? (
@@ -241,7 +243,7 @@ function EntryReel({ entry, bottom }: { entry: RankedEntry; bottom: number }) {
             </View>
           )}
           {message ? (
-            <VText variant="caption" color={Colors.cyan} style={{ marginTop: 4 }}>
+            <VText variant="caption" color={OnImage.accent} style={{ marginTop: 4 }}>
               {message}
             </VText>
           ) : null}

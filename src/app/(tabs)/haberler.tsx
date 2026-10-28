@@ -12,15 +12,15 @@ import { SendSheet, type SendPayload } from '@/components/send-sheet';
 import { VideoPlayer } from '@/components/ui/media';
 import { OutlineButton, PrimaryButton } from '@/components/ui/primitives';
 import { VText } from '@/components/ui/text';
-import { Colors, Fonts, Radius, Spacing, TabBarHeight } from '@/constants/theme';
+import { Colors, Fonts, OnImage, Radius, Spacing, TabBarHeight } from '@/constants/theme';
 import type { NewsArticle, NewsCategory } from '@/data/mock';
 import { rankByInterest } from '@/lib/feed-rank';
 import { useStore } from '@/store/app-store';
 
 const TAG_COLORS: Record<NewsCategory, string> = {
-  Gündem: Colors.cyan,
-  Teknoloji: Colors.cyan,
-  Finans: Colors.gold,
+  Gündem: OnImage.accent,
+  Teknoloji: OnImage.accent,
+  Finans: OnImage.gold,
   Spor: '#F87171',
   Dünya: '#60A5FA',
   Bilim: Colors.purple,
@@ -140,7 +140,7 @@ function NewsReel({
       <View style={[styles.side, { bottom: bottom + 150 }]}>
         <ReelAction icon={<Send size={22} color="#fff" />} label="Gönder" onPress={send} />
         {hasAi ? (
-          <ReelAction icon={<Sparkles size={22} color={Colors.cyan} />} label="AI Özet" onPress={() => open(true)} />
+          <ReelAction icon={<Sparkles size={22} color={OnImage.accent} />} label="AI Özet" onPress={() => open(true)} />
         ) : null}
       </View>
 
@@ -165,7 +165,7 @@ function NewsReel({
           {article.summary}
         </VText>
         <View style={styles.meta}>
-          <Clock size={13} color={Colors.textSecondary} />
+          <Clock size={13} color={OnImage.textSecondary} />
           <VText variant="caption">
             {article.sourceName ? `${article.sourceName} · ` : ''}
             {article.time}
@@ -181,7 +181,7 @@ function NewsReel({
           {hasAi ? (
             <OutlineButton
               label="AI Özet"
-              iconLeft={<Sparkles size={15} color={Colors.text} />}
+              iconLeft={<Sparkles size={15} color={OnImage.text} />}
               onPress={() => open(true)}
               style={{ flex: 1 }}
             />

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Colors } from '@/constants/theme';
+import { useInk } from '@/components/ui/text';
 
 /**
  * Kısa video oynatıcı. `autoPlay` ile sessiz otomatik oynatma, aksi halde dokununca oynar.
@@ -87,6 +88,7 @@ export function StarRating({
   size?: number;
   disabled?: boolean;
 }) {
+  const ink = useInk();
   return (
     <View style={{ flexDirection: 'row', gap: 6 }}>
       {[1, 2, 3, 4, 5].map((n) => {
@@ -98,7 +100,7 @@ export function StarRating({
             onPress={() => onChange?.(n)}
             hitSlop={4}
             accessibilityLabel={`${n} yıldız`}>
-            <Star size={size} color={on ? Colors.gold : Colors.textMuted} fill={on ? Colors.gold : 'transparent'} />
+            <Star size={size} color={ink(on ? Colors.gold : Colors.textMuted)} fill={on ? ink(Colors.gold) : 'transparent'} />
           </Pressable>
         );
       })}

@@ -8,8 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { VideoPlayer } from '@/components/ui/media';
 import { Avatar } from '@/components/ui/primitives';
-import { VText } from '@/components/ui/text';
-import { Colors } from '@/constants/theme';
+import { OnDark, VText } from '@/components/ui/text';
+import { Colors, OnImage } from '@/constants/theme';
 import { ME_ID, type Moment } from '@/data/mock';
 import { useScreenshotGuard } from '@/lib/screen-guard';
 import { deleteMoment } from '@/lib/moments-api';
@@ -117,6 +117,7 @@ export default function AnGoruntuleyici() {
       )}
       <LinearGradient colors={['rgba(0,0,0,0.6)', 'transparent']} style={styles.topShade} />
       <LinearGradient colors={['transparent', 'rgba(0,0,0,0.7)']} style={styles.bottomShade} />
+      <OnDark>
 
       {/* Dokunma alanları */}
       <View style={StyleSheet.absoluteFill}>
@@ -164,7 +165,7 @@ export default function AnGoruntuleyici() {
         {isMine ? (
           moment.remote ? (
             <Pressable onPress={remove} style={[styles.follow, styles.following]}>
-              <VText variant="label" color={Colors.text}>
+              <VText variant="label" color={OnImage.text}>
                 {deleting ? 'Siliniyor…' : 'Anı sil'}
               </VText>
             </Pressable>
@@ -173,7 +174,7 @@ export default function AnGoruntuleyici() {
           <Pressable
             onPress={() => store.toggleFollow(author.id)}
             style={[styles.follow, following && styles.following]}>
-            <VText variant="label" color={following ? Colors.text : Colors.onCyan}>
+            <VText variant="label" color={following ? OnImage.text : Colors.onCyan}>
               {following ? 'Takip ediliyor' : 'Takip Et'}
             </VText>
           </Pressable>
@@ -186,6 +187,7 @@ export default function AnGoruntuleyici() {
           <Heart size={30} color={liked[key] ? Colors.heart : '#fff'} fill={liked[key] ? Colors.heart : 'transparent'} />
         </Pressable>
       </View>
+      </OnDark>
     </View>
   );
 }

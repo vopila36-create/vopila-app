@@ -5,8 +5,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { BottomFade } from '@/components/ui/primitives';
 import { SubScreen } from '@/components/ui/sub-screen';
-import { VText } from '@/components/ui/text';
-import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { OnDark, VText } from '@/components/ui/text';
+import { Colors, Fonts, OnImage, Radius, Spacing } from '@/constants/theme';
 import { arenas } from '@/data/mock';
 import { formatCount, useStore } from '@/store/app-store';
 
@@ -26,6 +26,7 @@ export default function ArenaListesi() {
             <Pressable key={a.key} style={styles.card} onPress={() => router.push(`/arena/${a.key}` as Href)}>
               <Image source={{ uri: a.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
               <BottomFade style={{ opacity: 1 }} />
+              <OnDark>
               {joined ? (
                 <View style={styles.joined}>
                   <Check size={12} color={Colors.onCyan} />
@@ -37,25 +38,25 @@ export default function ArenaListesi() {
                   <VText variant="heading" numberOfLines={1}>
                     {a.name} Arenası
                   </VText>
-                  <VText variant="caption" color={Colors.textSecondary} numberOfLines={1}>
+                  <VText variant="caption" color={OnImage.textSecondary} numberOfLines={1}>
                     {a.tagline}
                   </VText>
                   <View style={styles.meta}>
                     <View style={styles.inline}>
-                      <Users size={12} color={Colors.textSecondary} />
-                      <VText variant="caption" color={Colors.textSecondary}>
+                      <Users size={12} color={OnImage.textSecondary} />
+                      <VText variant="caption" color={OnImage.textSecondary}>
                         {formatCount(arenaMeta(a.key).members)}
                       </VText>
                     </View>
                     <View style={styles.inline}>
-                      <Clock size={12} color={Colors.cyan} />
-                      <VText variant="caption" color={Colors.textSecondary}>
+                      <Clock size={12} color={OnImage.accent} />
+                      <VText variant="caption" color={OnImage.textSecondary}>
                         {arenaMeta(a.key).endsIn}
                       </VText>
                     </View>
                     <View style={styles.inline}>
-                      <Coins size={12} color={Colors.gold} />
-                      <VText variant="caption" color={Colors.gold}>
+                      <Coins size={12} color={OnImage.gold} />
+                      <VText variant="caption" color={OnImage.gold}>
                         {a.prizes[0]} / {a.prizes[1]} / {a.prizes[2]}
                       </VText>
                     </View>
@@ -65,6 +66,7 @@ export default function ArenaListesi() {
                   <ChevronRight size={18} color="#fff" />
                 </View>
               </View>
+              </OnDark>
             </Pressable>
           );
         })}

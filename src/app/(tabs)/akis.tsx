@@ -10,8 +10,8 @@ import { PostCard } from '@/components/post-card';
 import { Avatar, BottomFade, OutlineButton, SectionHeader } from '@/components/ui/primitives';
 import { AppHeader, Screen } from '@/components/ui/screen';
 import { EmptyState } from '@/components/ui/sub-screen';
-import { VText } from '@/components/ui/text';
-import { Colors, Fonts, Gradients, Radius, Spacing, TabBarHeight } from '@/constants/theme';
+import { OnDark, VText } from '@/components/ui/text';
+import { Colors, Fonts, Gradients, OnImage, Radius, Spacing, TabBarHeight } from '@/constants/theme';
 import { ME_ID } from '@/data/mock';
 import { useMe, useStore } from '@/store/app-store';
 
@@ -119,9 +119,10 @@ export default function Akis() {
                   <Image source={{ uri: m.items[0] }} style={StyleSheet.absoluteFill} contentFit="cover" />
                 )}
                 <BottomFade />
+                <OnDark>
                 <View style={styles.progress}>
                   {m.items.slice(0, 4).map((it, b) => (
-                    <View key={`${it}-${b}`} style={[styles.progressBar, b === 0 && { backgroundColor: Colors.cyan }]} />
+                    <View key={`${it}-${b}`} style={[styles.progressBar, b === 0 && { backgroundColor: OnImage.accent }]} />
                   ))}
                 </View>
                 <View style={styles.momentBody}>
@@ -129,10 +130,11 @@ export default function Akis() {
                   <VText variant="label" style={{ marginTop: 6, fontSize: 12 }} numberOfLines={2}>
                     {m.title || (m.authorId === ME_ID ? 'Senin anın' : author.name)}
                   </VText>
-                  <VText variant="caption" color={Colors.cyan} style={{ fontSize: 10 }}>
+                  <VText variant="caption" color={OnImage.accent} style={{ fontSize: 10 }}>
                     {m.items.length} yeni paylaşım
                   </VText>
                 </View>
+                </OnDark>
               </Pressable>
             );
           })}

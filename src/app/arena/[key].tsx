@@ -18,8 +18,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { GlassCard, OutlineButton, PrimaryButton, SectionHeader } from '@/components/ui/primitives';
 import { SubScreen } from '@/components/ui/sub-screen';
 import { WinnersCard } from '@/components/winners-card';
-import { VText } from '@/components/ui/text';
-import { bgAlpha, Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { OnDark, VText } from '@/components/ui/text';
+import { Colors, Fonts, OnImage, Radius, scrim, Spacing } from '@/constants/theme';
 import { arenaByKey, ME_ID, MIN_VOTES_FOR_RANK, userById } from '@/data/mock';
 import { formatCount, useStore } from '@/store/app-store';
 
@@ -37,32 +37,34 @@ export default function ArenaDetail() {
     <SubScreen title={`${arena.name} Arenası`}>
       <View style={styles.hero}>
         <Image source={{ uri: arena.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
-        <LinearGradient colors={['transparent', Colors.bg]} start={{ x: 0, y: 0.3 }} end={{ x: 0, y: 1 }} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={['transparent', scrim(0.92)]} start={{ x: 0, y: 0.3 }} end={{ x: 0, y: 1 }} style={StyleSheet.absoluteFill} />
+        <OnDark>
         <View style={styles.heroBody}>
           <View style={styles.row}>
             <VText variant="title" style={{ flexShrink: 1 }} numberOfLines={1}>
               {arena.name} Arenası
             </VText>
-            <BadgeCheck size={22} color="#fff" fill={Colors.cyan} />
+            <BadgeCheck size={22} color="#fff" fill={OnImage.accent} />
           </View>
-          <VText variant="body" color={Colors.text}>
+          <VText variant="body" color={OnImage.text}>
             {arena.tagline}
           </VText>
           <View style={[styles.row, { marginTop: 8, gap: 14 }]}>
             <View style={styles.row}>
-              <Users size={14} color={Colors.textSecondary} />
-              <VText variant="caption" color={Colors.textSecondary}>
+              <Users size={14} color={OnImage.textSecondary} />
+              <VText variant="caption" color={OnImage.textSecondary}>
                 {formatCount(store.arenaMeta(arena.key).members)} Üye
               </VText>
             </View>
             <View style={styles.row}>
-              <Clock size={14} color={Colors.cyan} />
-              <VText variant="caption" color={Colors.textSecondary}>
+              <Clock size={14} color={OnImage.accent} />
+              <VText variant="caption" color={OnImage.textSecondary}>
                 Ay sonuna (gece 12): {store.arenaMeta(arena.key).endsIn}
               </VText>
             </View>
           </View>
         </View>
+        </OnDark>
       </View>
 
       <View style={styles.pad}>
@@ -229,7 +231,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: Radius.pill,
-    backgroundColor: bgAlpha(0.75),
+    backgroundColor: scrim(0.75),
     borderWidth: 1,
     borderColor: Colors.borderStrong,
   },

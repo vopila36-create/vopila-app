@@ -7,8 +7,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { StarRating } from '@/components/ui/media';
 import { Avatar, GlassCard, OutlineButton, PrimaryButton } from '@/components/ui/primitives';
 import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
-import { VText } from '@/components/ui/text';
-import { bgAlpha, Colors, Radius, Spacing } from '@/constants/theme';
+import { OnDark, VText } from '@/components/ui/text';
+import { Colors, OnImage, Radius, scrim, Spacing } from '@/constants/theme';
 import { arenaByKey, arenas, ME_ID, MIN_VOTES_FOR_RANK } from '@/data/mock';
 import { useMe, useStore } from '@/store/app-store';
 
@@ -62,10 +62,12 @@ export default function EntryDetail() {
       <View style={styles.pad}>
         <View style={styles.imageWrap}>
           <Image source={{ uri: entry.image || arena.image }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+          <OnDark>
           <View style={styles.rank}>
-            {entry.rank <= 3 ? <Crown size={14} color={Colors.gold} fill={Colors.gold} /> : null}
+            {entry.rank <= 3 ? <Crown size={14} color={OnImage.gold} fill={OnImage.gold} /> : null}
             <VText variant="label">#{entry.rank}</VText>
           </View>
+          </OnDark>
         </View>
 
         <VText variant="title" style={{ marginTop: Spacing.lg, fontSize: 24, lineHeight: 30 }}>
@@ -197,7 +199,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: Radius.pill,
-    backgroundColor: bgAlpha(0.75),
+    backgroundColor: scrim(0.75),
     borderWidth: 1,
     borderColor: Colors.borderStrong,
   },

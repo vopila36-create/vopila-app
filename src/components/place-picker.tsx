@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { VText } from '@/components/ui/text';
+import { OnTheme, VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { trLower } from '@/lib/tr-adres';
 
@@ -64,6 +64,7 @@ export function PlacePicker({
       ) : null}
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
+        <OnTheme>
         <Pressable style={styles.backdrop} onPress={() => setOpen(false)} />
         <View style={[styles.sheet, { paddingBottom: insets.bottom + 10 }]}>
           <View style={styles.head}>
@@ -109,6 +110,7 @@ export function PlacePicker({
             }
           />
         </View>
+        </OnTheme>
       </Modal>
     </View>
   );

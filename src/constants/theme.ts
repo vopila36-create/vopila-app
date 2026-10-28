@@ -106,46 +106,65 @@ const LIGHT: Palette = {
   cyan: '#0891B2',
   cyanSoft: '#0E7490',
   cyanDim: 'rgba(8, 145, 178, 0.12)',
-  gold: '#B7791F',
-  goldSoft: 'rgba(183, 121, 31, 0.14)',
+  gold: '#A16207',
+  goldSoft: 'rgba(161, 98, 7, 0.14)',
   live: '#DC2626',
   liveSoft: 'rgba(220, 38, 38, 0.12)',
   success: '#059669',
   heart: '#E11D48',
   purple: '#7C3AED',
   text: '#0B1626',
-  textSecondary: '#475569',
-  textMuted: '#64748B',
+  textSecondary: '#3B4A5E',
+  textMuted: '#55657A',
   onCyan: '#FFFFFF',
 };
 
 /** Pembe: açık pembe zemin, pembe vurgu, mor ve altın detaylar. */
 const PINK: Palette = {
-  bg: '#FFF4F8',
-  bgDeep: '#FDE7F0',
-  bgTop: '#FFFFFF',
-  surface: 'rgba(255, 255, 255, 0.92)',
-  surfaceStrong: '#FFFFFF',
-  surfaceRaised: 'rgba(252, 228, 238, 0.9)',
-  border: 'rgba(190, 24, 93, 0.14)',
-  borderStrong: 'rgba(219, 39, 119, 0.55)',
-  cyan: '#DB2777',
-  cyanSoft: '#BE185D',
-  cyanDim: 'rgba(219, 39, 119, 0.12)',
-  gold: '#B7791F',
-  goldSoft: 'rgba(183, 121, 31, 0.14)',
-  live: '#DC2626',
-  liveSoft: 'rgba(220, 38, 38, 0.12)',
-  success: '#059669',
-  heart: '#E11D48',
-  purple: '#9333EA',
-  text: '#2A0F1F',
-  textSecondary: '#6B4459',
-  textMuted: '#9A7488',
+  bg: '#F8D7E5',
+  bgDeep: '#F1C1D5',
+  bgTop: '#FBE3ED',
+  surface: 'rgba(253, 236, 243, 0.94)',
+  surfaceStrong: '#FDECF3',
+  surfaceRaised: 'rgba(243, 196, 216, 0.9)',
+  border: 'rgba(157, 23, 77, 0.2)',
+  borderStrong: 'rgba(190, 24, 93, 0.6)',
+  cyan: '#C2185B',
+  cyanSoft: '#9D174D',
+  cyanDim: 'rgba(194, 24, 91, 0.14)',
+  gold: '#9A6213',
+  goldSoft: 'rgba(154, 98, 19, 0.16)',
+  live: '#C81E1E',
+  liveSoft: 'rgba(200, 30, 30, 0.14)',
+  success: '#047857',
+  heart: '#BE123C',
+  purple: '#7E22CE',
+  text: '#2A0A1C',
+  textSecondary: '#5A2E44',
+  textMuted: '#7A4862',
   onCyan: '#FFFFFF',
 };
 
 export const Colors: Palette = isPink ? PINK : isLight ? LIGHT : DARK;
+
+/**
+ * Resim / video üstündeki yazılar için renkler: her temada koyu gölge + açık yazı (Instagram gibi).
+ * Bunları <OnDark> içinde VText zaten kendiliğinden kullanır; doğrudan renk verirken bunları kullan.
+ */
+export const OnImage = {
+  text: '#F4F8FF',
+  textSecondary: '#D3DCEA',
+  textMuted: '#B4C1D4',
+  /** Koyu zeminde okunur vurgu rengi */
+  accent: isPink ? '#F9A8D4' : '#67E8F9',
+  gold: '#F5B642',
+} as const;
+
+/** Reels gibi her temada koyu kalan alanların zemini. */
+export const DarkScreenGradient = ['#0A1C38', '#050D1D', '#02060F'] as const;
+
+/** Resim üstü koyu gölge (temadan bağımsız). */
+export const scrim = (alpha: number) => `rgba(4, 10, 23, ${alpha})`;
 
 /** Zemin rengi, istenen saydamlıkla (ör. resim üstü başlık ve etiketler temaya uysun). */
 export function bgAlpha(alpha: number): string {
@@ -157,8 +176,8 @@ export function bgAlpha(alpha: number): string {
 type Tuple = readonly [string, string, ...string[]];
 export const Gradients: { screen: Tuple; cyanButton: Tuple; cardFade: Tuple; gold: Tuple } = isPink
   ? {
-      screen: ['#FFFFFF', '#FFF4F8', '#FDE7F0'],
-      cyanButton: ['#F472B6', '#DB2777'],
+      screen: ['#FBE3ED', '#F8D7E5', '#F1C1D5'],
+      cyanButton: ['#E0457F', '#C2185B'],
       cardFade: ['transparent', 'rgba(3, 9, 20, 0.85)'],
       gold: ['#F5C35B', '#C98516'],
     }

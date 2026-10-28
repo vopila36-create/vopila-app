@@ -6,8 +6,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Avatar, OutlineButton, PrimaryButton } from '@/components/ui/primitives';
 import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
-import { VText } from '@/components/ui/text';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { OnDark, VText } from '@/components/ui/text';
+import { Colors, OnImage, Radius, scrim, Spacing } from '@/constants/theme';
 import { arenaByKey, interests, ME_ID, userById } from '@/data/mock';
 import { formatCount, useStore } from '@/store/app-store';
 
@@ -36,19 +36,21 @@ export default function IlgiDetay() {
     <SubScreen title={it.title}>
       <View style={styles.hero}>
         <Image source={{ uri: it.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
-        <LinearGradient colors={['transparent', Colors.bg]} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={['transparent', scrim(0.92)]} style={StyleSheet.absoluteFill} />
+        <OnDark>
         <View style={styles.heroBody}>
           <VText variant="title" style={{ fontSize: 26 }}>
             {it.title}
           </VText>
-          <VText color={Colors.text}>{it.text}</VText>
+          <VText color={OnImage.text}>{it.text}</VText>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
             <Users size={14} color={it.color} />
-            <VText variant="caption" color={Colors.textSecondary}>
+            <VText variant="caption" color={OnImage.textSecondary}>
               {formatCount(arena.members)} üye
             </VText>
           </View>
         </View>
+        </OnDark>
       </View>
 
       <View style={styles.pad}>

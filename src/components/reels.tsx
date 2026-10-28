@@ -10,9 +10,9 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 
-import { VText } from '@/components/ui/text';
+import { OnDark, VText } from '@/components/ui/text';
 import { useAge } from '@/store/age';
-import { Colors } from '@/constants/theme';
+import { Colors, OnImage } from '@/constants/theme';
 
 /** autoplay: 15–18 yaşta video kendiliğinden başlamaz (Yaş Doğrulama Yönetmeliği). */
 export type ReelState = { active: boolean; height: number; autoplay: boolean };
@@ -84,6 +84,7 @@ export function ReelPager<T>({
   };
 
   return (
+    <OnDark>
     <View style={styles.root} onLayout={(e: LayoutChangeEvent) => setHeight(e.nativeEvent.layout.height)}>
       {height ? (
         <FlatList
@@ -126,6 +127,7 @@ export function ReelPager<T>({
         </View>
       ) : null}
     </View>
+    </OnDark>
   );
 }
 
@@ -170,6 +172,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textShadowColor: 'rgba(0,0,0,0.8)',
     textShadowRadius: 4,
-    color: Colors.text,
+    color: OnImage.text,
   },
 });

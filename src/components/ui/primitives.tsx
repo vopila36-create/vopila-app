@@ -4,7 +4,7 @@ import { ChevronRight, UserRound } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { VText } from '@/components/ui/text';
+import { OnTheme, VText } from '@/components/ui/text';
 import { Colors, Fonts, Gradients, Radius, Spacing } from '@/constants/theme';
 
 /** Yarı saydam, ince cyan kenarlıklı kart (taslaklardaki cam görünümü). */
@@ -124,12 +124,14 @@ export function Chip({
 }) {
   return (
     <Pressable onPress={onPress} style={[styles.chip, active && styles.chipActive]}>
+      <OnTheme>
       <VText
         variant="label"
         color={active ? Colors.onCyan : Colors.text}
         style={active ? { fontFamily: Fonts.bold } : undefined}>
         {label}
       </VText>
+      </OnTheme>
     </Pressable>
   );
 }

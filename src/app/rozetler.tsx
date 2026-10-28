@@ -10,7 +10,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { GlassCard } from '@/components/ui/primitives';
 import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
-import { bgAlpha, Colors, Spacing } from '@/constants/theme';
+import { Colors, scrim, Spacing } from '@/constants/theme';
 import { badges, earnedBadgesOf, ME_ID, userById, users } from '@/data/mock';
 
 export default function Rozetler() {
@@ -51,7 +51,7 @@ export default function Rozetler() {
                       <Image source={{ uri: b.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
                       {!has ? (
                         <View style={styles.lock}>
-                          <Lock size={18} color={Colors.text} />
+                          <Lock size={18} color="#fff" />
                         </View>
                       ) : null}
                     </View>
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
   badge: { width: 56, height: 56, borderRadius: 16, overflow: 'hidden', borderWidth: 2 },
   lock: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: bgAlpha(0.6),
+    backgroundColor: scrim(0.6),
     alignItems: 'center',
     justifyContent: 'center',
   },

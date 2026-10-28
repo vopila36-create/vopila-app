@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { VText } from '@/components/ui/text';
+import { OnTheme, VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { isRealId, report, REPORT_REASONS, type ReportReason } from '@/lib/social-api';
 import { useStore } from '@/store/app-store';
@@ -48,6 +48,7 @@ export function ReportSheet({
 
   return (
     <Modal visible={!!target} transparent animationType="slide" onRequestClose={close}>
+<OnTheme>
       <Pressable style={styles.backdrop} onPress={close} />
       <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
         <View style={styles.head}>
@@ -84,7 +85,8 @@ export function ReportSheet({
           </ScrollView>
         )}
       </View>
-    </Modal>
+    </OnTheme>
+</Modal>
   );
 }
 

@@ -9,8 +9,8 @@ import { RealProfileScreen } from '@/components/real-profile';
 import { Avatar, GlassCard, OutlineButton, PrimaryButton } from '@/components/ui/primitives';
 import { isRealId } from '@/lib/social-api';
 import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
-import { VText } from '@/components/ui/text';
-import { bgAlpha, Colors, Radius, Spacing } from '@/constants/theme';
+import { OnDark, VText } from '@/components/ui/text';
+import { Colors, OnImage, Radius, scrim, Spacing } from '@/constants/theme';
 import { arenaByKey, arenaEntries, earnedBadgesOf, followerIdsOf, followingIdsOf, ME_ID, privateUserIds, users } from '@/data/mock';
 import { formatCount, useStore } from '@/store/app-store';
 
@@ -48,7 +48,8 @@ export default function KullaniciProfil() {
     <SubScreen title={`@${user.username}`}>
       <View style={styles.top}>
         <Image source={{ uri: user.cover }} style={StyleSheet.absoluteFill} contentFit="cover" />
-        <LinearGradient colors={[bgAlpha(0.35), Colors.bg]} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={[scrim(0.35), scrim(0.92)]} style={StyleSheet.absoluteFill} />
+        <OnDark>
         <View style={styles.topRow}>
           <Avatar uri={user.avatar} size={92} ring />
           <View style={{ flex: 1 }}>
@@ -56,26 +57,26 @@ export default function KullaniciProfil() {
               <VText variant="heading" style={{ fontSize: 22, lineHeight: 28 }}>
                 {user.name}
               </VText>
-              {user.verified ? <BadgeCheck size={20} color="#fff" fill={Colors.cyan} /> : null}
-              {privateUserIds.includes(user.id) ? <Lock size={16} color={Colors.textSecondary} /> : null}
+              {user.verified ? <BadgeCheck size={20} color="#fff" fill={OnImage.accent} /> : null}
+              {privateUserIds.includes(user.id) ? <Lock size={16} color={OnImage.textSecondary} /> : null}
             </View>
             <VText>@{user.username}</VText>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-              <MapPin size={13} color={Colors.cyan} />
-              <VText variant="caption" color={Colors.textSecondary}>
+              <MapPin size={13} color={OnImage.accent} />
+              <VText variant="caption" color={OnImage.textSecondary}>
                 {user.location}
               </VText>
             </View>
           </View>
         </View>
-        <VText color={Colors.text} style={{ marginTop: 12 }}>
+        <VText color={OnImage.text} style={{ marginTop: 12 }}>
           {user.bio}
         </VText>
         <View style={{ marginTop: 14 }}>
           {following ? (
             <OutlineButton
               label="Takip Ediliyor"
-              iconLeft={<UserCheck size={16} color={Colors.text} />}
+              iconLeft={<UserCheck size={16} color={OnImage.text} />}
               onPress={() => store.toggleFollow(user.id)}
             />
           ) : (
@@ -86,6 +87,7 @@ export default function KullaniciProfil() {
             />
           )}
         </View>
+        </OnDark>
       </View>
 
       <View style={styles.pad}>

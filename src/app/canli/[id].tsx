@@ -8,8 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoPlayer } from '@/components/ui/media';
 import { Avatar, OutlineButton } from '@/components/ui/primitives';
 import { EmptyState } from '@/components/ui/sub-screen';
-import { VText } from '@/components/ui/text';
-import { Colors, Fonts, Radius } from '@/constants/theme';
+import { OnDark, VText } from '@/components/ui/text';
+import { Colors, Fonts, OnImage, Radius } from '@/constants/theme';
 import { liveChat, liveStreams, ME_ID, userById } from '@/data/mock';
 import { formatCount, useMe, useStore } from '@/store/app-store';
 
@@ -59,6 +59,7 @@ export default function CanliIzle() {
       </View>
       <LinearGradient colors={['rgba(0,0,0,0.6)', 'transparent']} style={[styles.shade, { top: 0, height: 160 }]} pointerEvents="none" />
       <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={[styles.shade, { bottom: 0, height: 360 }]} pointerEvents="none" />
+      <OnDark>
 
       {/* Üst bar */}
       <View style={[styles.top, { paddingTop: insets.top + 8 }]}>
@@ -71,7 +72,7 @@ export default function CanliIzle() {
             <VText variant="label" numberOfLines={1}>
               {host.name}
             </VText>
-            <VText variant="caption" color={Colors.textSecondary} numberOfLines={1}>
+            <VText variant="caption" color={OnImage.textSecondary} numberOfLines={1}>
               {stream.title}
             </VText>
           </View>
@@ -80,7 +81,7 @@ export default function CanliIzle() {
           onPress={() => toggleFollow(host.id)}
           style={[styles.follow, following && styles.following]}
           hitSlop={6}>
-          <VText variant="label" color={following ? Colors.text : Colors.onCyan} style={{ fontFamily: Fonts.bold, fontSize: 12 }}>
+          <VText variant="label" color={following ? OnImage.text : Colors.onCyan} style={{ fontFamily: Fonts.bold, fontSize: 12 }}>
             {following ? 'Takipte' : 'Takip Et'}
           </VText>
         </Pressable>
@@ -116,7 +117,7 @@ export default function CanliIzle() {
                 <View key={m.id} style={styles.msg}>
                   <Avatar uri={u.avatar} size={26} />
                   <View style={{ flexShrink: 1 }}>
-                    <VText variant="caption" color={Colors.cyanSoft}>
+                    <VText variant="caption" color={OnImage.accent}>
                       {u.name}
                     </VText>
                     <VText variant="body" color="#fff" style={{ fontSize: 13 }}>
@@ -152,6 +153,7 @@ export default function CanliIzle() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+      </OnDark>
     </View>
   );
 }

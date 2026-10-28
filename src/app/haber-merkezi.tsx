@@ -6,8 +6,8 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { BottomFade, Chip, GlassCard, PlayBadge, SectionHeader } from '@/components/ui/primitives';
 import { SubScreen } from '@/components/ui/sub-screen';
-import { VText } from '@/components/ui/text';
-import { bgAlpha, Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { OnDark, VText } from '@/components/ui/text';
+import { Colors, Fonts, OnImage, Radius, scrim, Spacing } from '@/constants/theme';
 import { newsCategories, type NewsArticle, type NewsCategory } from '@/data/mock';
 import { useStore } from '@/store/app-store';
 
@@ -66,6 +66,7 @@ export default function HaberMerkezi() {
           <Pressable style={styles.headline} onPress={() => open(headline.id)}>
             <Image source={{ uri: headline.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
             <BottomFade />
+            <OnDark>
             {headline.live ? (
               <View style={styles.liveTag}>
                 <View style={styles.liveDot} />
@@ -79,8 +80,8 @@ export default function HaberMerkezi() {
               </View>
             )}
             <View style={styles.devTag}>
-              <Sparkles size={13} color={Colors.cyan} />
-              <VText variant="caption" color={Colors.text}>
+              <Sparkles size={13} color={OnImage.accent} />
+              <VText variant="caption" color={OnImage.text}>
                 Son Gelişme
               </VText>
             </View>
@@ -95,22 +96,23 @@ export default function HaberMerkezi() {
               <VText variant="heading" style={{ fontSize: 22, lineHeight: 28 }} numberOfLines={2}>
                 {headline.title}
               </VText>
-              <VText variant="body" color={Colors.textSecondary} style={{ marginTop: 4 }} numberOfLines={2}>
+              <VText variant="body" color={OnImage.textSecondary} style={{ marginTop: 4 }} numberOfLines={2}>
                 {headline.summary}
               </VText>
               <View style={styles.metaRow}>
-                <Meta icon={<Globe size={14} color={Colors.textSecondary} />} text={headline.category} />
-                <Meta icon={<Clock size={14} color={Colors.textSecondary} />} text={headline.readTime} />
+                <Meta icon={<Globe size={14} color={OnImage.textSecondary} />} text={headline.category} />
+                <Meta icon={<Clock size={14} color={OnImage.textSecondary} />} text={headline.readTime} />
                 <View style={{ flex: 1 }} />
                 <Pressable style={styles.inline} onPress={() => open(headline.id, true)} hitSlop={8}>
-                  <Sparkles size={14} color={Colors.cyan} />
-                  <VText variant="label" color={Colors.cyan}>
+                  <Sparkles size={14} color={OnImage.accent} />
+                  <VText variant="label" color={OnImage.accent}>
                     Yapay Zekâ Özeti
                   </VText>
-                  <ChevronRight size={14} color={Colors.cyan} />
+                  <ChevronRight size={14} color={OnImage.accent} />
                 </Pressable>
               </View>
             </View>
+            </OnDark>
           </Pressable>
         </View>
       ) : null}
@@ -204,6 +206,7 @@ export default function HaberMerkezi() {
           <Pressable style={styles.special} onPress={() => open(special.id)}>
             <Image source={{ uri: special.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
             <BottomFade />
+            <OnDark>
             <View style={styles.specialBadge}>
               <VText style={styles.badgeText}>VOPILA ÖZEL</VText>
             </View>
@@ -214,18 +217,19 @@ export default function HaberMerkezi() {
             </View>
             <View style={styles.headlineBody}>
               <VText variant="heading">{special.title}</VText>
-              <VText variant="caption" color={Colors.textSecondary} numberOfLines={2}>
+              <VText variant="caption" color={OnImage.textSecondary} numberOfLines={2}>
                 {special.summary}
               </VText>
               <View style={styles.metaRow}>
-                <Meta icon={<Clock size={14} color={Colors.textSecondary} />} text={special.readTime} />
+                <Meta icon={<Clock size={14} color={OnImage.textSecondary} />} text={special.readTime} />
                 <View style={{ flex: 1 }} />
-                <FileText size={14} color={Colors.cyan} />
-                <VText variant="label" color={Colors.cyan}>
+                <FileText size={14} color={OnImage.accent} />
+                <VText variant="label" color={OnImage.accent}>
                   Özel Dosya
                 </VText>
               </View>
             </View>
+            </OnDark>
           </Pressable>
         </View>
       ) : null}
@@ -289,7 +293,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.live,
     backgroundColor: 'rgba(239,68,68,0.18)',
   },
-  catTag: { borderColor: Colors.border, backgroundColor: bgAlpha(0.6) },
+  catTag: { borderColor: Colors.border, backgroundColor: scrim(0.6) },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.live },
   liveText: { fontFamily: Fonts.bold, fontSize: 11, color: '#fff', letterSpacing: 0.5 },
   devTag: {
@@ -302,7 +306,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
-    backgroundColor: bgAlpha(0.6),
+    backgroundColor: scrim(0.6),
     borderWidth: 1,
     borderColor: Colors.border,
   },
@@ -357,7 +361,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     borderWidth: 1,
     borderColor: Colors.borderStrong,
-    backgroundColor: bgAlpha(0.6),
+    backgroundColor: scrim(0.6),
   },
-  badgeText: { fontFamily: Fonts.bold, fontSize: 10, letterSpacing: 1, color: Colors.text },
+  badgeText: { fontFamily: Fonts.bold, fontSize: 10, letterSpacing: 1, color: OnImage.text },
 });

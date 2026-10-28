@@ -5,8 +5,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { BottomFade } from '@/components/ui/primitives';
 import { SubScreen } from '@/components/ui/sub-screen';
-import { VText } from '@/components/ui/text';
-import { bgAlpha, Colors, Radius, Spacing } from '@/constants/theme';
+import { OnDark, VText } from '@/components/ui/text';
+import { Colors, OnImage, Radius, scrim, Spacing } from '@/constants/theme';
 import { arenaByKey, interests } from '@/data/mock';
 
 export default function IlgiAlanlari() {
@@ -21,6 +21,7 @@ export default function IlgiAlanlari() {
             <Pressable key={it.key} style={styles.card} onPress={() => router.push(`/ilgi/${it.key}` as Href)}>
               <Image source={{ uri: it.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
               <BottomFade />
+              <OnDark>
               <View style={[styles.tag, { borderColor: it.color }]}>
                 <VText variant="caption" color={it.color}>
                   {arenaByKey(it.arenaKey).name} Arenası
@@ -29,7 +30,7 @@ export default function IlgiAlanlari() {
               <View style={styles.body}>
                 <View style={{ flex: 1 }}>
                   <VText variant="heading">{it.title}</VText>
-                  <VText variant="caption" color={Colors.textSecondary}>
+                  <VText variant="caption" color={OnImage.textSecondary}>
                     {it.text}
                   </VText>
                 </View>
@@ -37,6 +38,7 @@ export default function IlgiAlanlari() {
                   <ChevronRight size={18} color="#fff" />
                 </View>
               </View>
+              </OnDark>
             </Pressable>
           ))}
         </View>
@@ -56,7 +58,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: Radius.pill,
     borderWidth: 1,
-    backgroundColor: bgAlpha(0.6),
+    backgroundColor: scrim(0.6),
   },
   body: { position: 'absolute', left: 14, right: 14, bottom: 14, flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
   circle: {

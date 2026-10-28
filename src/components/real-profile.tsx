@@ -29,8 +29,8 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { ReportSheet, type ReportTarget } from '@/components/report-sheet';
 import { Avatar, GlassCard, OutlineButton, PrimaryButton } from '@/components/ui/primitives';
 import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
-import { VText } from '@/components/ui/text';
-import { bgAlpha, Colors, Radius, Spacing } from '@/constants/theme';
+import { OnDark, VText } from '@/components/ui/text';
+import { Colors, OnImage, Radius, scrim, Spacing } from '@/constants/theme';
 import type { Post } from '@/data/mock';
 import { fetchPosts } from '@/lib/posts-api';
 import { useScreenshotGuard } from '@/lib/screen-guard';
@@ -167,7 +167,8 @@ export function RealProfileScreen({ id }: { id: string }) {
 
       <View style={styles.top}>
         {profile.cover ? <Image source={{ uri: profile.cover }} style={StyleSheet.absoluteFill} contentFit="cover" /> : null}
-        <LinearGradient colors={[bgAlpha(0.35), Colors.bg]} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={[scrim(0.35), scrim(0.92)]} style={StyleSheet.absoluteFill} />
+        <OnDark>
         <View style={styles.topRow}>
           <Avatar uri={profile.avatar} size={92} ring />
           <View style={{ flex: 1 }}>
@@ -175,14 +176,14 @@ export function RealProfileScreen({ id }: { id: string }) {
               <VText variant="heading" style={{ fontSize: 22, lineHeight: 28, flexShrink: 1 }} numberOfLines={1}>
                 {profile.name}
               </VText>
-              {profile.verified ? <BadgeCheck size={20} color="#fff" fill={Colors.cyan} /> : null}
-              {profile.isPrivate ? <Lock size={16} color={Colors.textSecondary} /> : null}
+              {profile.verified ? <BadgeCheck size={20} color="#fff" fill={OnImage.accent} /> : null}
+              {profile.isPrivate ? <Lock size={16} color={OnImage.textSecondary} /> : null}
             </View>
             <VText>@{profile.username}</VText>
             {profile.location ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                <MapPin size={13} color={Colors.cyan} />
-                <VText variant="caption" color={Colors.textSecondary}>
+                <MapPin size={13} color={OnImage.accent} />
+                <VText variant="caption" color={OnImage.textSecondary}>
                   {profile.location}
                 </VText>
               </View>
@@ -190,30 +191,31 @@ export function RealProfileScreen({ id }: { id: string }) {
           </View>
         </View>
         {profile.bio ? (
-          <VText color={Colors.text} style={{ marginTop: 12 }}>
+          <VText color={OnImage.text} style={{ marginTop: 12 }}>
             {profile.bio}
           </VText>
         ) : null}
         <View style={{ marginTop: 14, flexDirection: 'row', gap: 10 }}>
           {status === 'accepted' ? (
-            <OutlineButton label="Takip Ediliyor" iconLeft={<UserCheck size={16} color={Colors.text} />} onPress={onFollow} style={{ flex: 1 }} />
+            <OutlineButton label="Takip Ediliyor" iconLeft={<UserCheck size={16} color={OnImage.text} />} onPress={onFollow} style={{ flex: 1 }} />
           ) : status === 'pending' ? (
-            <OutlineButton label="İstek Gönderildi" iconLeft={<Clock size={16} color={Colors.text} />} onPress={onFollow} style={{ flex: 1 }} />
+            <OutlineButton label="İstek Gönderildi" iconLeft={<Clock size={16} color={OnImage.text} />} onPress={onFollow} style={{ flex: 1 }} />
           ) : (
             <PrimaryButton label="Takip Et" icon={<UserPlus size={16} color={Colors.onCyan} />} onPress={onFollow} style={{ flex: 1 }} />
           )}
           <OutlineButton
             label="Mesaj"
-            iconLeft={<MessageCircle size={16} color={Colors.text} />}
+            iconLeft={<MessageCircle size={16} color={OnImage.text} />}
             onPress={() => router.push(`/mesaj/kisi/${id}` as Href)}
             style={{ flex: 1 }}
           />
         </View>
         {notice ? (
-          <VText variant="caption" color={Colors.cyan} style={{ marginTop: 8 }}>
+          <VText variant="caption" color={OnImage.accent} style={{ marginTop: 8 }}>
             {notice}
           </VText>
         ) : null}
+        </OnDark>
       </View>
 
       <View style={styles.pad}>

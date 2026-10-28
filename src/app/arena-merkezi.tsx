@@ -26,8 +26,8 @@ import {
 } from '@/components/ui/primitives';
 import { SearchButton } from '@/components/ui/screen';
 import { SubScreen } from '@/components/ui/sub-screen';
-import { VText } from '@/components/ui/text';
-import { bgAlpha, Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { OnDark, VText } from '@/components/ui/text';
+import { Colors, Fonts, OnImage, Radius, scrim, Spacing } from '@/constants/theme';
 import { arenaByKey, arenas, levelInfo, ME_ID, userById, type ArenaKey } from '@/data/mock';
 import { formatCount, formatTokens, useStore } from '@/store/app-store';
 
@@ -123,9 +123,11 @@ export default function ArenaMerkezi() {
                 style={[styles.cat, i >= 4 && styles.catWide, selected && styles.catSelected]}>
                 <Image source={{ uri: c.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
                 <BottomFade />
+                <OnDark>
                 <VText variant="label" style={styles.catLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
                   {c.name}
                 </VText>
+                </OnDark>
               </Pressable>
             );
           })}
@@ -138,10 +140,11 @@ export default function ArenaMerkezi() {
       {/* Seçili arena */}
       <View style={[styles.pad, { marginTop: Spacing.lg }]}>
         <Pressable onPress={() => go(`/arena/${active}`)}>
+          <OnDark>
           <GlassCard style={styles.arenaCard}>
             <Image source={{ uri: arena.image }} style={styles.arenaBg} contentFit="cover" />
             <LinearGradient
-              colors={[bgAlpha(1), bgAlpha(0.2)]}
+              colors={[scrim(1), scrim(0.2)]}
               start={{ x: 0.35, y: 0.5 }}
               end={{ x: 1, y: 0.5 }}
               style={StyleSheet.absoluteFill}
@@ -150,7 +153,7 @@ export default function ArenaMerkezi() {
               <VText variant="heading" style={{ fontSize: 21, flexShrink: 1 }} numberOfLines={1}>
                 {arena.name} Arenası
               </VText>
-              <BadgeCheck size={18} color="#fff" fill={Colors.cyan} />
+              <BadgeCheck size={18} color="#fff" fill={OnImage.accent} />
             </View>
             <VText variant="body" numberOfLines={2}>
               {arena.tagline}
@@ -158,14 +161,14 @@ export default function ArenaMerkezi() {
             <View style={styles.arenaFoot}>
               <View style={{ gap: 4 }}>
                 <View style={styles.inline}>
-                  <Users size={14} color={Colors.textSecondary} />
-                  <VText variant="caption" color={Colors.textSecondary} numberOfLines={1}>
+                  <Users size={14} color={OnImage.textSecondary} />
+                  <VText variant="caption" color={OnImage.textSecondary} numberOfLines={1}>
                     {formatCount(store.arenaMeta(active).members)} Üye
                   </VText>
                 </View>
                 <View style={styles.inline}>
-                  <MessageCircle size={14} color={Colors.textSecondary} />
-                  <VText variant="caption" color={Colors.textSecondary} numberOfLines={1}>
+                  <MessageCircle size={14} color={OnImage.textSecondary} />
+                  <VText variant="caption" color={OnImage.textSecondary} numberOfLines={1}>
                     {ranked.length} Gönderi
                   </VText>
                 </View>
@@ -178,6 +181,7 @@ export default function ArenaMerkezi() {
               />
             </View>
           </GlassCard>
+          </OnDark>
         </Pressable>
       </View>
 
@@ -273,9 +277,11 @@ export default function ArenaMerkezi() {
           <Pressable key={a.key} style={styles.tile} onPress={() => go(`/arena/${a.key}`)}>
             <Image source={{ uri: a.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
             <BottomFade />
+            <OnDark>
             <VText variant="label" style={styles.tileLabel} numberOfLines={1}>
               {a.name}
             </VText>
+            </OnDark>
           </Pressable>
         ))}
       </ScrollView>

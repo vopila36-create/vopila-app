@@ -34,8 +34,8 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Avatar, GlassCard, OutlineButton, SectionHeader } from '@/components/ui/primitives';
 import { AppHeader, Screen } from '@/components/ui/screen';
 import { EmptyState } from '@/components/ui/sub-screen';
-import { VText } from '@/components/ui/text';
-import { bgAlpha, Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { OnDark, VText } from '@/components/ui/text';
+import { Colors, Fonts, OnImage, Radius, scrim, Spacing } from '@/constants/theme';
 import { arenaByKey, badges, levelInfo, ME_ID, myFollowerIds, type ArenaKey, type Post } from '@/data/mock';
 import { formatCount, formatTokens, useMe, useStore } from '@/store/app-store';
 
@@ -94,12 +94,13 @@ export default function Profil() {
       <View style={styles.top}>
         <Image source={{ uri: me.cover }} style={styles.cover} contentFit="cover" />
         <LinearGradient
-          colors={[bgAlpha(0.92), bgAlpha(0.45)]}
+          colors={[scrim(0.92), scrim(0.45)]}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
           style={StyleSheet.absoluteFill}
         />
-        <LinearGradient colors={['transparent', Colors.bg]} start={{ x: 0, y: 0.5 }} end={{ x: 0, y: 1 }} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={['transparent', scrim(0.92)]} start={{ x: 0, y: 0.5 }} end={{ x: 0, y: 1 }} style={StyleSheet.absoluteFill} />
+        <OnDark>
         <View style={styles.topRow}>
           <Pressable style={styles.avatarGlow} onPress={() => go('/profil-duzenle')}>
             <Avatar uri={me.avatar} size={100} ring />
@@ -109,38 +110,39 @@ export default function Profil() {
               <VText variant="heading" style={{ fontSize: 23, lineHeight: 29, flexShrink: 1 }} numberOfLines={1}>
                 {me.name}
               </VText>
-              {me.verified ? <BadgeCheck size={21} color="#fff" fill={Colors.cyan} /> : null}
+              {me.verified ? <BadgeCheck size={21} color="#fff" fill={OnImage.accent} /> : null}
             </View>
             <VText variant="body">@{me.username}</VText>
-            <VText variant="body" color={Colors.text} style={{ marginTop: 6, fontSize: 13 }} numberOfLines={3}>
+            <VText variant="body" color={OnImage.text} style={{ marginTop: 6, fontSize: 13 }} numberOfLines={3}>
               {me.bio}
             </VText>
           </View>
         </View>
         <View style={styles.metaRow}>
-          <MapPin size={14} color={Colors.cyan} />
-          <VText variant="caption" color={Colors.textSecondary} numberOfLines={1} style={{ flexShrink: 1 }}>
+          <MapPin size={14} color={OnImage.accent} />
+          <VText variant="caption" color={OnImage.textSecondary} numberOfLines={1} style={{ flexShrink: 1 }}>
             {me.location}
           </VText>
-          <CalendarDays size={14} color={Colors.cyan} style={{ marginLeft: 10 }} />
-          <VText variant="caption" color={Colors.textSecondary}>
+          <CalendarDays size={14} color={OnImage.accent} style={{ marginLeft: 10 }} />
+          <VText variant="caption" color={OnImage.textSecondary}>
             VOPILA&apos;da 1+ Yıl
           </VText>
         </View>
         <View style={styles.actionRow}>
           <OutlineButton
             label="Profili Düzenle"
-            iconLeft={<Pencil size={16} color={Colors.text} />}
+            iconLeft={<Pencil size={16} color={OnImage.text} />}
             style={{ flex: 1 }}
             onPress={() => go('/profil-duzenle')}
           />
           <Pressable style={styles.wallet} onPress={() => go('/cuzdan')}>
-            <Coins size={18} color={Colors.gold} />
-            <VText variant="label" color={Colors.gold}>
+            <Coins size={18} color={OnImage.gold} />
+            <VText variant="label" color={OnImage.gold}>
               {formatTokens(store.balance)} Token
             </VText>
           </Pressable>
         </View>
+        </OnDark>
       </View>
 
       {/* İstatistikler */}
@@ -191,9 +193,11 @@ export default function Profil() {
               <Pressable key={key} style={styles.myArena} onPress={() => go(`/arena/${key}`)}>
                 <Image source={{ uri: a.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
                 <LinearGradient colors={['transparent', 'rgba(3,9,20,0.9)']} style={StyleSheet.absoluteFill} />
+                <OnDark>
                 <VText variant="label" style={styles.myArenaLabel} numberOfLines={2}>
                   {a.name}
                 </VText>
+                </OnDark>
               </Pressable>
             );
           })}
@@ -338,12 +342,14 @@ export default function Profil() {
                 </View>
               ) : null}
               <LinearGradient colors={['transparent', 'rgba(0,0,0,0.6)']} style={[StyleSheet.absoluteFill, { top: '60%' }]} />
+              <OnDark>
               <View style={styles.gridFoot}>
                 <Heart size={13} color="#fff" />
                 <VText variant="caption" color="#fff" style={{ flex: 1 }}>
                   {formatCount(store.likeCount(p))}
                 </VText>
               </View>
+              </OnDark>
             </Pressable>
           ))}
         </View>

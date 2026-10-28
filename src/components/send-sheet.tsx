@@ -22,7 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PeoplePicker } from '@/components/people-picker';
 import { PrimaryButton } from '@/components/ui/primitives';
-import { VText } from '@/components/ui/text';
+import { OnTheme, VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { sendToUser } from '@/lib/messages-api';
 import { isRealId } from '@/lib/social-api';
@@ -77,6 +77,7 @@ export function SendSheet({ payload, onClose }: { payload: SendPayload | null; o
 
   return (
     <Modal visible={!!payload} transparent animationType="slide" onRequestClose={close}>
+<OnTheme>
       <Pressable style={styles.backdrop} onPress={close} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}>
@@ -146,7 +147,8 @@ export function SendSheet({ payload, onClose }: { payload: SendPayload | null; o
           )}
         </View>
       </KeyboardAvoidingView>
-    </Modal>
+    </OnTheme>
+</Modal>
   );
 }
 

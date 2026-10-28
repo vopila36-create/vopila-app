@@ -6,8 +6,8 @@ import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native
 
 import { Avatar, BottomFade, Chip, GlassCard, PrimaryButton } from '@/components/ui/primitives';
 import { SubScreen } from '@/components/ui/sub-screen';
-import { VText } from '@/components/ui/text';
-import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { OnDark, VText } from '@/components/ui/text';
+import { Colors, Fonts, OnImage, Radius, Spacing } from '@/constants/theme';
 import { arenaByKey, arenas, liveStreams, userById, type ArenaKey } from '@/data/mock';
 import { formatCount } from '@/store/app-store';
 
@@ -115,6 +115,7 @@ export default function CanliListe() {
               <Pressable key={s.id} style={styles.card} onPress={() => router.push(`/canli/${s.id}` as Href)}>
                 <Image source={{ uri: s.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
                 <BottomFade />
+                <OnDark>
                 <View style={styles.topRow}>
                   <View style={styles.liveTag}>
                     <View style={styles.liveDot} />
@@ -133,12 +134,13 @@ export default function CanliListe() {
                     <VText variant="bodyBold" numberOfLines={1}>
                       {s.title}
                     </VText>
-                    <VText variant="caption" color={Colors.textSecondary} numberOfLines={1}>
+                    <VText variant="caption" color={OnImage.textSecondary} numberOfLines={1}>
                       {host.name}
                       {s.arenaKey ? ` · ${arenaByKey(s.arenaKey).name} Arenası` : ''}
                     </VText>
                   </View>
                 </View>
+                </OnDark>
               </Pressable>
             );
           })}

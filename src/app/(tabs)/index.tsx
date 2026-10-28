@@ -25,8 +25,8 @@ import {
   SectionHeader,
 } from '@/components/ui/primitives';
 import { AppHeader, Screen } from '@/components/ui/screen';
-import { VText } from '@/components/ui/text';
-import { bgAlpha, Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { OnDark, VText } from '@/components/ui/text';
+import { Colors, Fonts, OnImage, Radius, scrim, Spacing } from '@/constants/theme';
 import { img, interests, newsById } from '@/data/mock';
 
 const QUICK: { title: string; sub: string; Icon: LucideIcon; color: string; href: string }[] = [
@@ -52,20 +52,21 @@ export default function AnaSahne() {
       <View style={styles.hero}>
         <Image source={{ uri: img.mountain2 }} style={styles.heroImage} contentFit="cover" />
         <LinearGradient
-          colors={[bgAlpha(0.95), bgAlpha(0.55), bgAlpha(0.1)]}
+          colors={[scrim(0.95), scrim(0.55), scrim(0.1)]}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
           style={StyleSheet.absoluteFill}
         />
         <LinearGradient
-          colors={['transparent', Colors.bg]}
+          colors={['transparent', scrim(0.92)]}
           start={{ x: 0, y: 0.6 }}
           end={{ x: 0, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
+        <OnDark>
         <View style={styles.heroContent}>
           <VText variant="display">Bugün</VText>
-          <VText variant="display" color={Colors.cyan}>
+          <VText variant="display" color={OnImage.accent}>
             Ne Keşfetmek{'\n'}İstersin?
           </VText>
           <VText style={styles.heroText}>
@@ -74,7 +75,7 @@ export default function AnaSahne() {
           <View style={styles.heroActions}>
             <OutlineButton
               label="Keşfe Başla"
-              icon={<ArrowRight size={18} color={Colors.cyan} />}
+              icon={<ArrowRight size={18} color={OnImage.accent} />}
               onPress={() => router.navigate('/akis' as Href)}
             />
             <Pressable style={styles.heroPlay} onPress={() => router.push('/haber/n6' as Href)}>
@@ -88,6 +89,7 @@ export default function AnaSahne() {
             </Pressable>
           </View>
         </View>
+        </OnDark>
       </View>
 
       {/* Hızlı erişim kutuları */}
@@ -122,6 +124,7 @@ export default function AnaSahne() {
             <Pressable key={it.key} style={styles.interest} onPress={() => router.push(`/ilgi/${it.key}` as Href)}>
               <Image source={{ uri: it.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
               <BottomFade />
+              <OnDark>
               <View style={styles.interestIcon}>
                 <Icon size={18} color={it.color} />
               </View>
@@ -130,7 +133,7 @@ export default function AnaSahne() {
                   <VText variant="bodyBold" style={{ fontSize: 16 }}>
                     {it.title}
                   </VText>
-                  <VText variant="caption" color={Colors.textSecondary}>
+                  <VText variant="caption" color={OnImage.textSecondary}>
                     {it.text}
                   </VText>
                 </View>
@@ -138,6 +141,7 @@ export default function AnaSahne() {
                   <ChevronRight size={18} color="#fff" />
                 </View>
               </View>
+              </OnDark>
             </Pressable>
           );
         })}
@@ -149,13 +153,14 @@ export default function AnaSahne() {
         <Pressable style={styles.featured} onPress={() => router.push('/haber/n6' as Href)}>
           <Image source={{ uri: featured?.image ?? img.whale }} style={StyleSheet.absoluteFill} contentFit="cover" />
           <BottomFade />
+          <OnDark>
           <View style={styles.badge}>
             <VText style={styles.badgeText}>VOPILA ÖZEL</VText>
           </View>
           <View style={styles.featuredBody}>
             <View style={{ flex: 1 }}>
               <VText variant="heading">Mavi Dünyanın Sırları</VText>
-              <VText variant="caption" color={Colors.textSecondary}>
+              <VText variant="caption" color={OnImage.textSecondary}>
                 Okyanusların derinliklerinde keşfedilmeyi bekleyen yaşam.
               </VText>
             </View>
@@ -163,6 +168,7 @@ export default function AnaSahne() {
               <Play size={20} color="#fff" fill="#fff" />
             </PlayBadge>
           </View>
+          </OnDark>
         </Pressable>
       </View>
     </Screen>
@@ -182,7 +188,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   heroPlay: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  overline: { fontFamily: Fonts.semibold, fontSize: 10, letterSpacing: 1.5, color: Colors.textMuted },
+  overline: { fontFamily: Fonts.semibold, fontSize: 10, letterSpacing: 1.5, color: OnImage.textMuted },
   quickRow: { flexDirection: 'row', gap: 8, paddingHorizontal: Spacing.screen },
   quick: { alignItems: 'center', paddingVertical: 14, paddingHorizontal: 4, minHeight: 112 },
   section: { paddingHorizontal: Spacing.screen, marginTop: Spacing.xxl },
@@ -242,9 +248,9 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     borderWidth: 1,
     borderColor: Colors.borderStrong,
-    backgroundColor: bgAlpha(0.6),
+    backgroundColor: scrim(0.6),
   },
-  badgeText: { fontFamily: Fonts.bold, fontSize: 10, letterSpacing: 1, color: Colors.text },
+  badgeText: { fontFamily: Fonts.bold, fontSize: 10, letterSpacing: 1, color: OnImage.text },
   featuredBody: {
     position: 'absolute',
     left: 14,
