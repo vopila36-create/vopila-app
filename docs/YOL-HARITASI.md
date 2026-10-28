@@ -62,10 +62,12 @@
 - [ ] Ürün, sipariş ve kargo yönetimi; arena ve haber yönetimi
 - [ ] Şikayet kuyruğu, bekleyen ödül onayı, kullanıcı askı/ban, denetim kaydı
 
-## Adım 5 — Ayarlar paketi
-- [ ] Hesabı sil, engellenenler, verilerimi indir, yardım ve destek, topluluk kuralları
-- [ ] İki adımlı doğrulama, aktif cihazlar, e-posta değiştir, ayrıntılı bildirimler, yorum/etiket izinleri, kısıtla/sessize al, gizli kelimeler
-- [ ] Etkinliğin (kaydedilenler, arşiv), süre sınırı, dil/tema/yazı boyutu, ayarlarda arama; "Demo verilerini sıfırla" kaldırılır
+## Adım 5 — Ayarlar paketi (Instagram karşılaştırması, kod bitti 28 Ekim 2026)
+- [x] Hesabı sil (siparişler kimliksiz saklanır), engellenenler, verilerimi indir (KVKK), yardım ve sorun bildir, topluluk kuralları
+- [x] İki adımlı doğrulama (doğrulama uygulaması), tüm cihazlardan çıkış, ayrıntılı bildirimler, yorum/bahsetme/mesaj izinleri, kısıtla/sessize al, gizli kelimeler
+- [x] Kaydedilenler, Arşiv, Hareketlerin (beğendiklerin, yorumların), geçirdiğin süre + günlük sınır
+- [ ] E-posta değiştir (Resend bağlanınca), dil/tema/yazı boyutu, beğeni sayılarını gizle, ayarlarda arama; "Demo verilerini sıfırla" yayından önce kaldırılır
+- [ ] Destek taleplerini yanıtlama ekranı (yönetici paneli, Adım 4)
 
 ## Adım 6 — Yasal paket (yayından önce şart)
 - [ ] 15 yaş sınırı + e-Devlet yaş doğrulama (yönetmelik 1 Kasım 2026'da yürürlükte; mevcut hesaplar 31 Mart 2027'ye kadar)

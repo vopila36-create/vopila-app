@@ -48,6 +48,7 @@ import {
 } from '@/lib/posts-api';
 import { fetchConversations, subscribeToInbox, type Conversation } from '@/lib/messages-api';
 import { createMoment as createRemoteMoment, fetchMoments } from '@/lib/moments-api';
+import { fetchRelationIds, setRelation } from '@/lib/settings-api';
 import { fetchNotifications, markNotificationsRead as markRemoteNotificationsRead } from '@/lib/notifications-api';
 import { fetchMyFollowing, follow, isRealId, unfollow, type FollowStatus } from '@/lib/social-api';
 import { isSupabaseConfigured } from '@/lib/supabase';
@@ -122,6 +123,7 @@ const EMPTY_FOLLOWS: Record<string, 'pending' | 'accepted'> = {};
 const EMPTY_INBOX: Conversation[] = [];
 const EMPTY_NOTIFS: AppNotification[] = [];
 const EMPTY_MOMENTS: Moment[] = [];
+const EMPTY_REL = { owner: null as string | null, muted: [] as string[], restricted: [] as string[] };
 
 const MAX_SEEN = 300;
 /** Eski ilgiler yavaşça sönümlenir; kullanıcının zevki değişince akış da değişir. */
@@ -572,6 +574,47 @@ function useBuildStore() {
 
   const unreadMessages = useMemo(() => inbox.reduce((s, c) => s + (c.unread > 0 ? 1 : 0), 0), [inbox]);
 
+  // ─── Sessize al ve kısıtla ────────────────────────────────────────────────
+  const [rawRel, setRel] = useState<{ owner: string | null; muted: string[]; restricted: string[] }>({
+    owner: null,
+    muted: [],
+    restricted: [],
+  });
+  const rel = rawRel.owner === myId ? rawRel : EMPTY_REL;
+
+  useEffect(() => {
+    if (!myId) return;
+    let cancelled = false;
+    Promise.all([fetchRelationIds(myId, 'mutes'), fetchRelationIds(myId, 'restricts')]).then(([muted, restricted]) => {
+      if (!cancelled) setRel({ owner: myId, muted, restricted });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [myId]);
+
+  /** Sessize al / kısıtla aç-kapa (ekranda hemen, sunucu reddederse geri alınır). */
+  const toggleRelation = useCallback(
+    async (kind: 'mutes' | 'restricts', id: string): Promise<{ ok: boolean; on: boolean; error?: string }> => {
+      if (!myId) return { ok: false, on: false, error: 'Önce giriş yapmalısın.' };
+      const key = kind === 'mutes' ? 'muted' : 'restricted';
+      const on = !rel[key].includes(id);
+      const flip = (v: boolean) =>
+        setRel((r) => {
+          const base = r.owner === myId ? r : { ...EMPTY_REL, owner: myId };
+          return { ...base, [key]: v ? [...base[key], id] : base[key].filter((x) => x !== id) };
+        });
+      flip(on);
+      const res = await setRelation(myId, kind, id, on);
+      if (!res.ok) {
+        flip(!on);
+        return { ok: false, on: !on, error: res.error };
+      }
+      return { ok: true, on };
+    },
+    [myId, rel],
+  );
+
   // ─── Anlar (24 saat) ──────────────────────────────────────────────────────
   const [rawMoments, setMoments] = useState<{ owner: string | null; list: Moment[] }>({ owner: null, list: [] });
   const realMoments = rawMoments.owner === myId ? rawMoments.list : EMPTY_MOMENTS;
@@ -842,6 +885,9 @@ function useBuildStore() {
     inbox,
     unreadMessages,
     refreshInbox,
+    mutedIds: rel.muted,
+    restrictedIds: rel.restricted,
+    toggleRelation,
     allMoments,
     refreshMoments,
     createMoment,

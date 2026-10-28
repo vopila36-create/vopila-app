@@ -1,41 +1,57 @@
+/**
+ * Ayarlar (Instagram düzenine göre): Hesap · Etkinliğin · Bildirimler · Gizlilik · Etkileşimler ·
+ * Güvenlik · Tercihler · Destek · Yasal · Hesap işlemleri.
+ */
 import { router, type Href } from 'expo-router';
 import {
+  Archive,
   Award,
   Ban,
   Bell,
-  MessageCircle,
-  UserPlus,
+  BellOff,
+  BookOpen,
+  Bookmark,
   ChevronDown,
-  ChevronRight,
   ChevronUp,
   Coins,
+  Download,
   FileText,
+  History,
   Info,
   KeyRound,
+  LifeBuoy,
   Lock,
   LogOut,
+  MessageCircle,
+  MonitorSmartphone,
   Package,
-  ScanFace,
   PlayCircle,
   RotateCcw,
+  ScanFace,
   Shield,
-  Trophy,
+  ShieldCheck,
+  ShieldMinus,
+  Timer,
+  Trash2,
   UserPen,
+  UserPlus,
+  Users,
 } from 'lucide-react-native';
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Switch, TextInput, View } from 'react-native';
 
-import { GlassCard } from '@/components/ui/primitives';
+import { Row, Section, ToggleRow } from '@/components/settings-ui';
 import { SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { useStore, type Settings } from '@/store/app-store';
+import { signOutEverywhere } from '@/lib/settings-api';
+import { useStore } from '@/store/app-store';
 import { useAuth } from '@/store/auth';
 
 const PRIVACY = [
   'VOPILA, 6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) kapsamında kişisel verilerini yalnızca hizmeti sunmak için işler.',
   'Paylaştığın içerikler, profil bilgilerin ve arena oyların hesabınla ilişkilendirilir. Verilerin üçüncü kişilere satılmaz.',
-  'Hesabını sildiğinde kişisel verilerin yasal saklama süreleri dışında kalıcı olarak silinir. Talepler için destek@vopila.app adresine yazabilirsin.',
+  'Verilerinin bir kopyasını “Verilerimi indir” ile alabilir, “Hesabı sil” ile hesabını kalıcı olarak silebilirsin. Talepler için destek@vopila.app adresine yazabilirsin.',
 ];
 const TERMS = [
   'VOPILA’yı kullanarak topluluk kurallarına uymayı kabul edersin: nefret söylemi, taciz ve telif ihlali içeren içerikler kaldırılır.',
@@ -46,15 +62,17 @@ const TERMS = [
 const go = (p: string) => router.push(p as Href);
 
 export default function Ayarlar() {
-  const { state, updateSettings, resetDemo } = useStore();
+  const { state, updateSettings, resetDemo, myId } = useStore();
   const [open, setOpen] = useState<'privacy' | 'terms' | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmEverywhere, setConfirmEverywhere] = useState(false);
   const [note, setNote] = useState('');
   const auth = useAuth();
   // Face ID'yi açarken şifre sorulur
   const [bioPw, setBioPw] = useState<string | null>(null);
   const [bioBusy, setBioBusy] = useState(false);
   const bioLabel = auth.biometric.label;
+  const signedIn = !!auth.session;
 
   const toggleBiometric = async (on: boolean) => {
     setNote('');
@@ -77,25 +95,24 @@ export default function Ayarlar() {
   };
 
   // Gizli hesap ayarı giriş yapılmışsa Supabase'deki profilde tutulur
-  const settingValue = (key: keyof Settings) =>
-    key === 'privateAccount' && auth.profile ? auth.profile.is_private : state.settings[key];
-  const changeSetting = async (key: keyof Settings, v: boolean) => {
-    updateSettings({ [key]: v });
-    if (key === 'privateAccount' && auth.profile) {
+  const privateAccount = auth.profile ? auth.profile.is_private : state.settings.privateAccount;
+  const setPrivate = async (v: boolean) => {
+    updateSettings({ privateAccount: v });
+    if (auth.profile) {
       const res = await auth.saveProfile({ is_private: v });
       if (!res.ok) setNote(res.error);
+      else setNote(v ? 'Hesabın artık gizli. Yeni takipçileri sen onaylarsın.' : 'Hesabın artık herkese açık. Bekleyen istekler onaylandı.');
     }
   };
 
-  const toggles: { key: keyof Settings; label: string; desc: string; icon: ReactNode }[] = [
-    { key: 'pushNotifications', label: 'Bildirimler', desc: 'Beğeni, yorum ve takip bildirimleri', icon: <Bell size={20} color={Colors.cyan} /> },
-    { key: 'arenaReminders', label: 'Arena hatırlatmaları', desc: 'Sezon bitişi ve oylama hatırlatmaları', icon: <Trophy size={20} color={Colors.gold} /> },
-    { key: 'privateAccount', label: 'Gizli hesap', desc: 'Paylaşımlarını ve takipçi/takip listelerini yalnızca takipçilerin görür', icon: <Lock size={20} color={Colors.cyanSoft} /> },
-    { key: 'autoplayVideos', label: 'Videoları otomatik oynat', desc: 'Akışta videolar sessiz başlar', icon: <PlayCircle size={20} color={Colors.cyanSoft} /> },
-  ];
+  const everywhere = async () => {
+    setConfirmEverywhere(false);
+    const res = await signOutEverywhere();
+    if (!res.ok) setNote(res.error);
+  };
 
   return (
-    <SubScreen title="Ayarlar">
+    <SubScreen title="Ayarlar ve Etkinlik">
       <View style={styles.pad}>
         <Section title="Hesap">
           <Row icon={<UserPen size={20} color={Colors.cyan} />} label="Profili düzenle" onPress={() => go('/profil-duzenle')} />
@@ -104,22 +121,43 @@ export default function Ayarlar() {
           <Row icon={<Award size={20} color={Colors.gold} />} label="Rozetlerim" onPress={() => go('/rozetler')} last />
         </Section>
 
-        <Section title="Gizlilik ve Etkileşim">
-          <Row icon={<MessageCircle size={20} color={Colors.cyan} />} label="Mesajlar" onPress={() => go('/mesajlar')} />
+        <Section title="VOPILA'yı nasıl kullanıyorsun">
+          <Row icon={<Bookmark size={20} color={Colors.cyan} />} label="Kaydedilenler" onPress={() => go('/kaydedilenler')} />
+          <Row icon={<Archive size={20} color={Colors.cyanSoft} />} label="Arşiv" onPress={() => go('/arsiv')} />
+          <Row icon={<History size={20} color={Colors.cyanSoft} />} label="Hareketlerin" onPress={() => go('/hareketlerin')} />
+          <Row icon={<Timer size={20} color={Colors.cyanSoft} />} label="Geçirdiğin süre" onPress={() => go('/hareketlerin?tab=sure')} />
+          <Row icon={<Bell size={20} color={Colors.cyan} />} label="Bildirimler" onPress={() => go('/bildirim-ayarlari')} last />
+        </Section>
+
+        <Section title="İçeriğini kimler görebilir">
+          <ToggleRow
+            icon={<Lock size={20} color={Colors.cyanSoft} />}
+            label="Gizli hesap"
+            desc="Paylaşımlarını ve takipçi/takip listelerini yalnızca onayladığın takipçiler görür"
+            value={privateAccount}
+            onChange={setPrivate}
+          />
           <Row icon={<UserPlus size={20} color={Colors.cyanSoft} />} label="Takip istekleri" onPress={() => go('/takip-istekleri')} />
           <Row icon={<Ban size={20} color={Colors.live} />} label="Engellenen hesaplar" onPress={() => go('/engellenenler')} last />
         </Section>
 
-        {auth.session ? (
+        <Section title="Başkaları seninle nasıl etkileşim kurabilir">
+          <Row icon={<MessageCircle size={20} color={Colors.cyan} />} label="Mesajlar" onPress={() => go('/mesajlar')} />
+          <Row
+            icon={<Users size={20} color={Colors.cyanSoft} />}
+            label="Yorumlar, bahsetmeler, mesaj izni ve gizli kelimeler"
+            onPress={() => go('/etkilesim-ayarlari')}
+          />
+          <Row icon={<ShieldMinus size={20} color={Colors.cyanSoft} />} label="Kısıtlanan hesaplar" onPress={() => go('/kisitlananlar')} />
+          <Row icon={<BellOff size={20} color={Colors.cyanSoft} />} label="Sessize alınan hesaplar" onPress={() => go('/sessize-alinanlar')} last />
+        </Section>
+
+        {signedIn ? (
           <Section title="Güvenlik">
-            <Row
-              icon={<KeyRound size={20} color={Colors.cyan} />}
-              label="Şifreyi değiştir"
-              onPress={() => go('/yeni-sifre')}
-              last={!auth.biometric.available}
-            />
+            <Row icon={<KeyRound size={20} color={Colors.cyan} />} label="Şifreyi değiştir" onPress={() => go('/yeni-sifre')} />
+            <Row icon={<ShieldCheck size={20} color={Colors.success} />} label="İki adımlı doğrulama" onPress={() => go('/iki-adimli')} />
             {auth.biometric.available ? (
-              <View style={[styles.row, { borderBottomWidth: 0, flexWrap: 'wrap' }]}>
+              <View style={[styles.row, { flexWrap: 'wrap' }]}>
                 <ScanFace size={20} color={Colors.cyanSoft} />
                 <View style={{ flex: 1 }}>
                   <VText variant="label">{bioLabel} ile giriş</VText>
@@ -156,25 +194,39 @@ export default function Ayarlar() {
                 ) : null}
               </View>
             ) : null}
+            {confirmEverywhere ? (
+              <Confirm
+                text="Bu hesap açık olan tüm telefon ve tarayıcılardan çıkış yapılsın mı? Bu cihazdan da çıkılır."
+                yes="Evet, hepsinden çık"
+                onYes={everywhere}
+                onNo={() => setConfirmEverywhere(false)}
+                last
+              />
+            ) : (
+              <Row
+                icon={<MonitorSmartphone size={20} color={Colors.cyanSoft} />}
+                label="Tüm cihazlardan çıkış yap"
+                onPress={() => setConfirmEverywhere(true)}
+                last
+              />
+            )}
           </Section>
         ) : null}
 
-        <Section title="Tercihler">
-          {toggles.map((t, i) => (
-            <View key={t.key} style={[styles.row, i === toggles.length - 1 && { borderBottomWidth: 0 }]}>
-              {t.icon}
-              <View style={{ flex: 1 }}>
-                <VText variant="label">{t.label}</VText>
-                <VText variant="caption">{t.desc}</VText>
-              </View>
-              <Switch
-                value={settingValue(t.key)}
-                onValueChange={(v) => changeSetting(t.key, v)}
-                trackColor={{ true: Colors.cyan, false: 'rgba(255,255,255,0.15)' }}
-                thumbColor="#fff"
-              />
-            </View>
-          ))}
+        <Section title="Uygulama tercihleri">
+          <ToggleRow
+            icon={<PlayCircle size={20} color={Colors.cyanSoft} />}
+            label="Videoları otomatik oynat"
+            desc="Akışta videolar sessiz başlar"
+            value={state.settings.autoplayVideos}
+            onChange={(v) => updateSettings({ autoplayVideos: v })}
+            last
+          />
+        </Section>
+
+        <Section title="Destek">
+          <Row icon={<LifeBuoy size={20} color={Colors.cyan} />} label="Yardım ve sorun bildir" onPress={() => go('/destek')} />
+          <Row icon={<BookOpen size={20} color={Colors.cyanSoft} />} label="Topluluk kuralları" onPress={() => go('/topluluk-kurallari')} last />
         </Section>
 
         <Section title="Yasal">
@@ -191,39 +243,35 @@ export default function Ayarlar() {
             open={open === 'terms'}
             onPress={() => setOpen(open === 'terms' ? null : 'terms')}
             paragraphs={TERMS}
-            last
           />
-        </Section>
-
-        <Section title="Diğer">
-          <View style={styles.row}>
+          <View style={[styles.row, { borderBottomWidth: 0 }]}>
             <Info size={20} color={Colors.textSecondary} />
             <VText variant="label" style={{ flex: 1 }}>
               Uygulama sürümü
             </VText>
             <VText variant="caption">1.0.0</VText>
           </View>
+        </Section>
+
+        <Section title="Hesap işlemleri">
+          {myId ? (
+            <>
+              <Row icon={<Download size={20} color={Colors.cyanSoft} />} label="Verilerimi indir" onPress={() => go('/verilerim')} />
+              <Row icon={<Trash2 size={20} color={Colors.live} />} label="Hesabı sil" onPress={() => go('/hesap-sil')} />
+            </>
+          ) : null}
+          {/* Örnek veriler yayından önce kaldırılacak */}
           {confirmReset ? (
-            <View style={[styles.row, { flexDirection: 'column', alignItems: 'stretch' }]}>
-              <VText variant="label">Tüm demo verileri (beğeniler, siparişler, oylar) silinsin mi?</VText>
-              <View style={{ flexDirection: 'row', gap: 20, marginTop: 10 }}>
-                <Pressable
-                  onPress={() => {
-                    resetDemo();
-                    setConfirmReset(false);
-                    setNote('Demo verileri sıfırlandı.');
-                  }}>
-                  <VText variant="label" color={Colors.live}>
-                    Evet, sıfırla
-                  </VText>
-                </Pressable>
-                <Pressable onPress={() => setConfirmReset(false)}>
-                  <VText variant="label" color={Colors.textSecondary}>
-                    Vazgeç
-                  </VText>
-                </Pressable>
-              </View>
-            </View>
+            <Confirm
+              text="Tüm demo verileri (beğeniler, siparişler, oylar) silinsin mi?"
+              yes="Evet, sıfırla"
+              onYes={() => {
+                resetDemo();
+                setConfirmReset(false);
+                setNote('Demo verileri sıfırlandı.');
+              }}
+              onNo={() => setConfirmReset(false)}
+            />
           ) : (
             <Row icon={<RotateCcw size={20} color={Colors.textSecondary} />} label="Demo verilerini sıfırla" onPress={() => setConfirmReset(true)} />
           )}
@@ -232,16 +280,14 @@ export default function Ayarlar() {
             label="Çıkış Yap"
             danger
             onPress={() =>
-              auth.session
-                ? auth.signOut()
-                : setNote('Demo modundasın; Supabase bağlanınca buradan çıkış yapabileceksin.')
+              auth.session ? auth.signOut() : setNote('Demo modundasın; Supabase bağlanınca buradan çıkış yapabileceksin.')
             }
             last
           />
         </Section>
 
         {note ? (
-          <VText variant="caption" color={Colors.cyan} style={{ textAlign: 'center', marginTop: 4 }}>
+          <VText variant="caption" color={Colors.cyan} style={{ textAlign: 'center', marginTop: 10 }}>
             {note}
           </VText>
         ) : null}
@@ -250,26 +296,23 @@ export default function Ayarlar() {
   );
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Confirm({ text, yes, onYes, onNo, last }: { text: string; yes: string; onYes: () => void; onNo: () => void; last?: boolean }) {
   return (
-    <View style={{ marginTop: Spacing.lg }}>
-      <VText variant="caption" style={styles.sectionTitle}>
-        {title.toLocaleUpperCase('tr-TR')}
-      </VText>
-      <GlassCard>{children}</GlassCard>
+    <View style={[styles.row, { flexDirection: 'column', alignItems: 'stretch' }, last && { borderBottomWidth: 0 }]}>
+      <VText variant="label">{text}</VText>
+      <View style={{ flexDirection: 'row', gap: 20, marginTop: 10 }}>
+        <Pressable onPress={onYes}>
+          <VText variant="label" color={Colors.live}>
+            {yes}
+          </VText>
+        </Pressable>
+        <Pressable onPress={onNo}>
+          <VText variant="label" color={Colors.textSecondary}>
+            Vazgeç
+          </VText>
+        </Pressable>
+      </View>
     </View>
-  );
-}
-
-function Row({ icon, label, onPress, last, danger }: { icon: ReactNode; label: string; onPress: () => void; last?: boolean; danger?: boolean }) {
-  return (
-    <Pressable style={[styles.row, last && { borderBottomWidth: 0 }]} onPress={onPress}>
-      {icon}
-      <VText variant="label" color={danger ? Colors.live : Colors.text} style={{ flex: 1 }}>
-        {label}
-      </VText>
-      {!danger ? <ChevronRight size={18} color={Colors.textMuted} /> : null}
-    </Pressable>
   );
 }
 
@@ -279,17 +322,15 @@ function Expand({
   open,
   onPress,
   paragraphs,
-  last,
 }: {
   icon: ReactNode;
   label: string;
   open: boolean;
   onPress: () => void;
   paragraphs: string[];
-  last?: boolean;
 }) {
   return (
-    <View style={[styles.expand, last && { borderBottomWidth: 0 }]}>
+    <View style={styles.expand}>
       <Pressable style={styles.expandHead} onPress={onPress}>
         {icon}
         <VText variant="label" style={{ flex: 1 }}>
@@ -326,7 +367,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   pad: { paddingHorizontal: Spacing.screen },
-  sectionTitle: { letterSpacing: 1, marginBottom: 6, marginLeft: 4 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

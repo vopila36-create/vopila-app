@@ -8,6 +8,7 @@ import { router, type Href } from 'expo-router';
 import {
   BadgeCheck,
   Ban,
+  BellOff,
   Clock,
   Flag,
   ImageOff,
@@ -16,6 +17,7 @@ import {
   MessageCircle,
   MoreHorizontal,
   PlayCircle,
+  ShieldMinus,
   Sparkles,
   UserCheck,
   UserPlus,
@@ -100,6 +102,24 @@ export function RealProfileScreen({ id }: { id: string }) {
     if (!res.ok) setNotice(res.error ?? 'İşlem yapılamadı.');
   };
 
+  const onRelation = async (kind: 'mutes' | 'restricts') => {
+    setMenuOpen(false);
+    const res = await store.toggleRelation(kind, id);
+    if (!res.ok) {
+      setNotice(res.error ?? 'İşlem yapılamadı.');
+      return;
+    }
+    setNotice(
+      kind === 'mutes'
+        ? res.on
+          ? `${profile.name} sessize alındı. Gönderileri ve anları akışında görünmeyecek; bundan haberi olmaz.`
+          : `${profile.name} artık sessizde değil.`
+        : res.on
+          ? `${profile.name} kısıtlandı. Gönderilerine yaptığı yorumları yalnızca o ve sen görürsün; bildirim gelmez.`
+          : `${profile.name} için kısıtlama kaldırıldı.`,
+    );
+  };
+
   const onBlock = async () => {
     setMenuOpen(false);
     if (!store.myId) return;
@@ -123,6 +143,14 @@ export function RealProfileScreen({ id }: { id: string }) {
       }>
       {menuOpen ? (
         <View style={styles.menu}>
+          <Pressable style={styles.menuItem} onPress={() => onRelation('mutes')}>
+            <BellOff size={16} color={Colors.text} />
+            <VText variant="label">{store.mutedIds.includes(id) ? 'Sessizden çıkar' : 'Sessize al'}</VText>
+          </Pressable>
+          <Pressable style={styles.menuItem} onPress={() => onRelation('restricts')}>
+            <ShieldMinus size={16} color={Colors.text} />
+            <VText variant="label">{store.restrictedIds.includes(id) ? 'Kısıtlamayı kaldır' : 'Kısıtla'}</VText>
+          </Pressable>
           <Pressable style={styles.menuItem} onPress={() => { setMenuOpen(false); setReportTarget({ type: 'user', id }); }}>
             <Flag size={16} color={Colors.live} />
             <VText variant="label" color={Colors.live}>Şikayet et</VText>

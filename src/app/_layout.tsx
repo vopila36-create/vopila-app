@@ -12,7 +12,9 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, type ReactNode } from 'react';
 import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 
+import { MfaGate } from '@/components/mfa-gate';
 import { Colors } from '@/constants/theme';
+import { useUsageTracker } from '@/lib/usage';
 import { AppStoreProvider } from '@/store/app-store';
 import { AuthProvider, useAuth } from '@/store/auth';
 
@@ -66,11 +68,15 @@ function RootStack() {
     else if (session && first === 'giris') router.replace((passwordRecovery ? '/yeni-sifre' : '/') as Href);
   }, [enabled, ready, session, onAuthScreen, first, passwordRecovery]);
 
+  // Kullanım süresi (Ayarlar > Hareketlerin > Geçirdiğin süre)
+  useUsageTracker();
+
   // Oturum bilgisi gelene kadar açılış ekranı görünür kalır
   if (!ready) return null;
 
   return (
-    <Stack
+    <MfaGate>
+      <Stack
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: Colors.bg },
@@ -85,7 +91,8 @@ function RootStack() {
         name="kamera"
         options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', gestureEnabled: false }}
       />
-    </Stack>
+      </Stack>
+    </MfaGate>
   );
 }
 

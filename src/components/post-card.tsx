@@ -1,5 +1,6 @@
 import { router, type Href } from 'expo-router';
 import {
+  Archive,
   BadgeCheck,
   Bookmark,
   Flag,
@@ -30,6 +31,7 @@ import { Avatar, GlassCard } from '@/components/ui/primitives';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius } from '@/constants/theme';
 import { arenaByKey, ME_ID, type Post } from '@/data/mock';
+import { setArchived } from '@/lib/settings-api';
 import { formatCount, useMe, useStore } from '@/store/app-store';
 
 /** Akış ve gönderi detayında kullanılan gönderi kartı. */
@@ -114,6 +116,22 @@ export function PostCard({ post, detail }: { post: Post; detail?: boolean }) {
               share();
             }}
           />
+          {post.authorId === ME_ID && post.remote ? (
+            <MenuItem
+              icon={<Archive size={16} color={Colors.text} />}
+              label="Arşivle (yalnızca sen görürsün)"
+              onPress={async () => {
+                const res = await setArchived(post.id, true);
+                if (!res.ok) {
+                  flash(res.error);
+                  return;
+                }
+                flash('Arşive taşındı. Ayarlar > Arşiv bölümünden geri alabilirsin.');
+                await store.refreshFeed();
+                if (detail) router.back();
+              }}
+            />
+          ) : null}
           {post.authorId !== ME_ID ? (
             <MenuItem
               icon={<Flag size={16} color={Colors.live} />}

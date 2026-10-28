@@ -19,21 +19,24 @@ export default function Akis() {
   const [tab, setTab] = useState<'following' | 'forYou'>('following');
   const store = useStore();
   const me = useMe();
-  const moments = store.allMoments;
+  // Sessize alınan kişilerin gönderileri ve anları akışta görünmez (takip sürer, haberi olmaz)
+  const muted = store.mutedIds;
+  const moments = store.allMoments.filter((m) => !muted.includes(m.authorId));
   const insets = useSafeAreaInsets();
 
   const list = useMemo(() => {
     const following = store.followingIds;
+    const visible = store.allPosts.filter((p) => !muted.includes(p.authorId));
     if (tab === 'forYou') {
       // Önce takip etmediğin kişilerden öneriler, sonra en çok beğenilenler
-      const others = store.allPosts.filter((p) => p.authorId !== ME_ID);
+      const others = visible.filter((p) => p.authorId !== ME_ID);
       const discover = others.filter((p) => !following.includes(p.authorId)).sort((a, b) => b.likes - a.likes);
       const popular = others.filter((p) => following.includes(p.authorId)).sort((a, b) => b.likes - a.likes);
       return [...discover, ...popular];
     }
     // Takip ettiklerin + senin paylaşımların, en yeniden eskiye
-    return store.allPosts.filter((p) => following.includes(p.authorId) || p.authorId === ME_ID);
-  }, [tab, store.allPosts, store.followingIds]);
+    return visible.filter((p) => following.includes(p.authorId) || p.authorId === ME_ID);
+  }, [tab, store.allPosts, store.followingIds, muted]);
 
   // Akış sekmesine her gelişte gerçek gönderileri ve anları tazele
   const { refreshFeed, refreshMoments } = store;

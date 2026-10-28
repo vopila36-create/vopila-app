@@ -59,6 +59,7 @@ export async function fetchFeed(myId: string): Promise<ApiResult<Feed>> {
     .from('posts')
     .select(POST_SELECT)
     .order('created_at', { ascending: false })
+    .is('archived_at', null)
     .limit(50);
   if (error) return { ok: false, error: toTurkish(error) };
 
@@ -86,10 +87,13 @@ export async function fetchFeed(myId: string): Promise<ApiResult<Feed>> {
 /** Belirli gönderiler: bir kullanıcının paylaşımları ya da #etiket araması. */
 export async function fetchPosts(
   myId: string,
-  filter: { authorId?: string; tag?: string; ids?: string[] },
+  filter: { authorId?: string; tag?: string; ids?: string[]; archived?: boolean },
 ): Promise<ApiResult<{ posts: Post[]; authors: User[] }>> {
   let q = supabase.from('posts').select(POST_SELECT).order('created_at', { ascending: false }).limit(60);
   if (filter.authorId) q = q.eq('author_id', filter.authorId);
+  // Arşivdekiler yalnızca Arşiv ekranında (sahibine) gösterilir
+  if (filter.archived) q = q.not('archived_at', 'is', null);
+  else if (!filter.ids) q = q.is('archived_at', null);
   if (filter.tag) q = q.ilike('caption', `%#${filter.tag.replace(/[%_]/g, '')}%`);
   if (filter.ids) q = q.in('id', filter.ids.length ? filter.ids : ['00000000-0000-0000-0000-000000000000']);
   const { data, error } = await q;
