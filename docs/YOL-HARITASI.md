@@ -109,7 +109,8 @@
 - [ ] Müzik, düzenleme araçları
 - [x] Yakın Arkadaşlar (29 Ekim 2026): liste yalnızca sahibine görünür, eklenen kişiye bildirim yok; "★ Yakın Arkadaşlar" anları sunucuda yalnızca listedekilere görünür, yeşil çerçeve
 - [x] Öne Çıkanlar ve an arşivi (29 Ekim 2026): sahibi süresi dolmuş anlarını görür; albüm ögeleri kopyalanır (an silinse de kalır); profili görebilen görür; Yakın Arkadaş anları eklenemez; 18 altı albümünde ekran görüntüsü engeli
-- [ ] Anlar çıkartmaları, davet / QR / paylaşım bağlantıları
+- [x] QR kod ve davet (29 Ekim 2026): profil bağlantısı vopila.app/u/<kullanıcı adı> (uygulamada /u/ yönlendirmesi; 18 altı ilişkisi olmayana bulunamaz), QR kodum + kamerayla Tara, Arkadaşlarını davet et, profil başlığında QR simgesi. Web'de açılması için alan adı + yönlendirme sayfası gerekecek
+- [ ] Anlar çıkartmaları
 
 ## Adım 9 — Yayın
 - [ ] Ayrı canlı Supabase projesi + Pro plan, EAS Build, gerçek uygulama doğrulaması (App Attest / Play Integrity), Face ID işletim sistemi kilidi, Sentry, bağımsız güvenlik testi

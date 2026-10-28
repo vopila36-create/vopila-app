@@ -10,8 +10,9 @@ import {
   Ban,
   Bell,
   BellOff,
-  BookOpen,
   Bookmark,
+  BookOpen,
+  CalendarDays,
   Coins,
   Download,
   FileEdit,
@@ -27,29 +28,30 @@ import {
   MonitorSmartphone,
   Package,
   PlayCircle,
+  QrCode,
   RotateCcw,
   ScanFace,
   Shield,
   ShieldAlert,
-  Sparkles,
-  Star,
   ShieldCheck,
   ShieldMinus,
+  Sparkles,
+  Star,
   Timer,
   Trash2,
   UserPen,
   UserPlus,
   Users,
-  CalendarDays,
 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Switch, TextInput, View } from 'react-native';
+import { Platform, Pressable, Share, StyleSheet, Switch, TextInput, View } from 'react-native';
 
 import { ChoiceList, Row, Section, ToggleRow } from '@/components/settings-ui';
 import { SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, saveThemePref, Spacing, themePref, type ThemePref } from '@/constants/theme';
 import { fetchAdminStatus, type AdminStatus } from '@/lib/admin-api';
+import { profileLink } from '@/lib/profile-link';
 import { signOutEverywhere } from '@/lib/settings-api';
 import { useStore } from '@/store/app-store';
 import { useAuth } from '@/store/auth';
@@ -75,6 +77,15 @@ export default function Ayarlar() {
   const [confirmEverywhere, setConfirmEverywhere] = useState(false);
   const [note, setNote] = useState('');
   const auth = useAuth();
+  // Davet: profil bağlantımla birlikte paylaşım menüsü
+  const invite = () => {
+    const u = auth.profile?.username;
+    Share.share({
+      message: u
+        ? `VOPILA'ya katıl, keşfet ve arenalarda yarış! Beni takip et: ${profileLink(u)}`
+        : "VOPILA'ya katıl, keşfet ve arenalarda yarış!",
+    }).catch(() => {});
+  };
   // Face ID'yi açarken şifre sorulur
   const [bioPw, setBioPw] = useState<string | null>(null);
   const [bioBusy, setBioBusy] = useState(false);
@@ -147,6 +158,8 @@ export default function Ayarlar() {
         ) : null}
         <Section title="Hesap">
           <Row icon={<UserPen size={20} color={Colors.cyan} />} label="Profili düzenle" onPress={() => go('/profil-duzenle')} />
+          <Row icon={<QrCode size={20} color={Colors.cyan} />} label="QR kod" onPress={() => go('/qr-kod')} />
+          <Row icon={<UserPlus size={20} color={Colors.cyan} />} label="Arkadaşlarını davet et" onPress={invite} />
           <Row icon={<Coins size={20} color={Colors.gold} />} label="Token cüzdanım" onPress={() => go('/cuzdan')} />
           <Row icon={<Package size={20} color={Colors.cyanSoft} />} label="Siparişlerim" onPress={() => go('/siparisler')} />
           <Row icon={<MapPin size={20} color={Colors.cyanSoft} />} label="Adreslerim" onPress={() => go('/adreslerim')} />

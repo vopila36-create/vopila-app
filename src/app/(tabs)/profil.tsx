@@ -20,6 +20,7 @@ import {
   Pencil,
   PlayCircle,
   Plus,
+  QrCode,
   Search,
   Settings,
   ShoppingBag,
@@ -83,6 +84,9 @@ export default function Profil() {
             <>
               <Pressable hitSlop={8} onPress={() => go('/arama')} accessibilityLabel="Ara">
                 <Search size={24} color={Colors.text} strokeWidth={1.8} />
+              </Pressable>
+              <Pressable hitSlop={8} onPress={() => go('/qr-kod')} accessibilityLabel="QR kodum">
+                <QrCode size={23} color={Colors.text} strokeWidth={1.8} />
               </Pressable>
               <Pressable hitSlop={8} onPress={() => go('/ayarlar')} accessibilityLabel="Ayarlar">
                 <Settings size={24} color={Colors.text} strokeWidth={1.8} />
