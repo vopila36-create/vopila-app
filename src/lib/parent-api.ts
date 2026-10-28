@@ -38,7 +38,13 @@ async function call<T>(fn: string, args?: Record<string, unknown>): Promise<Res<
 }
 
 export const createParentCode = () => call<string>('parent_create_code');
-export const linkParent = (code: string) => call<string>('parent_link', { p_code: code });
+/** Yanlış ya da süresi dolmuş kodda sunucu boş döner (deneme sınırı geri alınmasın diye hata fırlatmaz). */
+export async function linkParent(code: string): Promise<Res<string>> {
+  const r = await call<string | null>('parent_link', { p_code: code });
+  if (!r.ok) return r;
+  if (!r.data) return { ok: false, error: 'Kod hatalı ya da süresi dolmuş. Çocuğundan yeni kod iste.' };
+  return { ok: true, data: r.data };
+}
 export const setParentControls = (child: string, dailyLimit: number | null, lockPrivate: boolean, lockComments: boolean) =>
   call('parent_set_controls', {
     p_child: child,

@@ -108,7 +108,7 @@ function CreateCode() {
       </View>
       {code ? (
         <>
-          <VText style={styles.code}>{code.replace(/(.{4})/, '$1 ')}</VText>
+          <VText style={styles.code}>{code.replace(/(.{4})(?=.)/g, '$1 ')}</VText>
           <VText variant="caption">
             Kod 15 dakika geçerli ve tek kullanımlık. Ebeveynin kendi VOPILA hesabında Ayarlar &gt; Ebeveyn denetimi
             bölümüne bu kodu girsin.
@@ -176,7 +176,7 @@ function LinkChild({ onDone }: { onDone: () => void }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const submit = async () => {
-    if (busy || code.replace(/\s/g, '').length < 8) return;
+    if (busy || code.replace(/\s/g, '').length < 12) return;
     setBusy(true);
     const r = await linkParent(code);
     setBusy(false);
@@ -200,11 +200,14 @@ function LinkChild({ onDone }: { onDone: () => void }) {
       </VText>
       <TextInput
         value={code}
-        onChangeText={(t) => setCode(t.toUpperCase().replace(/[^A-Z0-9 ]/g, '').slice(0, 9))}
+        onChangeText={(t) => {
+          const c = t.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+          setCode(c.replace(/(.{4})(?=.)/g, '$1 '));
+        }}
         onSubmitEditing={submit}
         autoCapitalize="characters"
         autoCorrect={false}
-        placeholder="ABCD 2345"
+        placeholder="ABCD EFGH 2345"
         placeholderTextColor={Colors.textMuted}
         style={styles.input}
       />
@@ -282,7 +285,7 @@ const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 12 },
-  code: { fontFamily: Fonts.bold, fontSize: 32, letterSpacing: 6, textAlign: 'center', color: Colors.cyan },
+  code: { fontFamily: Fonts.bold, fontSize: 26, letterSpacing: 4, textAlign: 'center', color: Colors.cyan },
   input: {
     height: 54,
     borderRadius: Radius.md,
@@ -291,8 +294,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     color: Colors.text,
     fontFamily: Fonts.bold,
-    fontSize: 22,
-    letterSpacing: 4,
+    fontSize: 20,
+    letterSpacing: 2,
     textAlign: 'center',
   },
 });
