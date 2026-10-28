@@ -41,5 +41,5 @@
 - Şeffaflık raporu: yılda bir, kaldırılan içerik ve itiraz sayıları (Yönetmelik md. 10 ile birlikte).
 
 ## Karar bekleyen
-- [ ] Görüntü denetim servisi seçimi (öneri: AWS Rekognition) ve hesabın açılması
+- [ ] **ERTELENDİ (28 Ekim 2026, kullanıcı kararı):** AWS Rekognition daha sonra birlikte incelenecek; o zamana kadar pornografi/çıplaklık şikâyet + yönetici incelemesiyle kaldırılır
 - [ ] Moderatör ekibi: ilk aşamada yönetici, büyüyünce yarı zamanlı moderatör

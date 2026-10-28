@@ -8,6 +8,7 @@ import { Avatar, PrimaryButton } from '@/components/ui/primitives';
 import { SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { isReservedName, RESERVED_NAME_ERROR } from '@/lib/reserved';
 import { useMe, useStore } from '@/store/app-store';
 import { useAuth, type PickedImage } from '@/store/auth';
 
@@ -58,6 +59,9 @@ export default function ProfilDuzenle() {
     if (!name.trim()) next.name = 'Ad soyad boş bırakılamaz.';
     if (!USERNAME_RE.test(username))
       next.username = 'Kullanıcı adı 3-20 karakter olmalı; yalnızca küçük harf, rakam ve _ içerebilir.';
+    // "VOPILA" adı resmî hesaplara ayrılmış; yönetici Yönetim Paneli'nden verir (sunucu da kontrol eder)
+    if (!next.name && name.trim() !== me.name && isReservedName(name)) next.name = RESERVED_NAME_ERROR;
+    if (!next.username && username !== me.username && isReservedName(username)) next.username = RESERVED_NAME_ERROR;
     setErrors(next);
     if (next.name || next.username) return;
 

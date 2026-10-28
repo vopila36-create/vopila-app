@@ -92,6 +92,9 @@ export function toTurkish(err: { message?: string; code?: string } | null | unde
   if (msg.includes('parent_only_for_teens')) return 'Ebeveyn kodu yalnızca 15–18 yaş hesaplar için oluşturulur.';
   if (msg.includes('parent_already_linked')) return 'Hesabın zaten bir ebeveyne bağlı.';
   if (msg.includes('under_15')) return "VOPILA'yı kullanmak için en az 15 yaşında olmalısın.";
+  if (msg.includes('reserved_name'))
+    return '“VOPILA” adı resmî hesaplara ayrılmıştır; kullanıcı adında ya da adında kullanılamaz.';
+  if (msg.includes('invalid_username')) return 'Kullanıcı adı 3-20 karakter olmalı; yalnızca küçük harf, rakam ve _ içerebilir.';
   if (msg.includes('birth_date_required')) return 'Doğum tarihini yaz. Kayıt için zorunlu.';
   if (msg.includes('invalid_birth_date')) return 'Geçerli bir doğum tarihi yaz.';
   if (msg.includes('age_already_set')) return 'Yaş bilgin zaten kayıtlı. Değiştirmek için Destek üzerinden itiraz et.';

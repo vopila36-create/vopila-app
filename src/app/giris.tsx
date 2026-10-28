@@ -24,6 +24,7 @@ import { Logo } from '@/components/ui/screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Gradients, Radius, Spacing } from '@/constants/theme';
 import { checkBirthDate } from '@/lib/age-api';
+import { isReservedName, RESERVED_NAME_ERROR } from '@/lib/reserved';
 import { hasNonAsciiEmail, normalizeEmail, useAuth, type CodePurpose, type Result } from '@/store/auth';
 
 type Mode = 'giris' | 'kayit';
@@ -119,6 +120,7 @@ export default function Giris() {
   const submitForm = () =>
     run(async () => {
       if (mode === 'kayit' && !name.trim()) return setError('Adını yaz.');
+      if (mode === 'kayit' && isReservedName(name)) return setError(RESERVED_NAME_ERROR);
       const addr = checkedEmail();
       if (!addr) return;
       if (password.length < 6) return setError('Şifre en az 6 karakter olmalı.');

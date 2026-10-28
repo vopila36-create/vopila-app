@@ -309,6 +309,13 @@ export async function setUserStatus(id: string, status: 'active' | 'suspended' |
   return ok(undefined);
 }
 
+/** Hesaba (resmî) kullanıcı adı ve ad verir; "VOPILA" içeren adlar yalnızca bununla verilebilir. */
+export async function setIdentity(id: string, username: string, name: string): Promise<ApiResult> {
+  const { error } = await supabase.rpc('admin_set_identity', { p_user: id, p_username: username, p_name: name });
+  if (error) return { ok: false, error: err(error) };
+  return ok(undefined);
+}
+
 // ─── Bekleyen ödüller ───────────────────────────────────────────────────────
 
 export type AdminReward = {

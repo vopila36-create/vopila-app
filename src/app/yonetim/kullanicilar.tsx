@@ -9,7 +9,7 @@ import { Avatar, Chip, GlassCard } from '@/components/ui/primitives';
 import { EmptyState } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { searchUsers, setUserStatus, type AdminUser } from '@/lib/admin-api';
+import { searchUsers, setIdentity, setUserStatus, type AdminUser } from '@/lib/admin-api';
 import { adminAgeGroupOf, adminSetAgeGroup, AGE_LABEL, type AgeGroup } from '@/lib/age-api';
 
 const STATUS = {
@@ -80,6 +80,7 @@ function UserRow({ u, onDone }: { u: AdminUser; onDone: () => void }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [showAge, setShowAge] = useState(false);
+  const [showId, setShowId] = useState(false);
   const st = STATUS[u.status];
   const change = async (s: AdminUser['status']) => {
     setBusy(s);
@@ -113,10 +114,43 @@ function UserRow({ u, onDone }: { u: AdminUser; onDone: () => void }) {
           <SmallButton label="Yasakla" color={Colors.live} onPress={() => change('banned')} busy={busy === 'banned'} />
         ) : null}
         <SmallButton label="Yaş" color={Colors.cyanSoft} onPress={() => setShowAge((v) => !v)} />
+        <SmallButton label="Ad ver" color={Colors.cyanSoft} onPress={() => setShowId((v) => !v)} />
       </View>
       {showAge ? <AgeEditor userId={u.id} /> : null}
+      {showId ? <IdentityEditor u={u} onDone={onDone} /> : null}
       <Notice text={msg} />
     </GlassCard>
+  );
+}
+
+/** Resmî ad: "VOPILA" içeren kullanıcı adı / ad yalnızca buradan verilebilir (denetim kaydına yazılır). */
+function IdentityEditor({ u, onDone }: { u: AdminUser; onDone: () => void }) {
+  const [username, setUsername] = useState(u.username);
+  const [name, setName] = useState(u.name);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const save = async () => {
+    setBusy(true);
+    const r = await setIdentity(u.id, username.trim().toLowerCase(), name.trim());
+    setBusy(false);
+    if (!r.ok) setMsg(r.error);
+    else onDone();
+  };
+  return (
+    <View style={{ gap: 8 }}>
+      <VText variant="caption">Kullanıcı adı ve görünen ad (ör. vopila_destek · VOPILA Destek)</VText>
+      <TextInput
+        value={username}
+        onChangeText={setUsername}
+        autoCapitalize="none"
+        placeholder="kullanici_adi"
+        placeholderTextColor={Colors.textMuted}
+        style={styles.field}
+      />
+      <TextInput value={name} onChangeText={setName} placeholder="Görünen ad" placeholderTextColor={Colors.textMuted} style={styles.field} />
+      <SmallButton label="Kaydet" onPress={save} busy={busy} />
+      <Notice text={msg} />
+    </View>
   );
 }
 
@@ -171,6 +205,17 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   searchInput: { flex: 1, color: Colors.text, fontFamily: Fonts.medium, fontSize: 14 },
+  field: {
+    height: 42,
+    paddingHorizontal: 12,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    color: Colors.text,
+    fontFamily: Fonts.medium,
+    fontSize: 14,
+  },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.pill, borderWidth: 1 },
 });
