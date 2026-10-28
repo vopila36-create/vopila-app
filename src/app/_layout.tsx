@@ -59,7 +59,8 @@ function RootStack() {
   const { enabled, ready, session, passwordRecovery } = useAuth();
   const segments = useSegments();
   const first = segments[0] as string | undefined;
-  const onAuthScreen = first === 'giris' || first === 'auth-callback';
+  // Yasal metinler giriş yapmadan da okunabilir (kayıt ekranındaki bağlantılar)
+  const onAuthScreen = first === 'giris' || first === 'auth-callback' || first === 'yasal';
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();

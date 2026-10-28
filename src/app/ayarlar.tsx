@@ -11,8 +11,6 @@ import {
   BellOff,
   BookOpen,
   Bookmark,
-  ChevronDown,
-  ChevronUp,
   Coins,
   Download,
   FileText,
@@ -39,7 +37,7 @@ import {
   Users,
   CalendarDays,
 } from 'lucide-react-native';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Switch, TextInput, View } from 'react-native';
 
 import { Row, Section, ToggleRow } from '@/components/settings-ui';
@@ -51,22 +49,10 @@ import { signOutEverywhere } from '@/lib/settings-api';
 import { useStore } from '@/store/app-store';
 import { useAuth } from '@/store/auth';
 
-const PRIVACY = [
-  'VOPILA, 6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) kapsamında kişisel verilerini yalnızca hizmeti sunmak için işler.',
-  'Paylaştığın içerikler, profil bilgilerin ve arena oyların hesabınla ilişkilendirilir. Verilerin üçüncü kişilere satılmaz.',
-  'Verilerinin bir kopyasını “Verilerimi indir” ile alabilir, “Hesabı sil” ile hesabını kalıcı olarak silebilirsin. Talepler için destek@vopila.app adresine yazabilirsin.',
-];
-const TERMS = [
-  'VOPILA’yı kullanarak topluluk kurallarına uymayı kabul edersin: nefret söylemi, taciz ve telif ihlali içeren içerikler kaldırılır.',
-  'Token’lar yalnızca arena yarışmalarında kazanılır, para ile satın alınamaz ve nakde çevrilemez. Mağazadaki ürünler stokla sınırlıdır.',
-  'Hileli oy kullanımı tespit edilen hesapların token’ları ve ödülleri iptal edilebilir.',
-];
-
 const go = (p: string) => router.push(p as Href);
 
 export default function Ayarlar() {
   const { state, updateSettings, resetDemo, myId } = useStore();
-  const [open, setOpen] = useState<'privacy' | 'terms' | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [confirmEverywhere, setConfirmEverywhere] = useState(false);
   const [note, setNote] = useState('');
@@ -260,20 +246,10 @@ export default function Ayarlar() {
         </Section>
 
         <Section title="Yasal">
-          <Expand
-            icon={<Shield size={20} color={Colors.cyanSoft} />}
-            label="Gizlilik Politikası (KVKK)"
-            open={open === 'privacy'}
-            onPress={() => setOpen(open === 'privacy' ? null : 'privacy')}
-            paragraphs={PRIVACY}
-          />
-          <Expand
-            icon={<FileText size={20} color={Colors.cyanSoft} />}
-            label="Kullanım Koşulları"
-            open={open === 'terms'}
-            onPress={() => setOpen(open === 'terms' ? null : 'terms')}
-            paragraphs={TERMS}
-          />
+          <Row icon={<Shield size={20} color={Colors.cyanSoft} />} label="Aydınlatma Metni ve Gizlilik" onPress={() => go('/yasal/aydinlatma')} />
+          <Row icon={<FileText size={20} color={Colors.cyanSoft} />} label="Kullanım Koşulları" onPress={() => go('/yasal/kosullar')} />
+          <Row icon={<Users size={20} color={Colors.cyanSoft} />} label="Çocukları Koruma Önlemleri" onPress={() => go('/yasal/cocuk-koruma')} />
+          <Row icon={<FileText size={20} color={Colors.cyanSoft} />} label="Telif ve İçerik Bildirimi" onPress={() => go('/yasal/telif')} />
           <View style={[styles.row, { borderBottomWidth: 0 }]}>
             <Info size={20} color={Colors.textSecondary} />
             <VText variant="label" style={{ flex: 1 }}>
@@ -346,41 +322,6 @@ function Confirm({ text, yes, onYes, onNo, last }: { text: string; yes: string; 
   );
 }
 
-function Expand({
-  icon,
-  label,
-  open,
-  onPress,
-  paragraphs,
-}: {
-  icon: ReactNode;
-  label: string;
-  open: boolean;
-  onPress: () => void;
-  paragraphs: string[];
-}) {
-  return (
-    <View style={styles.expand}>
-      <Pressable style={styles.expandHead} onPress={onPress}>
-        {icon}
-        <VText variant="label" style={{ flex: 1 }}>
-          {label}
-        </VText>
-        {open ? <ChevronUp size={18} color={Colors.cyan} /> : <ChevronDown size={18} color={Colors.textMuted} />}
-      </Pressable>
-      {open ? (
-        <View style={{ gap: 8, paddingHorizontal: 14, paddingBottom: 14 }}>
-          {paragraphs.map((p) => (
-            <VText key={p} variant="body" style={{ fontSize: 13 }}>
-              {p}
-            </VText>
-          ))}
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   bioBox: { width: '100%', marginTop: 10 },
   bioRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 6 },
@@ -406,6 +347,4 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  expand: { borderBottomWidth: 1, borderBottomColor: Colors.border },
-  expandHead: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 14 },
 });

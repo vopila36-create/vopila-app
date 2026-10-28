@@ -4,6 +4,7 @@
  * 3 hatalı şifre denemesinde bekletme yok: e-postaya kod gönderilir ve kodla giriş yapılır.
  */
 import { LinearGradient } from 'expo-linear-gradient';
+import { router, type Href } from 'expo-router';
 import { ArrowLeft, Eye, EyeOff, FingerprintPattern, MailCheck, ScanFace } from 'lucide-react-native';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
@@ -337,6 +338,20 @@ export default function Giris() {
                 onPress={submitForm}
                 style={{ marginTop: Spacing.lg, opacity: busy ? 0.6 : 1 }}
               />
+
+              {mode === 'kayit' ? (
+                <VText variant="caption" style={{ textAlign: 'center', marginTop: Spacing.md }}>
+                  Hesap oluşturarak{' '}
+                  <VText variant="caption" color={Colors.cyan} onPress={() => router.push('/yasal/kosullar' as Href)}>
+                    Kullanım Koşulları
+                  </VText>
+                  ’nı kabul etmiş ve{' '}
+                  <VText variant="caption" color={Colors.cyan} onPress={() => router.push('/yasal/aydinlatma' as Href)}>
+                    Aydınlatma Metni
+                  </VText>
+                  ’ni okumuş olursun.
+                </VText>
+              ) : null}
 
               {mode === 'giris' && auth.biometric.enabled ? (
                 <OutlineButton

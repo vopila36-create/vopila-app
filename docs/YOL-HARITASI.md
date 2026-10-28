@@ -86,7 +86,9 @@
 - [x] 18 altı profiller veri katmanında gizli (yalnızca kendisi, takip ilişkisi, ortak sohbet, ebeveyn, yönetici); gizli yazar "VOPILA kullanıcısı" görünür. 18 altı gönderi/an/profillerde ekran görüntüsü engeli (expo-screen-capture; Android tam, iOS 13+)
 - [ ] Zararlı içerik filtresi (md. 8), 18'ini dolduranın ebeveyn bağlantısının otomatik kalkması
 - [ ] Yönetmelik md. 8/6: alınan önlemleri web sitesinde yayımlamak; md. 10: yıllık itiraz istatistiği
-- [ ] KVKK metinleri, 5651 sayılı Kanun yükümlülükleri, hukukçu görüşü (token ödülleri / promosyon)
+- [x] Yasal metin taslakları (28 Ekim 2026, src/data/legal.ts): Aydınlatma Metni ve Gizlilik, Kullanım Koşulları, Çocukları Koruma Önlemleri (md. 8/6), Telif ve İçerik Bildirimi; Ayarlar > Yasal ve kayıt ekranında bağlantı; giriş yapmadan okunabilir. "Taslak" uyarısı LEGAL_DRAFT ile kapatılır
+- [ ] Hukukçu: metinleri onaylasın; köşeli parantezleri doldur (şirket ünvanı, adres, MERSİS, KEP, yetkili mahkeme, Supabase sunucu ülkesi + KVKK md. 9 yurt dışı aktarım güvencesi), token ödülleri / promosyon / çekiliş mevzuatı, haber kaynaklarından yazılı izin, VERBİS kaydı gerekiyor mu, 5651 temsilci / trafik kaydı yükümlülükleri, e-Devlet yaş belirteci başvurusu
+- [ ] Çocukları Koruma Önlemleri sayfasını web sitesinde de yayımla (alan adı açılınca)
 
 ## Adım 7 — Aşama 7–9
 - [x] Haberler: gerçek kaynaklar (28 Ekim 2026) — TRT Haber, BBC Türkçe, DW Türkçe, CNN Türk, Habertürk, Sözcü RSS; sunucu 15 dk'da bir çeker, 7 günden eskiyi siler; yalnızca başlık + kısa özet + görsel + kaynağa bağlantı (FSEK). Yayından önce kaynaklardan yazılı izin istenmeli (hukukçu listesine eklendi)
