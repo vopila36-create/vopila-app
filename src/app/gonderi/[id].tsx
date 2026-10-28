@@ -11,6 +11,7 @@ import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { ME_ID, type Comment } from '@/data/mock';
+import { deleteComment } from '@/lib/settings-api';
 import { useMe, useStore } from '@/store/app-store';
 
 export default function GonderiDetay() {
@@ -79,6 +80,13 @@ export default function GonderiDetay() {
     } else setError(res.error ?? 'Yorum gönderilemedi.');
   };
 
+  // Kendi yorumunu ya da kendi gönderindeki herhangi bir yorumu silebilirsin
+  const removeComment = async (commentId: string) => {
+    const res = await deleteComment(commentId);
+    if (!res.ok) setError(res.error);
+    else loadComments(post.id);
+  };
+
   const startReply = (c: Comment) => {
     const author = c.authorId === ME_ID ? me : store.userOf(c.authorId);
     setReplyTo({ id: c.id, name: author.name });
@@ -108,6 +116,13 @@ export default function GonderiDetay() {
                 Yanıtla
               </VText>
             </Pressable>
+            {post.remote && (c.authorId === ME_ID || post.authorId === ME_ID) ? (
+              <Pressable onPress={() => removeComment(c.id)} hitSlop={6}>
+                <VText variant="caption" color={Colors.live}>
+                  Sil
+                </VText>
+              </Pressable>
+            ) : null}
             {c.authorId !== ME_ID ? (
               <Pressable onPress={() => setReportTarget({ type: 'comment', id: c.id })} hitSlop={6}>
                 <VText variant="caption" color={Colors.textMuted}>

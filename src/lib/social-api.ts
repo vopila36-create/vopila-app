@@ -158,18 +158,24 @@ export type ReportReason =
   | 'telif'
   | 'hile'
   | 'cocuk_guvenligi'
+  | 'kufur'
+  | 'hassas'
+  | 'teror'
   | 'diger';
 
 export const REPORT_REASONS: { key: ReportReason; label: string }[] = [
-  { key: 'spam', label: 'Spam ya da dolandırıcılık' },
-  { key: 'nefret', label: 'Nefret söylemi' },
-  { key: 'taciz', label: 'Taciz ya da zorbalık' },
+  { key: 'kufur', label: 'Küfür ya da hakaret' },
+  { key: 'taciz', label: 'Taciz, zorbalık ya da tehdit' },
   { key: 'ciplaklik', label: 'Çıplaklık ya da cinsel içerik' },
+  { key: 'nefret', label: 'Nefret söylemi' },
   { key: 'siddet', label: 'Şiddet ya da tehlikeli davranış' },
+  { key: 'hassas', label: 'Rahatsız edici (kan, yaralanma vb.)' },
+  { key: 'spam', label: 'Spam ya da dolandırıcılık' },
   { key: 'sahte_hesap', label: 'Sahte hesap' },
   { key: 'telif', label: 'Telif hakkı ihlali' },
   { key: 'hile', label: 'Arena hilesi' },
   { key: 'cocuk_guvenligi', label: 'Çocuk güvenliği' },
+  { key: 'teror', label: 'Terör propagandası' },
   { key: 'diger', label: 'Diğer' },
 ];
 

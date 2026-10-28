@@ -244,8 +244,8 @@ export default function Olustur() {
           <View style={{ flex: 1 }}>
             <VText variant="label">Hassas içerik</VText>
             <VText variant="caption">
-              Şiddet, kan, korkutucu ya da rahatsız edici görüntü içeriyorsa işaretle. 18 yaş altına gösterilmez, diğerlerine
-              örtülü görünür.
+              Kan, yara, kavga, av, açık kıyafet, sigara/alkol ya da ürkütücü görüntü içeriyorsa işaretle. 18 yaş altına
+              gösterilmez, diğerlerine örtülü görünür. Çıplaklık ve pornografi yüklenemez.
             </VText>
           </View>
           <Switch

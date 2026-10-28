@@ -11,7 +11,7 @@ import { ChoiceList, Row, Section } from '@/components/settings-ui';
 import { SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import type { CommentPolicy, MentionPolicy, MessagePolicy } from '@/lib/settings-api';
+import type { MentionPolicy, MessagePolicy } from '@/lib/settings-api';
 import { useMySettings } from '@/store/use-settings';
 
 export default function EtkilesimAyarlari() {
@@ -43,19 +43,6 @@ export default function EtkilesimAyarlari() {
   return (
     <SubScreen title="Etkileşimler">
       <View style={{ paddingHorizontal: Spacing.screen }}>
-        <Section title="Gönderilerime kim yorum yapabilir?">
-          <ChoiceList<CommentPolicy>
-            value={settings.comment_policy}
-            onChange={(v) => save({ comment_policy: v })}
-            options={[
-              { key: 'everyone', label: 'Herkes' },
-              { key: 'following', label: 'Takip ettiğim kişiler' },
-              { key: 'followers', label: 'Takipçilerim' },
-              { key: 'nobody', label: 'Yorumlar kapalı' },
-            ]}
-          />
-        </Section>
-
         <Section title="Benden kim bahsedebilir? (@)">
           <ChoiceList<MentionPolicy>
             value={settings.mention_policy}

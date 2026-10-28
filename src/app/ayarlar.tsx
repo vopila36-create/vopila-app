@@ -28,6 +28,7 @@ import {
   RotateCcw,
   ScanFace,
   Shield,
+  ShieldAlert,
   ShieldCheck,
   ShieldMinus,
   Timer,
@@ -242,6 +243,7 @@ export default function Ayarlar() {
 
         <Section title="Destek">
           <Row icon={<LifeBuoy size={20} color={Colors.cyan} />} label="Yardım ve sorun bildir" onPress={() => go('/destek')} />
+          <Row icon={<ShieldAlert size={20} color={Colors.gold} />} label="Hesap durumu" onPress={() => go('/hesap-durumu')} />
           <Row icon={<BookOpen size={20} color={Colors.cyanSoft} />} label="Topluluk kuralları" onPress={() => go('/topluluk-kurallari')} last />
         </Section>
 

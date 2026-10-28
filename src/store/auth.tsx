@@ -80,6 +80,12 @@ export function toTurkish(err: { message?: string; code?: string } | null | unde
   // Yaş kuralları (0017_age_rules.sql)
   if (msg.includes('minor_dm_not_allowed'))
     return 'Bu kişi 18 yaşından küçük; ona yalnızca onun takip ettiği hesaplar mesaj gönderebilir.';
+  if (msg.includes('content_blocked')) {
+    const cat = msg.split('content_blocked:')[1]?.trim().split(/\W/)[0];
+    const what =
+      cat === 'cinsel' ? 'cinsel ifade' : cat === 'siddet' ? 'tehdit' : cat === 'hakaret' ? 'hakaret' : 'küfür';
+    return `Yazdığın metin ${what} içeriyor ve topluluk kurallarına aykırı. Lütfen düzenleyip tekrar dene.`;
+  }
   if (msg.includes('parent_locked')) return 'Bu ayar ebeveyn denetimi nedeniyle kilitli.';
   if (msg.includes('parent_code_invalid')) return 'Kod hatalı ya da süresi dolmuş. Çocuğundan yeni kod iste.';
   if (msg.includes('parent_must_be_adult')) return 'Ebeveyn denetimini yalnızca 18 yaşından büyükler bağlayabilir.';

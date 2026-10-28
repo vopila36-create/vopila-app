@@ -658,7 +658,7 @@ export const interests: Interest[] = [
 
 export type AppNotification = {
   id: string;
-  kind: 'like' | 'comment' | 'follow' | 'arena' | 'token' | 'order' | 'mention' | 'reply' | 'support' | 'parent';
+  kind: 'like' | 'comment' | 'follow' | 'arena' | 'token' | 'order' | 'mention' | 'reply' | 'support' | 'parent' | 'moderation';
   actorId?: string;
   text: string;
   time: string;
