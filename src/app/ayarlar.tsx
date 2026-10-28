@@ -40,7 +40,7 @@ import {
   CalendarDays,
 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Switch, TextInput, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Switch, TextInput, View } from 'react-native';
 
 import { ChoiceList, Row, Section, ToggleRow } from '@/components/settings-ui';
 import { SubScreen } from '@/components/ui/sub-screen';
@@ -61,6 +61,10 @@ export default function Ayarlar() {
   const changeTheme = (pref: ThemePref) => {
     if (pref === themePref) return;
     saveThemePref(pref);
+    if (Platform.OS === 'web') {
+      globalThis.location?.reload();
+      return;
+    }
     reloadAppAsync('Tema değişti').catch(() =>
       setThemeNote('Yeni tema, uygulamayı kapatıp açtığında görünecek.'),
     );
