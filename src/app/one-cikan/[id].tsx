@@ -1,11 +1,12 @@
 /** Öne Çıkan albüm izleyici: tam ekran, sağa/sola dokununca ileri/geri. Sahibi albümü silebilir. */
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Trash2, X } from 'lucide-react-native';
+import { Flag, Trash2, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ReportSheet, type ReportTarget } from '@/components/report-sheet';
 import { VideoPlayer } from '@/components/ui/media';
 import { OnDark, VText } from '@/components/ui/text';
 import { Fonts } from '@/constants/theme';
@@ -19,6 +20,7 @@ export default function OneCikanIzle() {
   const insets = useSafeAreaInsets();
   const [hl, setHl] = useState<{ id: string; data: Highlight | null } | null>(null);
   const [index, setIndex] = useState(0);
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -89,13 +91,21 @@ export default function OneCikanIzle() {
               <Pressable onPress={remove} hitSlop={10} accessibilityLabel="Albümü sil">
                 <Trash2 size={22} color="#fff" />
               </Pressable>
-            ) : null}
+            ) : (
+              <Pressable
+                onPress={() => setReportTarget({ type: 'highlight', id: data.id })}
+                hitSlop={10}
+                accessibilityLabel="Albümü şikâyet et">
+                <Flag size={22} color="#fff" />
+              </Pressable>
+            )}
             <Pressable onPress={() => router.back()} hitSlop={10} accessibilityLabel="Kapat">
               <X size={26} color="#fff" />
             </Pressable>
           </View>
         </View>
       </View>
+      <ReportSheet target={reportTarget} onClose={() => setReportTarget(null)} />
     </OnDark>
   );
 }

@@ -210,7 +210,7 @@ export async function saveArena(a: DbArena): Promise<ApiResult> {
 export type ReportGroup = {
   key: string;
   firstReportId: string;
-  targetType: 'post' | 'comment' | 'user' | 'moment' | 'live';
+  targetType: 'post' | 'comment' | 'user' | 'moment' | 'live' | 'highlight';
   targetId: string;
   count: number;
   reasons: Record<string, number>;
