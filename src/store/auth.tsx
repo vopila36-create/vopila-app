@@ -52,6 +52,10 @@ export function normalizeEmail(email: string) {
 export const hasNonAsciiEmail = (email: string) => /[^\x20-\x7E]/.test(email);
 
 /** Supabase'in İngilizce hata mesajlarını sade Türkçeye çevirir. */
+/** E-posta gönderildi mesajı: kod gelirse yazılır, bağlantı gelirse bu telefonda dokunulur. */
+const EMAIL_SENT_INFO =
+  'E-postanı kontrol et: 6 haneli kod geldiyse aşağıya yaz; “Log In / Confirm” bağlantısı geldiyse ona bu telefondan dokun, uygulama açılıp girişini tamamlar.';
+
 export function toTurkish(err: { message?: string; code?: string } | null | undefined): string {
   const code = err?.code ?? '';
   const msg = (err?.message ?? '').toLowerCase();
@@ -339,7 +343,7 @@ function useBuildAuth() {
     // E-posta doğrulaması açıkken var olan bir adres hata vermez, kimliksiz kullanıcı döner
     if (data.user && data.user.identities?.length === 0)
       return { ok: false, error: toTurkish({ code: 'user_already_exists' }) };
-    if (!data.session) return { ok: true, needsCode: true, info: 'E-postana 6 haneli bir doğrulama kodu gönderdik.' };
+    if (!data.session) return { ok: true, needsCode: true, info: EMAIL_SENT_INFO };
     return { ok: true };
   }, []);
 
@@ -347,15 +351,21 @@ function useBuildAuth() {
   const sendLoginCode = useCallback(async (email: string): Promise<Result> => {
     const { error } = await supabase.auth.signInWithOtp({
       email: normalizeEmail(email),
-      options: { shouldCreateUser: false },
+      // Supabase'in ücretsiz e-posta servisi şablonu değiştirmeye izin vermediği için e-postada kod yerine
+      // bağlantı gelir; bağlantı bu telefonda uygulamayı açıp girişi tamamlar (auth-callback)
+      options: { shouldCreateUser: false, emailRedirectTo: authRedirectUrl() },
     });
     if (error) return { ok: false, error: toTurkish(error), code: error.code };
-    return { ok: true, info: 'E-postana 6 haneli bir kod gönderdik.' };
+    return { ok: true, info: EMAIL_SENT_INFO };
   }, []);
 
   /** Kayıt doğrulama kodunu tekrar gönderir. */
   const resendSignupCode = useCallback(async (email: string): Promise<Result> => {
-    const { error } = await supabase.auth.resend({ type: 'signup', email: normalizeEmail(email) });
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: normalizeEmail(email),
+      options: { emailRedirectTo: authRedirectUrl() },
+    });
     if (error) return { ok: false, error: toTurkish(error), code: error.code };
     return { ok: true, info: 'Yeni kodu gönderdik.' };
   }, []);

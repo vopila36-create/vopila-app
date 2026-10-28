@@ -110,7 +110,7 @@ export default function Giris() {
     setStep('kod');
     setCode('');
     setCooldown(RESEND_SECONDS);
-    setInfo(message ?? 'E-postana 6 haneli bir kod gönderdik.');
+    setInfo(message ?? 'E-postanı kontrol et: kod geldiyse aşağıya yaz; bağlantı geldiyse ona bu telefondan dokun.');
   };
 
   /** E-postaya giriş kodu gönderip kod adımına geçer. */
