@@ -30,6 +30,7 @@ import {
   ScanFace,
   Shield,
   ShieldAlert,
+  Sparkles,
   ShieldCheck,
   ShieldMinus,
   Timer,
@@ -155,6 +156,7 @@ export default function Ayarlar() {
           <Row icon={<Archive size={20} color={Colors.cyanSoft} />} label="Arşiv" onPress={() => go('/arsiv')} />
           <Row icon={<History size={20} color={Colors.cyanSoft} />} label="Hareketlerin" onPress={() => go('/hareketlerin')} />
           <Row icon={<Timer size={20} color={Colors.cyanSoft} />} label="Geçirdiğin süre" onPress={() => go('/hareketlerin?tab=sure')} />
+          <Row icon={<Sparkles size={20} color={Colors.cyan} />} label="İlgi alanların" onPress={() => go('/ilgi-alanlarim')} />
           <Row icon={<Bell size={20} color={Colors.cyan} />} label="Bildirimler" onPress={() => go('/bildirim-ayarlari')} last />
         </Section>
 

@@ -99,7 +99,8 @@
 - [x] Haberler: gerçek kaynaklar (28 Ekim 2026) — TRT Haber, BBC Türkçe, DW Türkçe, CNN Türk, Habertürk, Sözcü RSS; sunucu 15 dk'da bir çeker, 7 günden eskiyi siler; yalnızca başlık + kısa özet + görsel + kaynağa bağlantı (FSEK). Yayından önce kaynaklardan yazılı izin istenmeli (hukukçu listesine eklendi)
 - [ ] Yapay zekâ özeti (otomatik haberler için)
 - [x] Ana Sahne gerçek veri (29 Ekim 2026): öne çıkan haber (gerçek kaynak), Gündemde (son 7 gün beğeni + yorum, yaşla azalan puan, sunucuda), gündemdeki #etiketler, bu ayın arena liderleri, takip önerileri (18 altı önerilmez)
-- [ ] Öneri motorunu sunucuya taşıma (ilgi alanlarına göre kişisel sıralama; şu an ilgi telefonda), Keşfet sayfası
+- [x] İlgi alanları sunucuda (29 Ekim 2026): her cihazda aynı kişisel sıralama, günde %3 sönme, Ayarlar > İlgi alanların (görme + sıfırlama), Verilerimi indir'e eklendi (ilgi, yaş grubu, ihlaller, ebeveyn)
+- [ ] Keşfet sayfası (arama ekranında gündem ızgarası)
 - [ ] Canlı yayın (LiveKit; 15–18 yaşa kapalı)
 
 ## Adım 8 — Rakiplerle aradaki farkı kapatma

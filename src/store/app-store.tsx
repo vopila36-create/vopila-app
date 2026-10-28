@@ -15,6 +15,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { AppState } from 'react-native';
 
 import {
   arenaByKey,
@@ -80,6 +81,7 @@ import {
   type RemoteOrder,
   type SavedAddress,
 } from '@/lib/shop-api';
+import { fetchMyInterests, pushInterests, resetMyInterests } from '@/lib/interests-api';
 import { fetchNews } from '@/lib/news-api';
 import { fetchNotifications, markNotificationsRead as markRemoteNotificationsRead } from '@/lib/notifications-api';
 import { fetchMyFollowing, follow, isRealId, unfollow, type FollowStatus } from '@/lib/social-api';
@@ -194,6 +196,8 @@ type Action =
   | { type: 'markNotificationsRead'; ids: string[] }
   | { type: 'updateSettings'; settings: Partial<Settings> }
   | { type: 'addInterest'; topic: string; amount: number; seenId?: string }
+  | { type: 'mergeInterests'; interests: Record<string, number> }
+  | { type: 'resetInterests' }
   | { type: 'reset' };
 
 const toggle = (list: string[], id: string) =>
@@ -271,6 +275,14 @@ function reducer(state: State, action: Action): State {
           : state.seenReels;
       return { ...state, interests, seenReels };
     }
+    case 'mergeInterests': {
+      // Sunucudaki ilgiler (başka cihazdan gelenler) yereldekiyle birleşir; büyük olan kalır
+      const interests = { ...state.interests };
+      for (const [k, v] of Object.entries(action.interests)) interests[k] = Math.max(interests[k] ?? 0, v);
+      return { ...state, interests };
+    }
+    case 'resetInterests':
+      return { ...state, interests: {}, seenReels: [] };
     case 'reset':
       return initialState;
   }
@@ -949,6 +961,33 @@ function useBuildStore() {
   const catalog: Product[] = (myId && shop.products) || demoProducts;
   const productOf = useCallback((id: string) => catalog.find((p) => p.id === id), [catalog]);
 
+  // ─── İlgi alanları sunucuda (her cihazda aynı kişisel sıralama) ──────────
+  const pendingInterests = useRef<Record<string, number>>({});
+  useEffect(() => {
+    if (!myId) return;
+    let alive = true;
+    fetchMyInterests().then((list) => {
+      if (alive && list) dispatch({ type: 'mergeInterests', interests: list });
+    });
+    // Biriken izleme süreleri 30 sn'de bir ve uygulama arka plana geçince gönderilir
+    const flush = () => {
+      const d = pendingInterests.current;
+      if (!Object.keys(d).length) return;
+      pendingInterests.current = {};
+      pushInterests(d).catch(() => {});
+    };
+    const t = setInterval(flush, 30_000);
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st !== 'active') flush();
+    });
+    return () => {
+      alive = false;
+      clearInterval(t);
+      sub.remove();
+      flush();
+    };
+  }, [myId]);
+
   // ─── Haberler (gerçek kaynaklar) ──────────────────────────────────────────
   // Herkese açık; giriş beklemeden yüklenir. Gelmezse örnek haberler gösterilir.
   const [realNews, setRealNews] = useState<NewsArticle[] | null>(null);
@@ -1075,8 +1114,17 @@ function useBuildStore() {
        * İlgi kaydı: bir konuya bakılan süre (saniye) ya da etkileşim puanı eklenir.
        * `seenId` verilirse içerik "görüldü" sayılır ve sıralamada geriye düşer.
        */
-      addInterest: (topic: string, amount: number, seenId?: string) =>
-        dispatch({ type: 'addInterest', topic, amount, seenId }),
+      addInterest: (topic: string, amount: number, seenId?: string) => {
+        dispatch({ type: 'addInterest', topic, amount, seenId });
+        // Giriş yapılmışsa sunucuya gönderilmek üzere biriktir
+        if (myId) pendingInterests.current[topic] = (pendingInterests.current[topic] ?? 0) + amount;
+      },
+      /** İlgi alanlarını sıfırla (Ayarlar > İlgi alanların) */
+      resetInterests: async () => {
+        pendingInterests.current = {};
+        dispatch({ type: 'resetInterests' });
+        return myId ? resetMyInterests() : true;
+      },
       resetDemo: () => dispatch({ type: 'reset' }),
     }),
     [state.profile.location, state.cart, myId, refreshFeed, refreshArenas, productOf],
