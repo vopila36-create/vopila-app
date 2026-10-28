@@ -12,42 +12,9 @@ import { PostGrid } from '@/components/post-grid';
 import { Avatar, BottomFade, GlassCard, SectionHeader } from '@/components/ui/primitives';
 import { OnDark, VText } from '@/components/ui/text';
 import { Colors, Fonts, OnImage, Radius, Spacing } from '@/constants/theme';
-import { arenas, type Post } from '@/data/mock';
-import { fetchPosts } from '@/lib/posts-api';
-import { supabase } from '@/lib/supabase';
+import { arenas } from '@/data/mock';
+import { loadDiscover, type Discover } from '@/lib/discover-api';
 import { formatCount, useStore } from '@/store/app-store';
-
-type Person = { id: string; username: string; name: string; avatar: string; verified: boolean; followers: number };
-type Discover = { posts: Post[]; tags: { tag: string; posts: number }[]; people: Person[] };
-
-async function loadDiscover(myId: string): Promise<Discover> {
-  const [tp, tt, sp] = await Promise.all([
-    supabase.rpc('trending_posts', { p_limit: 12 }),
-    supabase.rpc('trending_tags', { p_limit: 10 }),
-    supabase.rpc('suggest_people', { p_limit: 10 }),
-  ]);
-  const ids: string[] = (tp.data ?? []).map((r: { post_id: string }) => r.post_id);
-  let posts: Post[] = [];
-  if (ids.length) {
-    const res = await fetchPosts(myId, { ids });
-    if (res.ok) {
-      const byId = new Map(res.data.posts.map((p) => [p.id, p]));
-      posts = ids.map((id) => byId.get(id)).filter((p): p is Post => !!p);
-    }
-  }
-  return {
-    posts,
-    tags: tt.data ?? [],
-    people: (sp.data ?? []).map((p: any) => ({
-      id: p.id,
-      username: p.username,
-      name: p.name,
-      avatar: p.avatar_url ?? '',
-      verified: p.verified,
-      followers: p.followers,
-    })),
-  };
-}
 
 export function HomeDiscover() {
   const store = useStore();
@@ -58,7 +25,7 @@ export function HomeDiscover() {
   useEffect(() => {
     if (!myId) return;
     let alive = true;
-    loadDiscover(myId).then((d) => {
+    loadDiscover(myId, { posts: 12, tags: 10, people: 10 }).then((d) => {
       if (alive) setData({ uid: myId, d });
     });
     return () => {

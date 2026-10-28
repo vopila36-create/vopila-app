@@ -4,11 +4,13 @@ import { BadgeCheck, ChevronRight, Hash, Search, SearchX, X } from 'lucide-react
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
+import { PostGrid } from '@/components/post-grid';
 import { Avatar, Chip, GlassCard } from '@/components/ui/primitives';
 import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { arenas, ME_ID, users, type User } from '@/data/mock';
+import { loadDiscover, type Discover, type Person } from '@/lib/discover-api';
 import { isRealId, searchProfiles } from '@/lib/social-api';
 import { formatCount, useStore } from '@/store/app-store';
 
@@ -20,6 +22,20 @@ const TABS: [Tab, string][] = [
   ['news', 'Haberler'],
 ];
 const SUGGESTIONS = ['Lofoten', 'Kapadokya', 'Otomobil', 'Doğa', 'Uzay', 'Deniz'];
+
+const personToUser = (p: Person): User => ({
+  id: p.id,
+  name: p.name,
+  username: p.username,
+  avatar: p.avatar,
+  verified: p.verified,
+  bio: '',
+  location: '',
+  cover: '',
+  followers: p.followers,
+  following: 0,
+  discoveryPoints: 0,
+});
 
 /** Türkçe karakterleri dikkate alan küçük harf karşılaştırması. */
 const norm = (s: string) => s.toLocaleLowerCase('tr-TR');
@@ -59,6 +75,20 @@ export default function Arama() {
     };
   }, [query, store.allPosts, store.allNews, realPeople]);
 
+  // Keşfet verisi (arama kutusu boşken)
+  const [discoverState, setDiscoverState] = useState<{ uid: string; d: Discover } | null>(null);
+  useEffect(() => {
+    if (!myId) return;
+    let alive = true;
+    loadDiscover(myId, { posts: 30, tags: 12, people: 8 }).then((d) => {
+      if (alive) setDiscoverState({ uid: myId, d });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [myId]);
+  const discover = discoverState && discoverState.uid === myId ? discoverState.d : null;
+
   const tag = q.trim().startsWith('#') ? q.trim().slice(1).replace(/[^\p{L}\p{N}_]/gu, '') : '';
 
   const count = { people: results.people.length, posts: results.posts.length, arenas: results.arenas.length, news: results.news.length };
@@ -87,25 +117,36 @@ export default function Arama() {
 
       {!query ? (
         <View style={styles.pad}>
+          {/* Keşfet: gündemdeki etiketler, takip önerileri, en ilgi gören gönderiler (gerçek veri) */}
           <VText variant="heading" style={{ marginTop: Spacing.xl, marginBottom: Spacing.md }}>
-            Popüler aramalar
+            {discover?.tags.length ? 'Gündemdeki etiketler' : 'Popüler aramalar'}
           </VText>
           <View style={styles.wrap}>
-            {SUGGESTIONS.map((s) => (
-              <Chip key={s} label={s} onPress={() => setQ(s)} />
-            ))}
+            {discover?.tags.length
+              ? discover.tags.map((t) => (
+                  <Chip key={t.tag} label={`#${t.tag}`} onPress={() => router.push(`/etiket/${encodeURIComponent(t.tag)}` as Href)} />
+                ))
+              : SUGGESTIONS.map((s) => <Chip key={s} label={s} onPress={() => setQ(s)} />)}
           </View>
           <VText variant="heading" style={{ marginTop: Spacing.xl, marginBottom: Spacing.md }}>
             Önerilen kişiler
           </VText>
           <View style={{ gap: 8 }}>
-            {users
-              .filter((u) => u.id !== ME_ID)
-              .slice(0, 4)
-              .map((u) => (
-                <PersonRow key={u.id} user={u} />
-              ))}
+            {(discover?.people.length
+              ? discover.people.slice(0, 5).map(personToUser)
+              : users.filter((u) => u.id !== ME_ID).slice(0, 4)
+            ).map((u) => (
+              <PersonRow key={u.id} user={u} />
+            ))}
           </View>
+          {discover?.posts.length ? (
+            <>
+              <VText variant="heading" style={{ marginTop: Spacing.xl, marginBottom: Spacing.md }}>
+                Keşfet
+              </VText>
+              <PostGrid posts={discover.posts} />
+            </>
+          ) : null}
         </View>
       ) : (
         <>
