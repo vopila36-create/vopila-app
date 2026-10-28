@@ -112,7 +112,7 @@ export default function Akis() {
               <Pressable
                 key={m.id}
                 onPress={() => router.push(`/an/${m.id}` as Href)}
-                style={[styles.moment, (m.remote || i < 2) && styles.momentNew]}>
+                style={[styles.moment, (m.remote || i < 2) && styles.momentNew, m.closeFriends && styles.momentClose]}>
                 {first?.type === 'video' ? (
                   <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.surfaceStrong }]} />
                 ) : (
@@ -212,6 +212,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   momentNew: { borderColor: Colors.borderStrong, borderWidth: 1.5 },
+  // Yakın Arkadaşlar anı: yeşil çerçeve (Instagram gibi)
+  momentClose: { borderColor: '#22C55E', borderWidth: 2.5 },
   addMoment: {
     alignItems: 'center',
     justifyContent: 'center',

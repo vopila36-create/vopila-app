@@ -6,7 +6,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { MediaView } from '@/components/ui/media';
-import { GlassCard, OutlineButton, PrimaryButton } from '@/components/ui/primitives';
+import { Chip, GlassCard, OutlineButton, PrimaryButton } from '@/components/ui/primitives';
 import { SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
@@ -20,6 +20,7 @@ export default function AnOlustur() {
   const store = useStore();
   const [media, setMedia] = useState<Media[]>([]);
   const [title, setTitle] = useState('');
+  const [closeFriends, setCloseFriends] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
 
@@ -64,7 +65,7 @@ export default function AnOlustur() {
     }
     setSending(true);
     setError(null);
-    const res = await store.createMoment(media, title.trim());
+    const res = await store.createMoment(media, title.trim(), closeFriends);
     setSending(false);
     if (!res.ok) {
       setError(res.error ?? 'An paylaşılamadı.');
@@ -132,6 +133,21 @@ export default function AnOlustur() {
           maxLength={40}
           style={styles.input}
         />
+
+        <VText variant="label" style={{ marginTop: Spacing.xl, marginBottom: 8 }}>
+          Kimler görsün?
+        </VText>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <Chip label="Herkes" active={!closeFriends} onPress={() => setCloseFriends(false)} />
+          <Chip label="★ Yakın Arkadaşlar" active={closeFriends} onPress={() => setCloseFriends(true)} />
+        </View>
+        {closeFriends ? (
+          <Pressable onPress={() => router.push('/yakin-arkadaslar' as Href)} style={{ marginTop: 8 }}>
+            <VText variant="caption" color={Colors.success}>
+              Yalnızca Yakın Arkadaşlar listendekiler görür. Listeyi düzenlemek için dokun.
+            </VText>
+          </Pressable>
+        ) : null}
 
         {error ? (
           <VText variant="label" color={Colors.live} style={{ marginTop: 12 }}>

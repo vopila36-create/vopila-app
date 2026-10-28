@@ -148,6 +148,7 @@ export default function AnGoruntuleyici() {
             <View>
               <VText variant="bodyBold">{author.name}</VText>
               <VText variant="caption" color="rgba(255,255,255,0.8)">
+                {moment.closeFriends ? '★ Yakın Arkadaşlar · ' : ''}
                 {moment.title}
               </VText>
             </View>

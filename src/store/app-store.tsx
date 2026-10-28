@@ -713,9 +713,9 @@ function useBuildStore() {
   }, [realMoments]);
 
   const createMoment = useCallback(
-    async (media: Media[], title: string): Promise<{ ok: boolean; error?: string }> => {
+    async (media: Media[], title: string, closeFriends = false): Promise<{ ok: boolean; error?: string }> => {
       if (!myId) return { ok: false, error: 'An paylaşmak için giriş yapmalısın.' };
-      const res = await createRemoteMoment(myId, media, title);
+      const res = await createRemoteMoment(myId, media, title, closeFriends);
       if (!res.ok) return { ok: false, error: res.error };
       await refreshMoments();
       return { ok: true };

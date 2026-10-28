@@ -308,6 +308,8 @@ export type Moment = {
   media?: Media[];
   /** Sunucudan gelen gerçek an mı? */
   remote?: boolean;
+  /** Yalnızca yakın arkadaşlara (yeşil çerçeve) */
+  closeFriends?: boolean;
 };
 
 export const moments: Moment[] = [

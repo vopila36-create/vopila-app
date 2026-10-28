@@ -107,7 +107,8 @@
 - [x] Mesajlarda fotoğraf, video ve sesli mesaj (29 Ekim 2026): gizli 'dm' deposu (yalnızca sohbet üyeleri), sesli mesaj en çok 2 dk, hesap silinince mesaj dosyaları da silinir
 - [x] Taslaklar (telefonda, medya uygulama klasörüne kopyalanır; Ayarlar > Taslaklar) ve "Yapay zekâ ile üretildi" etiketi (paylaşan işaretler, sonradan kaldıramaz) — 29 Ekim 2026
 - [ ] Müzik, düzenleme araçları
-- [ ] Anlar çıkartmaları, Öne Çıkanlar, Yakın Arkadaşlar, davet / QR / paylaşım bağlantıları
+- [x] Yakın Arkadaşlar (29 Ekim 2026): liste yalnızca sahibine görünür, eklenen kişiye bildirim yok; "★ Yakın Arkadaşlar" anları sunucuda yalnızca listedekilere görünür, yeşil çerçeve
+- [ ] Anlar çıkartmaları, Öne Çıkanlar, davet / QR / paylaşım bağlantıları
 
 ## Adım 9 — Yayın
 - [ ] Ayrı canlı Supabase projesi + Pro plan, EAS Build, gerçek uygulama doğrulaması (App Attest / Play Integrity), Face ID işletim sistemi kilidi, Sentry, bağımsız güvenlik testi

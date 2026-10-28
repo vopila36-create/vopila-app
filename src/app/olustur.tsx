@@ -29,7 +29,8 @@ export default function Olustur() {
   const [sensitive, setSensitive] = useState(false);
   const [aiGenerated, setAiGenerated] = useState(false);
   // Taslak: açık taslağın kimliği ve kayıtlı taslak sayısı
-  const [draftId, setDraftId] = useState<string | undefined>(params.draft);
+  // Yalnızca gerçekten var olan bir taslak açılınca ayarlanır
+  const [draftId, setDraftId] = useState<string | undefined>(undefined);
   const [draftCount, setDraftCount] = useState(0);
   const [draftNote, setDraftNote] = useState<string | null>(null);
   const [savingDraft, setSavingDraft] = useState(false);
@@ -41,6 +42,7 @@ export default function Olustur() {
     let alive = true;
     getDraft(uid, params.draft).then((d) => {
       if (!alive || !d) return;
+      setDraftId(d.id);
       setMedia(d.media);
       setCaption(d.caption);
       setLocation(d.location);

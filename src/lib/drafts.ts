@@ -43,11 +43,20 @@ async function writeAll(uid: string | null, list: Draft[]) {
 export const listDrafts = readAll;
 
 export async function getDraft(uid: string | null, id: string) {
+  if (!isDraftId(id)) return null;
   return (await readAll(uid)).find((d) => d.id === id) ?? null;
 }
 
+/** Taslak kimliği yalnızca bizim ürettiğimiz biçimde olabilir (bağlantıdan gelen "../" gibi yollar reddedilir). */
+const DRAFT_ID = /^d\d{10,16}[a-z0-9]{0,6}$/;
+export const isDraftId = (id: unknown): id is string => typeof id === 'string' && DRAFT_ID.test(id);
+
 function draftDir(id: string) {
-  return new Directory(Paths.document, 'drafts', id);
+  if (!isDraftId(id)) throw new Error('invalid_draft_id');
+  const dir = new Directory(Paths.document, 'drafts', id);
+  // Ek güvence: klasör gerçekten taslaklar klasörünün içinde mi
+  if (!dir.uri.startsWith(new Directory(Paths.document, 'drafts').uri)) throw new Error('invalid_draft_id');
+  return dir;
 }
 
 /** Medyayı taslak klasörüne kopyalar (zaten oradaysa olduğu gibi bırakır). */
@@ -76,7 +85,7 @@ async function persistMedia(id: string, media: Media[]): Promise<Media[]> {
 
 /** Taslağı kaydeder ya da günceller; kimliğini döner. */
 export async function saveDraft(uid: string | null, input: Omit<Draft, 'id' | 'savedAt'> & { id?: string }) {
-  const id = input.id ?? `d${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
+  const id = isDraftId(input.id) ? input.id : `d${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
   const media = await persistMedia(id, input.media);
   const draft: Draft = { ...input, id, media, savedAt: new Date().toISOString() };
   const list = (await readAll(uid)).filter((d) => d.id !== id);
@@ -85,6 +94,7 @@ export async function saveDraft(uid: string | null, input: Omit<Draft, 'id' | 's
 }
 
 export async function deleteDraft(uid: string | null, id: string) {
+  if (!isDraftId(id)) return;
   await writeAll(uid, (await readAll(uid)).filter((d) => d.id !== id));
   if (!isWeb) {
     try {

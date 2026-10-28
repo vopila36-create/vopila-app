@@ -10,7 +10,7 @@ import { toTurkish } from '@/store/auth';
 export async function fetchMoments(myId: string): Promise<ApiResult<{ moments: Moment[]; authors: User[] }>> {
   const { data, error } = await supabase
     .from('moments')
-    .select(`id, author_id, title, created_at, moment_items(type, storage_path, position), author:profiles!moments_author_id_fkey(${AUTHOR})`)
+    .select(`id, author_id, title, created_at, close_friends, moment_items(type, storage_path, position), author:profiles!moments_author_id_fkey(${AUTHOR})`)
     .order('created_at', { ascending: false })
     .limit(50);
   if (error) return { ok: false, error: toTurkish(error) };
@@ -33,6 +33,7 @@ export async function fetchMoments(myId: string): Promise<ApiResult<{ moments: M
         items: media.map((m) => m.uri),
         media,
         remote: true,
+        closeFriends: !!r.close_friends,
       };
     })
     .filter((m) => m.items.length);
@@ -40,14 +41,19 @@ export async function fetchMoments(myId: string): Promise<ApiResult<{ moments: M
 }
 
 /** An paylaş: dosyaları yükler, anı ve ögelerini yazar; hata olursa geri alır. */
-export async function createMoment(myId: string, media: Media[], title: string): Promise<ApiResult<{ id: string }>> {
+export async function createMoment(
+  myId: string,
+  media: Media[],
+  title: string,
+  closeFriends = false,
+): Promise<ApiResult<{ id: string }>> {
   const uploaded: string[] = [];
   let momentId: string | null = null;
   try {
     for (const [i, m] of media.entries()) uploaded.push(await uploadMedia(myId, m, i));
     const { data, error } = await supabase
       .from('moments')
-      .insert({ author_id: myId, title: title.slice(0, 40) })
+      .insert({ author_id: myId, title: title.slice(0, 40), close_friends: closeFriends })
       .select('id')
       .single();
     if (error) throw error;

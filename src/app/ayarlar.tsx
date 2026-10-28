@@ -32,6 +32,7 @@ import {
   Shield,
   ShieldAlert,
   Sparkles,
+  Star,
   ShieldCheck,
   ShieldMinus,
   Timer,
@@ -163,6 +164,7 @@ export default function Ayarlar() {
         </Section>
 
         <Section title="İçeriğini kimler görebilir">
+          <Row icon={<Star size={20} color="#22C55E" />} label="Yakın Arkadaşlar" onPress={() => go('/yakin-arkadaslar')} />
           <ToggleRow
             icon={<Lock size={20} color={Colors.cyanSoft} />}
             label="Gizli hesap"
