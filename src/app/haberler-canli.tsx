@@ -6,9 +6,12 @@ import { GlassCard } from '@/components/ui/primitives';
 import { SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Spacing } from '@/constants/theme';
-import { liveUpdates, newsById } from '@/data/mock';
+import { useStore } from '@/store/app-store';
 
 export default function CanliGelismeler() {
+  const store = useStore();
+  const liveUpdates = store.liveFeed;
+  const newsById = store.newsOf;
   return (
     <SubScreen title="Canlı Gelişmeler">
       <View style={styles.pad}>

@@ -84,7 +84,8 @@
 - [ ] KVKK metinleri, 5651 sayılı Kanun yükümlülükleri, hukukçu görüşü (token ödülleri / promosyon)
 
 ## Adım 7 — Aşama 7–9
-- [ ] Haberler: gerçek haber kaynağı + yapay zekâ özeti
+- [x] Haberler: gerçek kaynaklar (28 Ekim 2026) — TRT Haber, BBC Türkçe, DW Türkçe, CNN Türk, Habertürk, Sözcü RSS; sunucu 15 dk'da bir çeker, 7 günden eskiyi siler; yalnızca başlık + kısa özet + görsel + kaynağa bağlantı (FSEK). Yayından önce kaynaklardan yazılı izin istenmeli (hukukçu listesine eklendi)
+- [ ] Yapay zekâ özeti (otomatik haberler için)
 - [ ] Ana Sahne: gerçek öneri motoru, keşfet, trendler, arama
 - [ ] Canlı yayın (LiveKit; 15–18 yaşa kapalı)
 

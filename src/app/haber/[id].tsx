@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
-import { Bookmark, ChevronDown, ChevronRight, ChevronUp, Clock, Newspaper, Play, Share2, Sparkles } from 'lucide-react-native';
+import * as WebBrowser from 'expo-web-browser';
+import { Bookmark, ChevronDown, ChevronRight, ChevronUp, Clock, ExternalLink, Newspaper, Play, Share2, Sparkles } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, Share, StyleSheet, View } from 'react-native';
 
@@ -9,11 +10,13 @@ import { GlassCard, OutlineButton, PlayBadge, SectionHeader } from '@/components
 import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { news, newsById } from '@/data/mock';
+import { useStore } from '@/store/app-store';
 
 export default function HaberDetay() {
   const { id, ozet } = useLocalSearchParams<{ id: string; ozet?: string }>();
-  const article = newsById(String(id));
+  const store = useStore();
+  const news = store.allNews;
+  const article = store.newsOf(String(id));
   const [summaryOpen, setSummaryOpen] = useState(ozet === '1');
   const [saved, setSaved] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -95,7 +98,27 @@ export default function HaberDetay() {
           {article.summary}
         </VText>
 
+        {/* Otomatik haber: haberin tamamı kaynağında */}
+        {article.sourceUrl ? (
+          <Pressable
+            style={styles.source}
+            onPress={() => WebBrowser.openBrowserAsync(article.sourceUrl!).catch(() => {})}
+            accessibilityLabel="Haberin tamamını kaynağında oku">
+            <ExternalLink size={18} color={Colors.onCyan} />
+            <VText variant="label" color={Colors.onCyan} style={{ fontFamily: Fonts.bold }}>
+              Haberin tamamı: {article.sourceName ?? 'kaynak'}
+            </VText>
+          </Pressable>
+        ) : null}
+        {article.sourceName ? (
+          <VText variant="caption" style={{ marginTop: 8 }}>
+            Kaynak: {article.sourceName}. Başlık ve kısa özet kaynağın herkese açık haber akışından alınmıştır; haberin tüm
+            hakları {article.sourceName}’e aittir.
+          </VText>
+        ) : null}
+
         {/* Yapay zekâ özeti */}
+        {article.aiSummary.length ? (
         <GlassCard highlighted={summaryOpen} style={{ marginTop: Spacing.lg }}>
           <Pressable style={styles.summaryHead} onPress={() => setSummaryOpen((v) => !v)}>
             <Sparkles size={18} color={Colors.cyan} />
@@ -120,6 +143,7 @@ export default function HaberDetay() {
             </View>
           ) : null}
         </GlassCard>
+        ) : null}
 
         <View style={{ marginTop: Spacing.lg, gap: 14 }}>
           {article.body.map((p) => (
@@ -169,7 +193,17 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     backgroundColor: Colors.surfaceStrong,
   },
-  center: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
+  center: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  source: {
+    marginTop: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 48,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.cyan,
+  },
   liveTag: {
     position: 'absolute',
     top: 12,

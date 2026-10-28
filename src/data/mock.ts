@@ -489,6 +489,13 @@ export type NewsArticle = {
   live?: boolean;
   special?: boolean;
   video?: string;
+  /** Otomatik haber: kaynak adı (ör. TRT Haber) ve orijinal habere bağlantı. */
+  sourceName?: string;
+  sourceUrl?: string;
+  /** Yayın zamanı (ISO) — canlı akış saatleri için. */
+  publishedAt?: string;
+  /** Alındığı anda son 30 dakika içinde mi yayınlandı (canlı akışta "YENİ"). */
+  fresh?: boolean;
 };
 
 export const news: NewsArticle[] = [

@@ -8,7 +8,7 @@ import { Avatar, Chip, GlassCard } from '@/components/ui/primitives';
 import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { arenas, ME_ID, news, users, type User } from '@/data/mock';
+import { arenas, ME_ID, users, type User } from '@/data/mock';
 import { isRealId, searchProfiles } from '@/lib/social-api';
 import { formatCount, useStore } from '@/store/app-store';
 
@@ -55,9 +55,9 @@ export default function Arama() {
       people: [...real, ...users.filter((u) => u.id !== ME_ID && (has(u.name) || has(u.username) || has(u.location)))],
       posts: store.allPosts.filter((p) => has(p.caption) || has(p.location)),
       arenas: arenas.filter((a) => has(a.name) || has(a.tagline)),
-      news: news.filter((n) => has(n.title) || has(n.category)),
+      news: store.allNews.filter((n) => has(n.title) || has(n.category) || has(n.sourceName ?? '')),
     };
-  }, [query, store.allPosts, realPeople]);
+  }, [query, store.allPosts, store.allNews, realPeople]);
 
   const tag = q.trim().startsWith('#') ? q.trim().slice(1).replace(/[^\p{L}\p{N}_]/gu, '') : '';
 

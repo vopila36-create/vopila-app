@@ -21,6 +21,8 @@ import {
   arenaEntries as seedEntries,
   initialLedger,
   moments as demoMoments,
+  news as demoNews,
+  liveUpdates as demoLiveUpdates,
   notifications as demoNotifications,
   ME_ID,
   MIN_VOTES_FOR_RANK,
@@ -34,6 +36,8 @@ import {
   type AppNotification,
   type Media,
   type Moment,
+  type NewsArticle,
+  type LiveUpdate,
   type Post,
   type Product,
   type User,
@@ -75,6 +79,7 @@ import {
   type RemoteOrder,
   type SavedAddress,
 } from '@/lib/shop-api';
+import { fetchNews } from '@/lib/news-api';
 import { fetchNotifications, markNotificationsRead as markRemoteNotificationsRead } from '@/lib/notifications-api';
 import { fetchMyFollowing, follow, isRealId, unfollow, type FollowStatus } from '@/lib/social-api';
 import { isSupabaseConfigured } from '@/lib/supabase';
@@ -939,6 +944,36 @@ function useBuildStore() {
   const catalog: Product[] = (myId && shop.products) || demoProducts;
   const productOf = useCallback((id: string) => catalog.find((p) => p.id === id), [catalog]);
 
+  // ─── Haberler (gerçek kaynaklar) ──────────────────────────────────────────
+  // Herkese açık; giriş beklemeden yüklenir. Gelmezse örnek haberler gösterilir.
+  const [realNews, setRealNews] = useState<NewsArticle[] | null>(null);
+  const refreshNews = useCallback(async () => {
+    const list = await fetchNews();
+    if (list) setRealNews(list);
+  }, []);
+  useEffect(() => {
+    let cancelled = false;
+    fetchNews().then((list) => {
+      if (!cancelled && list) setRealNews(list);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const allNews: NewsArticle[] = realNews && realNews.length ? realNews : demoNews;
+  const newsOf = useCallback((id: string) => allNews.find((n) => n.id === id), [allNews]);
+  /** Canlı gelişmeler: en yeni 20 gerçek haber (saatiyle); son 30 dakikadakiler "yeni". */
+  const liveFeed: LiveUpdate[] = useMemo(() => {
+    if (!realNews?.length) return demoLiveUpdates;
+    return realNews.slice(0, 20).map((n) => ({
+      id: `lu_${n.id}`,
+      time: n.publishedAt ? new Date(n.publishedAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '',
+      text: n.sourceName ? `${n.title} (${n.sourceName})` : n.title,
+      fresh: !!n.fresh,
+      articleId: n.id,
+    }));
+  }, [realNews]);
+
   const cartItems = useMemo(
     () =>
       Object.entries(state.cart)
@@ -1044,6 +1079,12 @@ function useBuildStore() {
   return {
     state,
     balance,
+    allNews,
+    newsOf,
+    liveFeed,
+    refreshNews,
+    /** Gerçek haberler yüklendi mi (Reels sırası bir kez yeniden kurulur) */
+    newsReady: !!realNews,
     ledger,
     orders: shop.orders,
     addresses: shop.addresses,

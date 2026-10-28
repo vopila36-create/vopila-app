@@ -8,7 +8,8 @@ import { BottomFade, Chip, GlassCard, PlayBadge, SectionHeader } from '@/compone
 import { SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { liveUpdates, news, newsCategories, type NewsArticle, type NewsCategory } from '@/data/mock';
+import { newsCategories, type NewsArticle, type NewsCategory } from '@/data/mock';
+import { useStore } from '@/store/app-store';
 
 const TAG_COLORS: Record<NewsCategory, string> = {
   Gündem: Colors.cyan,
@@ -26,11 +27,14 @@ const open = (id: string, ozet?: boolean) =>
 export default function HaberMerkezi() {
   const [cat, setCat] = useState<NewsCategory>('Gündem');
   const [showAll, setShowAll] = useState(false);
+  const store = useStore();
+  const news = store.allNews;
+  const liveUpdates = store.liveFeed;
 
   // "Gündem" tüm haberleri gösterir; diğerleri kategoriye göre süzer.
   const filtered = useMemo(
     () => (cat === 'Gündem' ? news : news.filter((n) => n.category === cat)),
-    [cat],
+    [cat, news],
   );
   const headline = filtered.find((n) => n.live) ?? filtered[0];
   const rest = filtered.filter((n) => n.id !== headline?.id && !n.special);

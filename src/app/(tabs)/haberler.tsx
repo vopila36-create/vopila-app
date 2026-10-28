@@ -1,8 +1,9 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, type Href } from 'expo-router';
+import { router, useFocusEffect, type Href } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { Clock, LayoutList, Radio, Send, Sparkles } from 'lucide-react-native';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -12,7 +13,7 @@ import { VideoPlayer } from '@/components/ui/media';
 import { OutlineButton, PrimaryButton } from '@/components/ui/primitives';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing, TabBarHeight } from '@/constants/theme';
-import { news, type NewsArticle, type NewsCategory } from '@/data/mock';
+import type { NewsArticle, NewsCategory } from '@/data/mock';
 import { rankByInterest } from '@/lib/feed-rank';
 import { useStore } from '@/store/app-store';
 
@@ -33,11 +34,24 @@ const topicOf = (n: NewsArticle) => `news:${n.category}`;
  */
 export default function Haberler() {
   const store = useStore();
+  // Sekmeye her gelişte yeni haberleri çek (sunucu 15 dakikada bir günceller)
+  const { refreshNews } = store;
+  useFocusEffect(
+    useCallback(() => {
+      refreshNews();
+    }, [refreshNews]),
+  );
+  // Gerçek haberler ilk geldiğinde sıra bir kez yeniden kurulur
+  return <NewsReels key={store.newsReady ? 'real' : 'demo'} />;
+}
+
+function NewsReels() {
+  const store = useStore();
   const insets = useSafeAreaInsets();
 
   // Sıra açılışta bir kez hesaplanır; izledikçe içerik yer değiştirmez
   const [items] = useState(() =>
-    rankByInterest(news, {
+    rankByInterest(store.allNews.slice(0, 150), {
       idOf: (n) => n.id,
       topicOf,
       interests: store.state.interests,
@@ -82,9 +96,15 @@ export default function Haberler() {
 function NewsReel({ article, active, bottom }: { article: NewsArticle; active: boolean; bottom: number }) {
   const store = useStore();
 
+  const hasAi = article.aiSummary.length > 0;
   const open = (ozet?: boolean) => {
     // Haberi açmak güçlü bir ilgi işaretidir
     store.addInterest(topicOf(article), ozet ? 4 : 6, article.id);
+    // Otomatik haber: haberin tamamı kaynağında (uygulama içi tarayıcıda) okunur
+    if (!ozet && article.sourceUrl) {
+      WebBrowser.openBrowserAsync(article.sourceUrl).catch(() => {});
+      return;
+    }
     router.push((ozet ? `/haber/${article.id}?ozet=1` : `/haber/${article.id}`) as Href);
   };
 
@@ -109,7 +129,9 @@ function NewsReel({ article, active, bottom }: { article: NewsArticle; active: b
 
       <View style={[styles.side, { bottom: bottom + 150 }]}>
         <ReelAction icon={<Send size={22} color="#fff" />} label="Gönder" onPress={send} />
-        <ReelAction icon={<Sparkles size={22} color={Colors.cyan} />} label="AI Özet" onPress={() => open(true)} />
+        {hasAi ? (
+          <ReelAction icon={<Sparkles size={22} color={Colors.cyan} />} label="AI Özet" onPress={() => open(true)} />
+        ) : null}
       </View>
 
       <View style={[styles.bottom, { paddingBottom: bottom }]}>
@@ -135,18 +157,25 @@ function NewsReel({ article, active, bottom }: { article: NewsArticle; active: b
         <View style={styles.meta}>
           <Clock size={13} color={Colors.textSecondary} />
           <VText variant="caption">
-            {article.time} · {article.readTime}
+            {article.sourceName ? `${article.sourceName} · ` : ''}
+            {article.time}
           </VText>
         </View>
 
         <View style={styles.buttons}>
-          <PrimaryButton label="Habere Git" onPress={() => open()} style={{ flex: 1 }} />
-          <OutlineButton
-            label="AI Özet"
-            iconLeft={<Sparkles size={15} color={Colors.text} />}
-            onPress={() => open(true)}
+          <PrimaryButton
+            label={article.sourceName ? `Habere Git · ${article.sourceName}` : 'Habere Git'}
+            onPress={() => open()}
             style={{ flex: 1 }}
           />
+          {hasAi ? (
+            <OutlineButton
+              label="AI Özet"
+              iconLeft={<Sparkles size={15} color={Colors.text} />}
+              onPress={() => open(true)}
+              style={{ flex: 1 }}
+            />
+          ) : null}
         </View>
       </View>
       <SendSheet payload={sendPayload} onClose={() => setSendPayload(null)} />
