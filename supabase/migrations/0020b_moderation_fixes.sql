@@ -94,7 +94,7 @@ as $$
                'I', 'ı'), 'İ', 'i')),
              -- Türkçe karakterler + yazım hileleri + Kiril/Yunan benzer harfler
              'ığüşöçâîû0134579@$!|аеорсхуікмнтвзαεορτυικνχѕјԁɡӏ',
-             'iguscoaiuoieastgasiiaeopcxyikmhtbzaeoptuikvxsjdgl'),
+             'igusocaiuoieastgasiiaeopcxyikmhtbzaeoptuikvxsjdgl'),
            '([a-z])\1+', '\1', 'g');
 $$;
 

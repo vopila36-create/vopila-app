@@ -41,6 +41,7 @@ export function ageOn(iso: string, today = new Date()): number {
 
 /** Yazılan doğum tarihini kontrol eder: hata mesajı ya da ISO tarih. */
 export function checkBirthDate(text: string): { ok: true; iso: string; age: number } | { ok: false; error: string } {
+  if (!text.trim()) return { ok: false, error: 'Doğum tarihini yaz. Kayıt için zorunlu (5651 sayılı Kanun gereği yaş kontrolü).' };
   const iso = parseTrDate(text);
   if (!iso) return { ok: false, error: 'Doğum tarihini GG.AA.YYYY şeklinde yaz (ör. 05.09.2004).' };
   const age = ageOn(iso);

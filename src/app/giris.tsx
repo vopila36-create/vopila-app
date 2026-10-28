@@ -282,7 +282,7 @@ export default function Giris() {
                 <>
                   <Field label="Ad Soyad" value={name} onChangeText={setName} maxLength={60} autoComplete="name" />
                   <Field
-                    label="Doğum tarihi (GG.AA.YYYY)"
+                    label="Doğum tarihi (zorunlu)"
                     value={birth}
                     onChangeText={(t) => {
                       const d = t.replace(/\D/g, '').slice(0, 8);

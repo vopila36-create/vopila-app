@@ -27,7 +27,7 @@ as $$
   select regexp_replace(
            translate(lower(replace(replace(coalesce(p, ''), 'I', 'ı'), 'İ', 'i')),
                      'ığüşöçâîû0134579@$!|',
-                     'iguscoaiuoieastgasii'),
+                     'igusocaiuoieastgasii'),
            '([a-z])\1+', '\1', 'g');
 $$;
 
