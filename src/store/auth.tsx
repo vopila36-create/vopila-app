@@ -157,7 +157,29 @@ function useBuildAuth() {
   const [passwordRecovery, setPasswordRecovery] = useState(false);
   const [biometric, setBiometric] = useState<Biometric>({ available: false, enabled: false, label: 'Face ID' });
 
-  const userId = session?.user.id ?? null;
+  const sessionUserId = session?.user.id ?? null;
+  const token = session?.access_token ?? null;
+
+  // İki adımlı doğrulama: hesapta açıksa, kod girilene kadar (oturum "aal2" olana kadar) kullanıcı
+  // "doğrulanmamış" sayılır; veriler yüklenmez (sunucu da zaten izin vermez — 0011_security_fixes.sql).
+  // Kullanıcıya göre tutulur ki saatlik oturum yenilemesinde ekran gidip gelmesin.
+  const [aal, setAal] = useState<{ userId: string; need: boolean } | null>(null);
+  useEffect(() => {
+    if (!token || !sessionUserId) return;
+    let alive = true;
+    supabase.auth.mfa.getAuthenticatorAssuranceLevel().then(({ data, error }) => {
+      // Kontrol edilemezse güvenli taraf: kod iste
+      const need = !!error || (data?.nextLevel === 'aal2' && data.currentLevel !== 'aal2');
+      if (alive) setAal({ userId: sessionUserId, need });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [token, sessionUserId]);
+  /** null: kontrol ediliyor · true: kod gerekli · false: tamam */
+  const mfaRequired: boolean | null = !sessionUserId ? false : aal?.userId === sessionUserId ? aal.need : null;
+
+  const userId = mfaRequired === false ? sessionUserId : null;
   const profile = loaded && loaded.userId === userId ? loaded.data : null;
 
   // Açılışta kayıtlı oturumu yükle, sonra değişiklikleri dinle
@@ -382,6 +404,10 @@ function useBuildAuth() {
       ready,
       session,
       profile,
+      /** İki adımlı doğrulama kodu bekleniyor mu (null: kontrol ediliyor) */
+      mfaRequired,
+      /** Doğrulanmış kullanıcı kimliği (kod gerekiyorsa null) */
+      userId,
       passwordRecovery,
       biometric,
       signIn,
@@ -402,6 +428,8 @@ function useBuildAuth() {
       ready,
       session,
       profile,
+      mfaRequired,
+      userId,
       passwordRecovery,
       biometric,
       signIn,

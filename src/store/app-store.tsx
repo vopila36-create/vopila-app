@@ -287,8 +287,9 @@ function useBuildStore() {
 
   // ─── Gerçek gönderiler (Supabase) ─────────────────────────────────────────
   // Giriş yapılmışsa gerçek gönderiler akışın en üstünde, örnek gönderiler altında görünür.
-  const { session } = useAuth();
-  const myId = isSupabaseConfigured ? (session?.user.id ?? null) : null;
+  // Yalnızca doğrulanmış kullanıcı (iki adımlı kod gerekiyorsa girilene kadar null)
+  const { userId: verifiedUserId } = useAuth();
+  const myId = isSupabaseConfigured ? verifiedUserId : null;
   type RemoteState = {
     /** Bu verinin ait olduğu kullanıcı: hesap değişince eski kişinin verisi gösterilmez. */
     owner: string | null;
