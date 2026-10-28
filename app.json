@@ -61,7 +61,13 @@
           "faceIDPermission": "VOPILA, hesabına hızlı ve güvenli giriş yapabilmen için Face ID kullanmak istiyor."
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "VOPILA, sesli mesaj kaydedebilmen için mikrofonuna erişmek istiyor."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

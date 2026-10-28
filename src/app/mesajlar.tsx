@@ -11,7 +11,7 @@ import { Avatar, GlassCard, OutlineButton } from '@/components/ui/primitives';
 import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { chatTime } from '@/lib/messages-api';
+import { chatTime, kindPreview } from '@/lib/messages-api';
 import { useStore } from '@/store/app-store';
 
 const norm = (s: string) => s.toLocaleLowerCase('tr-TR');
@@ -68,7 +68,7 @@ export default function Mesajlar() {
             {list.map((c, i) => {
               const unread = c.unread > 0;
               const preview =
-                c.lastKind === 'post' ? (c.lastText ? `Gönderi: ${c.lastText}` : 'Bir gönderi paylaştı') : c.lastText;
+                c.lastKind === 'post' ? (c.lastText ? `Gönderi: ${c.lastText}` : 'Bir gönderi paylaştı') : kindPreview(c.lastKind, c.lastText);
               return (
                 <Pressable
                   key={c.id}

@@ -15,22 +15,37 @@ export type Conversation = {
   otherName: string;
   otherAvatar: string;
   otherVerified: boolean;
-  lastKind: 'text' | 'post';
+  lastKind: MessageKind;
   lastText: string;
   lastFromMe: boolean;
   lastAt: string;
   unread: number;
 };
 
+export type MessageKind = 'text' | 'post' | 'image' | 'video' | 'audio';
+
 export type Message = {
   id: string;
   conversationId: string;
   senderId: string;
-  kind: 'text' | 'post';
+  kind: MessageKind;
   text: string;
   postId: string | null;
+  /** Fotoğraf / video / ses dosyası (gizli 'dm' deposunda) */
+  mediaPath: string | null;
+  /** Sesli mesaj süresi */
+  durationMs: number | null;
   createdAt: string;
 };
+
+/** Gelen kutusunda son mesajın özeti */
+export function kindPreview(kind: MessageKind, text: string) {
+  if (kind === 'image') return '📷 Fotoğraf';
+  if (kind === 'video') return '🎬 Video';
+  if (kind === 'audio') return '🎤 Sesli mesaj';
+  if (kind === 'post') return text || 'Bir gönderi paylaştı';
+  return text;
+}
 
 const toMessage = (r: any): Message => ({
   id: r.id,
@@ -39,6 +54,8 @@ const toMessage = (r: any): Message => ({
   kind: r.kind,
   text: r.text,
   postId: r.post_id,
+  mediaPath: r.media_path ?? null,
+  durationMs: r.duration_ms ?? null,
   createdAt: r.created_at,
 });
 
@@ -101,7 +118,7 @@ export async function fetchConversationPeer(
 export async function fetchMessages(conversationId: string, before?: string): Promise<ApiResult<Message[]>> {
   let q = supabase
     .from('messages')
-    .select('id, conversation_id, sender_id, kind, text, post_id, created_at')
+    .select('id, conversation_id, sender_id, kind, text, post_id, media_path, duration_ms, created_at')
     .eq('conversation_id', conversationId)
     .order('created_at', { ascending: false })
     .limit(40);
@@ -126,10 +143,68 @@ export async function sendMessage(
       text,
       post_id: input.postId ?? null,
     })
-    .select('id, conversation_id, sender_id, kind, text, post_id, created_at')
+    .select('id, conversation_id, sender_id, kind, text, post_id, media_path, duration_ms, created_at')
     .single();
   if (error) return { ok: false, error: messageError(error) };
   return { ok: true, data: toMessage(data) };
+}
+
+/**
+ * Fotoğraf, video ya da sesli mesaj gönderir: dosya gizli 'dm' deposuna
+ * <sohbet>/<gönderen>/ klasörüne yüklenir (yalnızca sohbetin üyeleri açabilir), sonra mesaj yazılır.
+ */
+export async function sendMediaMessage(
+  myId: string,
+  conversationId: string,
+  input: { uri: string; kind: 'image' | 'video' | 'audio'; mimeType?: string | null; durationMs?: number },
+): Promise<ApiResult<Message>> {
+  const mime =
+    input.mimeType ||
+    (input.kind === 'audio'
+      ? input.uri.startsWith('blob:')
+        ? 'audio/webm'
+        : 'audio/mp4'
+      : input.kind === 'video'
+        ? 'video/mp4'
+        : 'image/jpeg');
+  const ext = mime.includes('webm') ? 'webm' : mime.includes('png') ? 'png' : mime.includes('quicktime') ? 'mov'
+    : mime.startsWith('video') ? 'mp4' : mime.startsWith('audio') ? 'm4a' : 'jpg';
+  const path = `${conversationId}/${myId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  try {
+    const body = await fetch(input.uri).then((r) => r.arrayBuffer());
+    const up = await supabase.storage.from('dm').upload(path, body, { contentType: mime, upsert: false });
+    if (up.error) return { ok: false, error: 'Dosya yüklenemedi. Boyutu 50 MB’ı geçmemeli.' };
+  } catch {
+    return { ok: false, error: 'Dosya okunamadı, tekrar dene.' };
+  }
+  const { data, error } = await supabase
+    .from('messages')
+    .insert({
+      conversation_id: conversationId,
+      sender_id: myId,
+      kind: input.kind,
+      text: '',
+      media_path: path,
+      duration_ms: input.kind === 'audio' ? Math.min(Math.round(input.durationMs ?? 0), 120000) : null,
+    })
+    .select('id, conversation_id, sender_id, kind, text, post_id, media_path, duration_ms, created_at')
+    .single();
+  if (error) {
+    await supabase.storage.from('dm').remove([path]);
+    return { ok: false, error: messageError(error) };
+  }
+  return { ok: true, data: toMessage(data) };
+}
+
+/** Gizli medya için 1 saatlik bağlantı (bellekte saklanır). */
+const urlCache = new Map<string, { url: string; until: number }>();
+export async function dmMediaUrl(path: string): Promise<string | null> {
+  const hit = urlCache.get(path);
+  if (hit && hit.until > Date.now()) return hit.url;
+  const { data, error } = await supabase.storage.from('dm').createSignedUrl(path, 3600);
+  if (error || !data?.signedUrl) return null;
+  urlCache.set(path, { url: data.signedUrl, until: Date.now() + 50 * 60 * 1000 });
+  return data.signedUrl;
 }
 
 /** Bir kişiye doğrudan gönder (sohbet yoksa açılır). "Arkadaşına gönder" bunu kullanır. */

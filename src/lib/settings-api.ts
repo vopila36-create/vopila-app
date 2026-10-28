@@ -200,7 +200,7 @@ export async function exportMyData(): Promise<ApiResult<unknown>> {
 }
 
 /** Kullanıcının bir kovadaki tüm dosyalarını siler ({uid}/... klasörü). */
-async function removeAllFiles(bucket: 'media' | 'avatars', myId: string) {
+async function removeAllFiles(bucket: 'media' | 'avatars' | 'dm', myId: string) {
   for (let i = 0; i < 20; i++) {
     const { data } = await supabase.storage.from(bucket).list(myId, { limit: 1000 });
     const paths = (data ?? []).filter((f) => f.name).map((f) => `${myId}/${f.name}`);
@@ -214,6 +214,9 @@ export async function deleteMyAccount(myId: string): Promise<ApiResult> {
   try {
     await removeAllFiles('media', myId);
     await removeAllFiles('avatars', myId);
+    // Mesajlarda gönderdiğim fotoğraf / video / sesler: <sohbet>/<ben>/
+    const { data: convs } = await supabase.rpc('my_conversations');
+    for (const c of (convs ?? []) as { id: string }[]) await removeAllFiles('dm', `${c.id}/${myId}`);
   } catch {
     // Dosya silme başarısız olsa da hesap silinir; kalan dosyalar sahipsiz kalır ve sonra temizlenir
   }

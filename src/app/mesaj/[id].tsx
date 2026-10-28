@@ -4,7 +4,8 @@
  */
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
-import { BadgeCheck, ImageOff, PlayCircle, Send } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { BadgeCheck, ImageOff, ImagePlus, PlayCircle, Send } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -18,6 +19,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DmMediaBubble, VoiceRecorder } from '@/components/dm-media';
 import { Avatar } from '@/components/ui/primitives';
 import { Screen } from '@/components/ui/screen';
 import { SubHeader } from '@/components/ui/sub-screen';
@@ -29,6 +31,7 @@ import {
   fetchConversationPeer,
   fetchMessages,
   markRead,
+  sendMediaMessage,
   sendMessage,
   subscribeToConversation,
   type Message,
@@ -52,6 +55,7 @@ export default function Sohbet() {
   const [error, setError] = useState<string | null>(null);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [noMore, setNoMore] = useState(false);
+  const [recording, setRecording] = useState(false);
 
   // Paylaşılan gönderileri (görme yetkim varsa) getir
   const loadPosts = useCallback(
@@ -127,6 +131,42 @@ export default function Sohbet() {
     addIncoming(res.data);
   };
 
+  // Fotoğraf / video gönder
+  const pickMedia = async () => {
+    if (!myId || sending) return;
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images', 'videos'],
+        quality: 0.8,
+        videoMaxDuration: 60,
+      });
+      if (res.canceled || !res.assets?.[0]) return;
+      const a = res.assets[0];
+      setSending(true);
+      setError(null);
+      const r = await sendMediaMessage(myId, cid, {
+        uri: a.uri,
+        kind: a.type === 'video' ? 'video' : 'image',
+        mimeType: a.mimeType,
+      });
+      setSending(false);
+      if (!r.ok) setError(r.error);
+      else addIncoming(r.data);
+    } catch {
+      setSending(false);
+      setError('Galeri açılamadı. Fotoğraflara erişim izni vermen gerekebilir.');
+    }
+  };
+
+  // Sesli mesaj gönder
+  const sendVoice = async (uri: string, durationMs: number) => {
+    if (!myId) return;
+    setError(null);
+    const r = await sendMediaMessage(myId, cid, { uri, kind: 'audio', durationMs });
+    if (!r.ok) setError(r.error);
+    else addIncoming(r.data);
+  };
+
   // Ters liste: en yeni mesaj altta
   const data = useMemo(() => [...(messages ?? [])].reverse(), [messages]);
 
@@ -180,6 +220,9 @@ export default function Sohbet() {
                 <View>
                   <View style={[styles.bubbleRow, mine && { justifyContent: 'flex-end' }]}>
                     <View style={{ maxWidth: '78%', gap: 4 }}>
+                      {m.kind === 'image' || m.kind === 'video' || m.kind === 'audio' ? (
+                        <DmMediaBubble message={m} mine={mine} />
+                      ) : null}
                       {m.kind === 'post' ? (
                         <SharedPost post={m.postId ? posts[m.postId] : null} pending={!!m.postId && !(m.postId in posts)} />
                       ) : null}
@@ -208,22 +251,37 @@ export default function Sohbet() {
         ) : null}
 
         <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
-          <TextInput
-            value={text}
-            onChangeText={setText}
-            placeholder="Mesaj yaz…"
-            placeholderTextColor={Colors.textMuted}
-            style={styles.input}
-            multiline
-            maxLength={1000}
-          />
-          <Pressable
-            onPress={send}
-            disabled={!text.trim() || sending}
-            style={[styles.send, (!text.trim() || sending) && { opacity: 0.4 }]}
-            accessibilityLabel="Gönder">
-            {sending ? <ActivityIndicator size="small" color={Colors.onCyan} /> : <Send size={18} color={Colors.onCyan} />}
-          </Pressable>
+          {!recording ? (
+            <>
+              <Pressable onPress={pickMedia} disabled={sending} hitSlop={6} style={styles.attach} accessibilityLabel="Fotoğraf ya da video gönder">
+                <ImagePlus size={22} color={Colors.cyan} />
+              </Pressable>
+              <TextInput
+                value={text}
+                onChangeText={setText}
+                placeholder="Mesaj yaz…"
+                placeholderTextColor={Colors.textMuted}
+                style={styles.input}
+                multiline
+                maxLength={1000}
+              />
+            </>
+          ) : null}
+          {text.trim() ? (
+            <Pressable
+              onPress={send}
+              disabled={sending}
+              style={[styles.send, sending && { opacity: 0.4 }]}
+              accessibilityLabel="Gönder">
+              {sending ? <ActivityIndicator size="small" color={Colors.onCyan} /> : <Send size={18} color={Colors.onCyan} />}
+            </Pressable>
+          ) : sending ? (
+            <View style={styles.send}>
+              <ActivityIndicator size="small" color={Colors.onCyan} />
+            </View>
+          ) : (
+            <VoiceRecorder onSend={sendVoice} onError={setError} onActiveChange={setRecording} />
+          )}
         </View>
       </Screen>
     </KeyboardAvoidingView>
@@ -306,6 +364,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     backgroundColor: Colors.surface,
   },
+  attach: { width: 36, height: 40, alignItems: 'center', justifyContent: 'center' },
   send: {
     width: 42,
     height: 42,

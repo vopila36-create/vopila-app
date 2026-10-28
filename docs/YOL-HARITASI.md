@@ -104,7 +104,8 @@
 - [ ] Canlı yayın (LiveKit; 15–18 yaşa kapalı)
 
 ## Adım 8 — Rakiplerle aradaki farkı kapatma
-- [ ] Mesajlaşma (DM), dikey video akışı, müzik, düzenleme araçları, taslaklar
+- [x] Mesajlarda fotoğraf, video ve sesli mesaj (29 Ekim 2026): gizli 'dm' deposu (yalnızca sohbet üyeleri), sesli mesaj en çok 2 dk, hesap silinince mesaj dosyaları da silinir
+- [ ] Müzik, düzenleme araçları, taslaklar
 - [ ] Anlar çıkartmaları, Öne Çıkanlar, Yakın Arkadaşlar, "yapay zekâ ile üretildi" etiketi, davet / QR / paylaşım bağlantıları
 
 ## Adım 9 — Yayın
