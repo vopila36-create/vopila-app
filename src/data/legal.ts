@@ -15,7 +15,8 @@ export type LegalDoc = {
 export const LEGAL_DRAFT = true;
 
 const CONTROLLER = '[ŞİRKET ÜNVANI], [ADRES], MERSİS No: [MERSİS], KEP: [KEP ADRESİ]';
-const CONTACT = 'destek@vopila.app';
+// Not: bu adres için gelen kutusu henüz yok (yayından önce açılmalı)
+const CONTACT = 'destek@vopila.com';
 
 export const LEGAL_DOCS: LegalDoc[] = [
   {

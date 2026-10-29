@@ -110,7 +110,7 @@ export default function Giris() {
     setStep('kod');
     setCode('');
     setCooldown(RESEND_SECONDS);
-    setInfo(message ?? 'E-postanı kontrol et: kod geldiyse aşağıya yaz; bağlantı geldiyse ona bu telefondan dokun.');
+    setInfo(message ?? 'E-postanı kontrol et: noreply@vopila.com adresinden gelen 6 haneli kodu aşağıya yaz. Gelmediyse spam klasörüne de bak.');
   };
 
   /** E-postaya giriş kodu gönderip kod adımına geçer. */

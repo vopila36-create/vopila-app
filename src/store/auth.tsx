@@ -52,9 +52,9 @@ export function normalizeEmail(email: string) {
 export const hasNonAsciiEmail = (email: string) => /[^\x20-\x7E]/.test(email);
 
 /** Supabase'in İngilizce hata mesajlarını sade Türkçeye çevirir. */
-/** E-posta gönderildi mesajı: kod gelirse yazılır, bağlantı gelirse bu telefonda dokunulur. */
+/** E-posta gönderildi mesajı (Resend SMTP üzerinden 6 haneli kod gelir). */
 const EMAIL_SENT_INFO =
-  'E-postanı kontrol et: 6 haneli kod geldiyse aşağıya yaz; “Log In / Confirm” bağlantısı geldiyse ona bu telefondan dokun, uygulama açılıp girişini tamamlar.';
+  'E-postanı kontrol et: noreply@vopila.com adresinden gelen 6 haneli kodu aşağıya yaz. Gelmediyse gereksiz (spam) klasörüne de bak.';
 
 export function toTurkish(err: { message?: string; code?: string } | null | undefined): string {
   const code = err?.code ?? '';
@@ -351,8 +351,8 @@ function useBuildAuth() {
   const sendLoginCode = useCallback(async (email: string): Promise<Result> => {
     const { error } = await supabase.auth.signInWithOtp({
       email: normalizeEmail(email),
-      // Supabase'in ücretsiz e-posta servisi şablonu değiştirmeye izin vermediği için e-postada kod yerine
-      // bağlantı gelir; bağlantı bu telefonda uygulamayı açıp girişi tamamlar (auth-callback)
+      // E-postalar Resend (noreply@vopila.com) ile gider; şablonda 6 haneli kod ({{ .Token }}) vardır.
+      // Yönlendirme adresi eski bağlantılı e-postalar için kalıyor (auth-callback).
       options: { shouldCreateUser: false, emailRedirectTo: authRedirectUrl() },
     });
     if (error) return { ok: false, error: toTurkish(error), code: error.code };

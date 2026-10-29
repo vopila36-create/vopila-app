@@ -1,4 +1,4 @@
-/** Profil bağlantısı (vopila.app/u/<kullanıcı adı>, QR): kullanıcıyı bulup profiline yönlendirir. */
+/** Profil bağlantısı (vopila.com/u/<kullanıcı adı>, QR): kullanıcıyı bulup profiline yönlendirir. */
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { UserX } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
