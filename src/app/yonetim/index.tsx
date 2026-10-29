@@ -9,6 +9,7 @@ import {
   Newspaper,
   Package,
   ShoppingBag,
+  Ticket,
   Trophy,
   Users,
 } from 'lucide-react-native';
@@ -73,6 +74,7 @@ export default function YonetimAna() {
         </Section>
 
         <Section title="Topluluk">
+          <Row icon={<Ticket size={20} color={Colors.cyan} />} label="Beta davetleri" onPress={() => go('/yonetim/davetler')} />
           <Row icon={<Flag size={20} color={Colors.live} />} label="Şikayet kuyruğu" value={o?.open_reports ? `${o.open_reports}` : undefined} onPress={() => go('/yonetim/sikayetler')} />
           <Row icon={<Users size={20} color={Colors.cyan} />} label="Kullanıcılar (askı / yasak)" onPress={() => go('/yonetim/kullanicilar')} />
           <Row icon={<LifeBuoy size={20} color={Colors.cyan} />} label="Destek talepleri" value={o?.open_tickets ? `${o.open_tickets} açık` : undefined} onPress={() => go('/yonetim/destek')} last />

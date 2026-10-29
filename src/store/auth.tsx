@@ -100,11 +100,13 @@ export function toTurkish(err: { message?: string; code?: string } | null | unde
   if (msg.includes('username_reserved') || msg.includes('reserved_name'))
     return '“VOPILA” adı resmî hesaplara ayrılmıştır; kullanıcı adında ya da adında kullanılamaz.';
   if (msg.includes('invalid_username') || msg.includes('username_invalid')) return 'Kullanıcı adı 3-20 karakter olmalı; yalnızca küçük harf, rakam ve _ içerebilir.';
+  if (msg.includes('invite_invalid'))
+    return 'VOPILA şu an kapalı betada: kayıt için geçerli bir davet kodu gerekli. Kodu kontrol et ya da yeni davet iste.';
   if (msg.includes('birth_date_required')) return 'Doğum tarihini yaz. Kayıt için zorunlu.';
   if (msg.includes('invalid_birth_date')) return 'Geçerli bir doğum tarihi yaz.';
   if (msg.includes('age_already_set')) return 'Yaş bilgin zaten kayıtlı. Değiştirmek için Destek üzerinden itiraz et.';
   if (msg.includes('database error saving new user'))
-    return 'Hesap oluşturulamadı. Kullanıcı adının ve doğum tarihinin doğru olduğunu kontrol edip tekrar dene.';
+    return 'Hesap oluşturulamadı. Davet kodunun, kullanıcı adının ve doğum tarihinin doğru olduğunu kontrol edip tekrar dene.';
   if (msg.includes('provider is not enabled')) return 'Google ile giriş henüz açılmadı. Şimdilik e-posta ile devam et.';
   if (code === '23505' || msg.includes('duplicate key')) return 'Bu kullanıcı adı alınmış, başka bir tane dene.';
   if (msg.includes('network') || msg.includes('fetch')) return 'İnternet bağlantısı yok gibi görünüyor. Bağlantını kontrol et.';
@@ -329,13 +331,21 @@ function useBuildAuth() {
   }, [biometric.enabled, biometric.label, disableBiometric]);
 
   const signUp = useCallback(
-    async (name: string, username: string, email: string, password: string, birthDate: string): Promise<Result> => {
+    async (
+      name: string,
+      username: string,
+      email: string,
+      password: string,
+      birthDate: string,
+      inviteCode?: string,
+    ): Promise<Result> => {
     const { data, error } = await supabase.auth.signUp({
       email: normalizeEmail(email),
       password,
-      // Doğum tarihi yalnızca yaş grubunu hesaplamak için gider; sunucu tarihi hemen siler (0017)
+      // Doğum tarihi yalnızca yaş grubunu hesaplamak için gider; sunucu tarihi hemen siler (0017).
+      // Davet kodu kapalı betada zorunlu; sunucu kontrol edip harcar ve hesap bilgisinden siler (0029).
       options: {
-        data: { full_name: name.trim(), username, birth_date: birthDate },
+        data: { full_name: name.trim(), username, birth_date: birthDate, ...(inviteCode ? { invite_code: inviteCode } : {}) },
         emailRedirectTo: authRedirectUrl(),
       },
     });

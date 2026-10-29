@@ -1,5 +1,6 @@
-import Storage from 'expo-sqlite/kv-store';
-import { Appearance, Platform } from 'react-native';
+import { Appearance } from 'react-native';
+
+import { readThemeRaw, writeThemeRaw } from './theme-storage';
 
 /**
  * VOPILA tasarım sistemi — taslak görsellerdeki renk tonlarından alındı.
@@ -13,12 +14,10 @@ import { Appearance, Platform } from 'react-native';
 export type ThemePref = 'dark' | 'light' | 'pink' | 'system';
 const THEME_KEY = 'vopila-theme';
 
-// Telefonda expo-sqlite deposu; web'de tarayıcının deposu (expo-sqlite web'de eşzamanlı çalışmaz)
-const isWeb = Platform.OS === 'web';
-
+// Telefonda expo-sqlite deposu; web'de tarayıcının deposu (bkz. theme-storage.ts / .web.ts)
 function readThemePref(): ThemePref {
   try {
-    const v = isWeb ? globalThis.localStorage?.getItem(THEME_KEY) : Storage.getItemSync(THEME_KEY);
+    const v = readThemeRaw(THEME_KEY);
     return v === 'light' || v === 'pink' || v === 'system' ? v : 'dark';
   } catch {
     return 'dark';
@@ -34,8 +33,7 @@ export const isLight =
 /** Seçimi kaydeder; ardından uygulama yeniden başlatılmalı (reloadAppAsync). */
 export function saveThemePref(pref: ThemePref) {
   try {
-    if (isWeb) globalThis.localStorage?.setItem(THEME_KEY, pref);
-    else Storage.setItemSync(THEME_KEY, pref);
+    writeThemeRaw(THEME_KEY, pref);
   } catch {}
 }
 

@@ -4,7 +4,7 @@
  * 3 hatalı şifre denemesinde bekletme yok: e-postaya kod gönderilir ve kodla giriş yapılır.
  */
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, type Href } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { ArrowLeft, Eye, EyeOff, FingerprintPattern, MailCheck, ScanFace } from 'lucide-react-native';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
@@ -24,6 +24,7 @@ import { Logo } from '@/components/ui/screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Gradients, Radius, Spacing } from '@/constants/theme';
 import { checkBirthDate } from '@/lib/age-api';
+import { cleanInviteCode, INVITE_MESSAGES, inviteRequired, inviteStatus } from '@/lib/invite-api';
 import { isReservedName, RESERVED_NAME_ERROR } from '@/lib/reserved';
 import { cleanUsername, useUsernameCheck, UsernameHint, USERNAME_MESSAGES, usernameStatus } from '@/lib/username';
 import { hasNonAsciiEmail, normalizeEmail, useAuth, type CodePurpose, type Result } from '@/store/auth';
@@ -40,7 +41,11 @@ const RESEND_SECONDS = 60;
 export default function Giris() {
   const insets = useSafeAreaInsets();
   const auth = useAuth();
-  const [mode, setMode] = useState<Mode>('giris');
+  // Davet bağlantısıyla gelindiyse (davet/[code]) kayıt sekmesi kod dolu açılır
+  const { davet } = useLocalSearchParams<{ davet?: string }>();
+  const [invite, setInvite] = useState(() => cleanInviteCode(String(davet ?? '')));
+  const [inviteNeeded, setInviteNeeded] = useState(true);
+  const [mode, setMode] = useState<Mode>(davet ? 'kayit' : 'giris');
   const [step, setStep] = useState<Step>('form');
   const [purpose, setPurpose] = useState<CodePurpose>('login');
   const [name, setName] = useState('');
@@ -56,6 +61,17 @@ export default function Giris() {
   const [info, setInfo] = useState('');
   const [failed, setFailed] = useState(0);
   const [cooldown, setCooldown] = useState(0);
+
+  // Kapalı beta açık mı? (Kapalıysa davet kodu alanı gizlenir; sunucu her durumda kontrol eder)
+  useEffect(() => {
+    let alive = true;
+    inviteRequired().then((r) => {
+      if (alive) setInviteNeeded(r);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // Tekrar gönderme sayacı
   useEffect(() => {
@@ -122,6 +138,12 @@ export default function Giris() {
 
   const submitForm = () =>
     run(async () => {
+      if (mode === 'kayit' && inviteNeeded) {
+        // Kapalı beta: önce davet kodu (asıl kontrol kayıtta sunucuda)
+        if (invite.length < 8) return setError('Davet kodunu yaz (8 karakter). Kodu davet bağlantısında bulabilirsin.');
+        const st = await inviteStatus(invite);
+        if (st && st !== 'ok' && st !== 'not_required') return setError(INVITE_MESSAGES[st]);
+      }
       if (mode === 'kayit' && !name.trim()) return setError('Adını yaz.');
       if (mode === 'kayit' && isReservedName(name)) return setError(RESERVED_NAME_ERROR);
       if (mode === 'kayit') {
@@ -137,7 +159,7 @@ export default function Giris() {
         // 5651 s. Kanun: 15 yaşını doldurmamış kişiye hesap açılmaz (sunucu da kontrol eder)
         const age = checkBirthDate(birth);
         if (!age.ok) return setError(age.error);
-        const res = await auth.signUp(name, username, addr, password, age.iso);
+        const res = await auth.signUp(name, username, addr, password, age.iso, inviteNeeded ? invite : undefined);
         if (!res.ok) setError(res.error);
         else if (res.needsCode) openCodeStep('signup', res.info);
         return;
@@ -242,7 +264,9 @@ export default function Giris() {
         ? 'E-postanı yaz, sana bir kod gönderelim. Kodla girip yeni şifreni belirleyeceksin.'
         : mode === 'giris'
           ? 'Keşfetmeye kaldığın yerden devam et.'
-          : 'Paylaş, arenalarda yarış, token kazan.';
+          : inviteNeeded
+            ? 'VOPILA şu an kapalı betada. Davet kodunla hesabını oluştur.'
+            : 'Paylaş, arenalarda yarış, token kazan.';
 
   return (
     <View style={styles.root}>
@@ -290,6 +314,17 @@ export default function Giris() {
 
               {mode === 'kayit' ? (
                 <>
+                  {inviteNeeded ? (
+                    <Field
+                      label="Davet kodu"
+                      value={invite}
+                      onChangeText={(t) => setInvite(cleanInviteCode(t))}
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                      maxLength={8}
+                      placeholder="ABCD2345"
+                    />
+                  ) : null}
                   <Field label="Ad Soyad" value={name} onChangeText={setName} maxLength={60} autoComplete="name" />
                   <Field
                     label="Kullanıcı adı"

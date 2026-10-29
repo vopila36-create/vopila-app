@@ -113,6 +113,12 @@
 - [ ] Anlar çıkartmaları
 - [x] E-posta kodu (29 Ekim 2026): vopila.com (Natro DNS) Resend'de doğrulandı, Supabase SMTP → Resend (noreply@vopila.com), Türkçe şablonlar, 6 haneli kod. Kalan: destek@vopila.com gelen kutusu (yayından önce)
 
+## Kapalı beta (29 Ekim 2026)
+- [x] Davetle kayıt (0029): kayıt sunucuda yalnızca geçerli davet koduyla açılır (tek kişilik kodlar), Yönetim > Beta davetleri (kod üret, kopyala/paylaş, kimin kullandığı, iptal, "Kapalı beta" anahtarı). Bağlantı: beta.vopila.com/davet/<kod>. İlk 30 kod üretildi ("İlk beta")
+- [x] Android: APK bu bilgisayarda derleniyor (Expo hesabı yok; Expo şablonunun test anahtarıyla imzalı — Play Store için ayrı yükleme anahtarı gerekecek)
+- [ ] iPhone: web sürümü beta.vopila.com (GitHub Pages, vopila36-create/-vopila-beta-web); TestFlight için Apple Geliştirici hesabı gerekli
+- [ ] destek@vopila.com gelen kutusu
+
 ## Adım 9 — Yayın
 - [ ] Ayrı canlı Supabase projesi + Pro plan, EAS Build, gerçek uygulama doğrulaması (App Attest / Play Integrity), Face ID işletim sistemi kilidi, Sentry, bağımsız güvenlik testi
 - [ ] TestFlight + Google Play iç test → App Store ve Google Play

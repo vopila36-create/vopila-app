@@ -43,7 +43,7 @@
           "cameraPermission": "VOPILA, anlık fotoğraf ve video çekip paylaşabilmen için kameranı kullanmak istiyor.",
           "microphonePermission": "VOPILA, çektiğin videolara ses kaydedebilmek için mikrofonunu kullanmak istiyor.",
           "recordAudioAndroid": true,
-          "barcodeScannerEnabled": false
+          "barcodeScannerEnabled": true
         }
       ],
       [

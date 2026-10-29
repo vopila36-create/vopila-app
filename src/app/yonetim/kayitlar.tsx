@@ -23,6 +23,9 @@ const ACTION: Record<string, string> = {
   report_remove: 'Şikayet: içerik kaldırıldı',
   report_dismiss: 'Şikayet reddedildi',
   account_deleted: 'Hesap silindi (kullanıcı)',
+  invites_created: 'Beta daveti oluşturuldu',
+  invite_revoked: 'Beta daveti iptal edildi',
+  beta_invite_required: 'Kapalı beta ayarı değişti',
 };
 const label = (a: string) => ACTION[a] ?? (a.startsWith('user_status:') ? `Hesap durumu: ${a.split(':')[1]}` : a);
 
