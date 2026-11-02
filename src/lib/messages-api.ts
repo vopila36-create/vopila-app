@@ -316,11 +316,10 @@ export function subscribeTyping(conversationId: string, myId: string, onTyping: 
   };
 }
 
-/** Gönderimi geri al: mesaj iki taraftan da kalkar, varsa dosyası depodan silinir (0037). */
+/** Gönderimi geri al: mesaj iki taraftan da kalkar; içerik 30 gün gizli arşivde kalır, sonra silinir (0037). */
 export async function unsendMessage(messageId: string): Promise<ApiResult> {
-  const { data, error } = await supabase.rpc('unsend_message', { p_id: messageId });
+  const { error } = await supabase.rpc('unsend_message', { p_id: messageId });
   if (error) return { ok: false, error: messageError(error) };
-  if (typeof data === 'string' && data) await supabase.storage.from('dm').remove([data]);
   return { ok: true, data: undefined };
 }
 
