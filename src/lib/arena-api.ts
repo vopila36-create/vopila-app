@@ -7,7 +7,7 @@ import { AUTHOR, localId, toUser, type ApiResult, type DbAuthor } from '@/lib/po
 import { mediaUrls, supabase } from '@/lib/supabase';
 import { toTurkish } from '@/store/auth';
 
-export type ArenaStat = { members: number; seasonId: string | null; endsAt: string | null; entries: number };
+export type ArenaStat = { members: number; seasonId: string | null; endsAt: string | null; entries: number; prizes?: number[] };
 
 /** Oy / katılım hatalarını sade Türkçeye çevirir. */
 export function arenaError(err: { message?: string; code?: string } | null | undefined) {
@@ -24,11 +24,22 @@ export function arenaError(err: { message?: string; code?: string } | null | und
 }
 
 export async function fetchArenaStats(): Promise<ApiResult<Record<string, ArenaStat>>> {
-  const { data, error } = await supabase.from('arena_stats').select('key, members, season_id, ends_at, entries');
+  const [{ data, error }, prizes] = await Promise.all([
+    supabase.from('arena_stats').select('key, members, season_id, ends_at, entries'),
+    supabase.from('arenas').select('key, prizes'),
+  ]);
   if (error) return { ok: false, error: toTurkish(error) };
+  // Ödül miktarları yönetim panelinden değişir; sunucudaki güncel değer kullanılır
+  const prizeOf = new Map((prizes.data ?? []).map((r) => [r.key as string, (r.prizes ?? []) as number[]]));
   const out: Record<string, ArenaStat> = {};
   for (const r of data ?? [])
-    out[r.key] = { members: r.members ?? 0, seasonId: r.season_id, endsAt: r.ends_at, entries: r.entries ?? 0 };
+    out[r.key] = {
+      members: r.members ?? 0,
+      seasonId: r.season_id,
+      endsAt: r.ends_at,
+      entries: r.entries ?? 0,
+      prizes: prizeOf.get(r.key),
+    };
   return { ok: true, data: out };
 }
 

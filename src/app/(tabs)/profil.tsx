@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, type Href } from 'expo-router';
+import { router, useFocusEffect, type Href } from 'expo-router';
 import {
   Activity,
   BadgeCheck,
@@ -10,12 +10,12 @@ import {
   ChevronRight,
   Coins,
   Crown,
-  Eye,
   FolderOpen,
   Heart,
   ImageIcon,
   Lock,
   MapPin,
+  MessageCircle,
   Package,
   Pencil,
   PlayCircle,
@@ -29,7 +29,7 @@ import {
   UserCheck,
   Users,
 } from 'lucide-react-native';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Avatar, GlassCard, OutlineButton, SectionHeader } from '@/components/ui/primitives';
@@ -38,7 +38,17 @@ import { AppHeader, Screen } from '@/components/ui/screen';
 import { EmptyState } from '@/components/ui/sub-screen';
 import { OnDark, VText } from '@/components/ui/text';
 import { Colors, Fonts, OnImage, Radius, scrim, Spacing } from '@/constants/theme';
-import { arenaByKey, badges, levelInfo, ME_ID, myFollowerIds, type ArenaKey, type Post } from '@/data/mock';
+import { arenaByKey, badges as demoBadges, levelInfo, ME_ID, myFollowerIds, type ArenaKey, type Post } from '@/data/mock';
+import {
+  fetchBadges,
+  fetchFollowCounts,
+  fetchImpact,
+  memberSince,
+  type BadgeItem,
+  type FollowCounts,
+  type Impact as ImpactData,
+} from '@/lib/profile-stats-api';
+import { useAuth } from '@/store/auth';
 import { formatCount, formatTokens, useMe, useStore } from '@/store/app-store';
 
 const TABS = [
@@ -57,13 +67,47 @@ export default function Profil() {
   const [tab, setTab] = useState<TabKey>('posts');
   const [period, setPeriod] = useState<7 | 30>(30);
 
+  const { profile } = useAuth();
+  const myId = store.myId;
+  // Gerçek sayılar (oturumda): takipçi/takip, profil etkisi, rozetler — ekran her açıldığında tazelenir
+  const [live, setLive] = useState<{
+    owner: string;
+    counts: FollowCounts | null;
+    impact: Record<7 | 30, ImpactData | null>;
+    badges: BadgeItem[] | null;
+  } | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      if (!myId) return;
+      let alive = true;
+      Promise.all([fetchFollowCounts(myId), fetchImpact(7), fetchImpact(30), fetchBadges(myId)]).then(([counts, i7, i30, b]) => {
+        if (alive) setLive({ owner: myId, counts, impact: { 7: i7, 30: i30 }, badges: b });
+      });
+      return () => {
+        alive = false;
+      };
+    }, [myId]),
+  );
+  const real = myId && live?.owner === myId ? live : null;
+
   const myPosts = useMemo(() => store.allPosts.filter((p) => p.authorId === ME_ID), [store.allPosts]);
-  const totalLikes = myPosts.reduce((s, p) => s + store.likeCount(p), 0) + 600;
+  const totalLikes = myPosts.reduce((s, p) => s + store.likeCount(p), 0) + (myId ? 0 : 600);
+  const followerCount = myId ? (real?.counts?.followers ?? 0) : myFollowerIds.length;
+  const followingCount = myId ? (real?.counts?.following ?? store.followingIds.length) : store.followingIds.length;
+  const earnedBadges = myId
+    ? (real?.badges ?? []).filter((b) => b.earned)
+    : demoBadges.filter((b) => b.earned).map((b) => ({ id: b.id, name: b.name, image: b.image }));
+  const since = myId ? memberSince(profile?.created_at) : "VOPILA'da 1+ Yıl";
   const savedPosts = store.savedPostList;
   const lvl = levelInfo(store.myXp);
   const current = lvl.current;
   const levelPct = `${Math.round(lvl.progress * 100)}%` as const;
-  const impact = period === 30 ? { views: 48200, eng: 3600, growth: '+%72' } : { views: 11900, eng: 940, growth: '+%18' };
+  const imp = real?.impact[period];
+  const impact = myId
+    ? { a: imp?.likes ?? 0, b: imp?.comments ?? 0, c: imp?.newFollowers ?? 0 }
+    : period === 30
+      ? { a: 48200, b: 3600, c: 72 }
+      : { a: 11900, b: 940, c: 18 };
 
   const collections = useMemo(() => {
     const map = new Map<ArenaKey, Post[]>();
@@ -97,7 +141,7 @@ export default function Profil() {
       }>
       {/* Üst bilgi */}
       <View style={styles.top}>
-        <Image source={{ uri: me.cover }} style={styles.cover} contentFit="cover" />
+        {me.cover ? <Image source={{ uri: me.cover }} style={styles.cover} contentFit="cover" /> : null}
         <LinearGradient
           colors={[scrim(0.92), scrim(0.45)]}
           start={{ x: 0, y: 0.5 }}
@@ -128,10 +172,14 @@ export default function Profil() {
           <VText variant="caption" color={OnImage.textSecondary} numberOfLines={1} style={{ flexShrink: 1 }}>
             {me.location}
           </VText>
-          <CalendarDays size={14} color={OnImage.accent} style={{ marginLeft: 10 }} />
-          <VText variant="caption" color={OnImage.textSecondary}>
-            VOPILA&apos;da 1+ Yıl
-          </VText>
+          {since ? (
+            <>
+              <CalendarDays size={14} color={OnImage.accent} style={{ marginLeft: 10 }} />
+              <VText variant="caption" color={OnImage.textSecondary}>
+                {since}
+              </VText>
+            </>
+          ) : null}
         </View>
         <View style={styles.actionRow}>
           <OutlineButton
@@ -166,14 +214,14 @@ export default function Profil() {
           <Divider />
           <Stat
             icon={<Users size={20} color={Colors.cyanSoft} />}
-            value={formatCount(myFollowerIds.length)}
+            value={formatCount(followerCount)}
             label="Takipçi"
             onPress={() => go('/takip?tab=takipciler')}
           />
           <Divider />
           <Stat
             icon={<UserCheck size={20} color={Colors.cyanSoft} />}
-            value={formatCount(store.followingIds.length)}
+            value={formatCount(followingCount)}
             label="Takip"
             onPress={() => go('/takip?tab=takip')}
           />
@@ -260,9 +308,9 @@ export default function Profil() {
             </Pressable>
           </View>
           <Pressable style={{ flexDirection: 'row', marginTop: 12 }} onPress={() => go('/istatistikler')}>
-            <Impact icon={<Eye size={14} color={Colors.cyan} />} value={formatCount(impact.views)} label="Görüntüleme" />
-            <Impact icon={<Users size={14} color={Colors.cyan} />} value={formatCount(impact.eng)} label="Etkileşim" />
-            <Impact icon={<TrendingUp size={14} color={Colors.success} />} value={impact.growth} label="Keşif Artışı" color={Colors.success} />
+            <Impact icon={<Heart size={14} color={Colors.heart} />} value={formatCount(impact.a)} label="Beğeni" />
+            <Impact icon={<MessageCircle size={14} color={Colors.cyan} />} value={formatCount(impact.b)} label="Yorum" />
+            <Impact icon={<TrendingUp size={14} color={Colors.success} />} value={`+${formatCount(impact.c)}`} label="Yeni Takipçi" color={Colors.success} />
           </Pressable>
         </GlassCard>
       </View>
@@ -271,9 +319,7 @@ export default function Profil() {
       <View style={[styles.pad, { marginTop: Spacing.xl }]}>
         <SectionHeader title="Arena Başarıları" action="Tüm Rozetler" onAction={() => go('/rozetler')} />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
-          {badges
-            .filter((b) => b.earned)
-            .map((b) => (
+          {earnedBadges.map((b) => (
               <Pressable key={b.id} style={styles.badgeItem} onPress={() => go('/rozetler')}>
                 <View style={styles.badge}>
                   <Image source={{ uri: b.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
@@ -282,7 +328,7 @@ export default function Profil() {
                   {b.name}
                 </VText>
               </Pressable>
-            ))}
+          ))}
           <Pressable style={styles.badgeItem} onPress={() => go('/rozetler')}>
             <View style={[styles.badge, styles.badgeLocked]}>
               <Lock size={20} color={Colors.textMuted} />

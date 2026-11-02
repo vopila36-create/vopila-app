@@ -8,7 +8,7 @@ import { Avatar, OutlineButton, PrimaryButton } from '@/components/ui/primitives
 import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
 import { OnDark, VText } from '@/components/ui/text';
 import { Colors, OnImage, Radius, scrim, Spacing } from '@/constants/theme';
-import { arenaByKey, interests, ME_ID, userById } from '@/data/mock';
+import { arenaByKey, interests, ME_ID } from '@/data/mock';
 import { formatCount, useStore } from '@/store/app-store';
 
 export default function IlgiDetay() {
@@ -46,7 +46,7 @@ export default function IlgiDetay() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
             <Users size={14} color={it.color} />
             <VText variant="caption" color={OnImage.textSecondary}>
-              {formatCount(arena.members)} üye
+              {formatCount(store.arenaMeta(arena.key).members)} üye
             </VText>
           </View>
         </View>
@@ -74,7 +74,7 @@ export default function IlgiDetay() {
             </VText>
             <View style={{ flexDirection: 'row', gap: 14, flexWrap: 'wrap' }}>
               {people.map((id) => {
-                const u = userById(id);
+                const u = store.userOf(id);
                 return (
                   <Pressable key={id} style={{ alignItems: 'center', width: 70 }} onPress={() => router.push(`/kullanici/${id}` as Href)}>
                     <Avatar uri={u.avatar} size={56} ring />

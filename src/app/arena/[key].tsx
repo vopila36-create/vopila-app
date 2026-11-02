@@ -20,7 +20,7 @@ import { SubScreen } from '@/components/ui/sub-screen';
 import { WinnersCard } from '@/components/winners-card';
 import { OnDark, VText } from '@/components/ui/text';
 import { Colors, Fonts, OnImage, Radius, scrim, Spacing } from '@/constants/theme';
-import { arenaByKey, ME_ID, MIN_VOTES_FOR_RANK, userById } from '@/data/mock';
+import { arenaByKey, ME_ID, MIN_VOTES_FOR_RANK } from '@/data/mock';
 import { formatCount, useStore } from '@/store/app-store';
 
 const PRIZE_COLORS = [Colors.gold, '#C9D3E0', '#D08B5B'];
@@ -103,7 +103,7 @@ export default function ArenaDetail() {
         <GlassCard style={styles.card}>
           <SectionHeader title="Bu Ayın Ödülleri" action={null} icon={<Trophy size={18} color={Colors.gold} />} />
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            {arena.prizes.map((p, i) => (
+            {store.arenaMeta(arena.key).prizes.map((p, i) => (
               <View key={i} style={[styles.prize, { borderColor: PRIZE_COLORS[i] }]}>
                 <Crown size={18} color={PRIZE_COLORS[i]} fill={PRIZE_COLORS[i]} />
                 <VText variant="caption" color={Colors.text}>
@@ -148,7 +148,7 @@ export default function ArenaDetail() {
           {entries.length ? (
             <View style={styles.grid}>
               {entries.map((e) => {
-                const author = userById(e.authorId);
+                const author = store.userOf(e.authorId);
                 const isMe = e.authorId === ME_ID;
                 return (
                   <Pressable key={e.id} style={styles.entry} onPress={() => go(`/arena/giris/${e.id}`)}>

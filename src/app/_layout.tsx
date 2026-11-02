@@ -6,11 +6,20 @@ import {
   Manrope_800ExtraBold,
   useFonts,
 } from '@expo-google-fonts/manrope';
-import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider, useSegments, type Href } from 'expo-router';
+import {
+  DarkTheme,
+  DefaultTheme,
+  router,
+  Stack,
+  ThemeProvider,
+  useSegments,
+  type ErrorBoundaryProps,
+  type Href,
+} from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, type ReactNode } from 'react';
-import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { AgeGate } from '@/components/age-gate';
 import { MfaGate } from '@/components/mfa-gate';
@@ -33,6 +42,30 @@ const theme = {
     border: Colors.border,
   },
 };
+
+/**
+ * Beklenmeyen hata: beyaz ekran yerine sade bir "tekrar dene" ekranı (expo-router hata sınırı).
+ * Bilerek tema bileşenlerine dayanmaz; hata onlardan da gelebilir.
+ */
+export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
+  return (
+    <View style={errorStyles.root}>
+      <Text style={errorStyles.title}>Bir şeyler ters gitti</Text>
+      <Text style={errorStyles.text}>Uygulamada beklenmeyen bir hata oluştu. Tekrar deneyebilirsin.</Text>
+      <Pressable style={errorStyles.btn} onPress={() => retry()} accessibilityRole="button">
+        <Text style={errorStyles.btnText}>Tekrar dene</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+const errorStyles = StyleSheet.create({
+  root: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#040A17' },
+  title: { color: '#fff', fontSize: 20, fontWeight: '700', textAlign: 'center' },
+  text: { color: 'rgba(255,255,255,0.75)', fontSize: 15, textAlign: 'center', marginTop: 8, lineHeight: 21 },
+  btn: { marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24, backgroundColor: '#22D3EE' },
+  btnText: { color: '#04131F', fontSize: 15, fontWeight: '700' },
+});
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({

@@ -68,12 +68,13 @@ export default function Arama() {
     const has = (s: string) => norm(s).includes(query.replace(/^[@#]/, ''));
     const real = realPeople.q && query.includes(norm(realPeople.q)) ? realPeople.list : [];
     return {
-      people: [...real, ...users.filter((u) => u.id !== ME_ID && (has(u.name) || has(u.username) || has(u.location)))],
+      // Örnek kişiler yalnızca oturumsuz önizlemede
+      people: [...real, ...(myId ? [] : users.filter((u) => u.id !== ME_ID && (has(u.name) || has(u.username) || has(u.location))))],
       posts: store.allPosts.filter((p) => has(p.caption) || has(p.location)),
       arenas: arenas.filter((a) => has(a.name) || has(a.tagline)),
       news: store.allNews.filter((n) => has(n.title) || has(n.category) || has(n.sourceName ?? '')),
     };
-  }, [query, store.allPosts, store.allNews, realPeople]);
+  }, [query, store.allPosts, store.allNews, realPeople, myId]);
 
   // Keşfet verisi (arama kutusu boşken)
   const [discoverState, setDiscoverState] = useState<{ uid: string; d: Discover } | null>(null);
@@ -134,7 +135,9 @@ export default function Arama() {
           <View style={{ gap: 8 }}>
             {(discover?.people.length
               ? discover.people.slice(0, 5).map(personToUser)
-              : users.filter((u) => u.id !== ME_ID).slice(0, 4)
+              : myId
+                ? []
+                : users.filter((u) => u.id !== ME_ID).slice(0, 4)
             ).map((u) => (
               <PersonRow key={u.id} user={u} />
             ))}

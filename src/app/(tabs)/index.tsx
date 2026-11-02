@@ -9,7 +9,7 @@ import {
   Flame,
   Orbit,
   Play,
-  Radio,
+  Search,
   Trophy,
   Utensils,
   Waves,
@@ -29,12 +29,14 @@ import { AppHeader, Screen } from '@/components/ui/screen';
 import { OnDark, VText } from '@/components/ui/text';
 import { Colors, Fonts, OnImage, Radius, scrim, Spacing } from '@/constants/theme';
 import { img, interests } from '@/data/mock';
+import { useStore } from '@/store/app-store';
 
 const QUICK: { title: string; sub: string; Icon: LucideIcon; color: string; href: string }[] = [
   { title: 'Akış', sub: 'Topluluklarla bağlan', Icon: Waves, color: Colors.cyan, href: '/akis' },
   { title: 'Haberler', sub: 'Dünyayı keşfet', Icon: FileText, color: Colors.cyan, href: '/haberler' },
   { title: 'Arenalar', sub: 'Yarışmalara katıl', Icon: Trophy, color: Colors.gold, href: '/arenalar' },
-  { title: 'Canlı', sub: 'Şimdi izle', Icon: Radio, color: Colors.live, href: '/canli' },
+  // Canlı yayın LiveKit bağlanınca geri gelecek; şimdilik Keşfet
+  { title: 'Keşfet', sub: 'Kişi ve etiket bul', Icon: Search, color: Colors.cyanSoft, href: '/arama' },
 ];
 
 const INTEREST_ICONS: Record<string, LucideIcon> = {
@@ -45,6 +47,8 @@ const INTEREST_ICONS: Record<string, LucideIcon> = {
 };
 
 export default function AnaSahne() {
+  // Öne çıkan: en yeni gerçek haber (yoksa düğme gizli)
+  const top = useStore().allNews[0];
 
   return (
     <Screen header={<AppHeader tagline />}>
@@ -78,15 +82,19 @@ export default function AnaSahne() {
               icon={<ArrowRight size={18} color={OnImage.accent} />}
               onPress={() => router.navigate('/akis' as Href)}
             />
-            <Pressable style={styles.heroPlay} onPress={() => router.push('/haber/n6' as Href)}>
-              <PlayBadge size={38}>
-                <Play size={16} color="#fff" fill="#fff" />
-              </PlayBadge>
-              <View>
-                <VText variant="label">Sınırların Ötesinde</VText>
-                <VText style={styles.overline}>VOPILA ÖZEL</VText>
-              </View>
-            </Pressable>
+            {top ? (
+              <Pressable style={styles.heroPlay} onPress={() => router.push(`/haber/${top.id}` as Href)}>
+                <PlayBadge size={38}>
+                  <Play size={16} color="#fff" fill="#fff" />
+                </PlayBadge>
+                <View style={{ flexShrink: 1, maxWidth: 150 }}>
+                  <VText variant="label" numberOfLines={2}>
+                    {top.title}
+                  </VText>
+                  <VText style={styles.overline}>GÜNÜN HABERİ</VText>
+                </View>
+              </Pressable>
+            ) : null}
           </View>
         </View>
         </OnDark>

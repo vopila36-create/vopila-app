@@ -38,3 +38,18 @@ export async function markNotificationsRead(myId: string, ids?: string[]) {
   if (ids) q = q.in('id', ids);
   await q;
 }
+
+/** Yeni bildirim gelince haber verir (Realtime; RLS gereği yalnızca kendi bildirimlerim gelir). */
+export function subscribeToNotifications(myId: string, onNew: () => void): () => void {
+  const channel = supabase
+    .channel(`notif:${myId}`)
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${myId}` },
+      () => onNew(),
+    )
+    .subscribe();
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}

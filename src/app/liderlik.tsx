@@ -8,7 +8,7 @@ import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { WinnersCard } from '@/components/winners-card';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { arenaByKey, arenas, ME_ID, MIN_VOTES_FOR_RANK, userById, type ArenaKey } from '@/data/mock';
+import { arenaByKey, arenas, ME_ID, MIN_VOTES_FOR_RANK, type ArenaKey } from '@/data/mock';
 import { useStore, type RankedEntry } from '@/store/app-store';
 
 const MEDAL = [Colors.gold, '#C9D3E0', '#D08B5B'];
@@ -46,7 +46,7 @@ export default function Liderlik() {
               {[1, 0, 2].map((i) => {
                 const e = podium[i];
                 if (!e) return <View key={i} style={{ flex: 1 }} />;
-                const u = userById(e.authorId);
+                const u = store.userOf(e.authorId);
                 const tall = i === 0;
                 return (
                   <Pressable key={e.id} style={[styles.podiumCol, { marginTop: tall ? 0 : 24 }]} onPress={() => open(e)}>
@@ -68,7 +68,7 @@ export default function Liderlik() {
                       <View style={styles.inline}>
                         <Coins size={11} color={Colors.gold} />
                         <VText variant="caption" color={Colors.gold} style={{ fontSize: 10.5 }}>
-                          {arena.prizes[i]}
+                          {store.arenaMeta(arena.key).prizes[i]}
                         </VText>
                       </View>
                     </View>
@@ -79,7 +79,7 @@ export default function Liderlik() {
 
             <GlassCard style={{ padding: 8, marginTop: Spacing.lg }}>
               {ranked.map((e) => {
-                const u = userById(e.authorId);
+                const u = store.userOf(e.authorId);
                 const isMe = e.authorId === ME_ID;
                 return (
                   <Pressable key={e.id} style={[styles.row, isMe && styles.rowMe]} onPress={() => open(e)}>
@@ -106,7 +106,7 @@ export default function Liderlik() {
                         </VText>
                       ) : e.rank <= 3 ? (
                         <VText variant="caption" color={Colors.gold} style={{ fontSize: 10.5 }}>
-                          +{arena.prizes[e.rank - 1]} token
+                          +{store.arenaMeta(arena.key).prizes[e.rank - 1]} token
                         </VText>
                       ) : null}
                     </View>

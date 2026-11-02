@@ -1,11 +1,12 @@
 import { Image } from 'expo-image';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { Star } from 'lucide-react-native';
+import { Play, Star } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Colors } from '@/constants/theme';
 import { useInk } from '@/components/ui/text';
+import { useStore } from '@/store/app-store';
 
 /**
  * Kısa video oynatıcı. `autoPlay` ile sessiz otomatik oynatma, aksi halde dokununca oynar.
@@ -55,6 +56,8 @@ export function MediaView({
   style?: StyleProp<ViewStyle>;
 }) {
   const [started, setStarted] = useState(false);
+  // Ayarlar > Videoları otomatik oynat kapalıysa video dokununca başlar
+  const autoplayOn = useStore().state.settings.autoplayVideos;
   if (type === 'image') {
     return (
       <View style={[StyleSheet.absoluteFill, style]}>
@@ -62,10 +65,13 @@ export function MediaView({
       </View>
     );
   }
-  if (!started && poster) {
+  if (!started && (poster || !autoplayOn)) {
     return (
-      <Pressable style={[StyleSheet.absoluteFill, style]} onPress={() => setStarted(true)}>
-        <Image source={{ uri: poster }} style={StyleSheet.absoluteFill} contentFit="cover" />
+      <Pressable style={[StyleSheet.absoluteFill, styles.tapToPlay, style]} onPress={() => setStarted(true)} accessibilityLabel="Videoyu oynat">
+        {poster ? <Image source={{ uri: poster }} style={StyleSheet.absoluteFill} contentFit="cover" /> : null}
+        <View style={styles.playBtn}>
+          <Play size={26} color="#fff" fill="#fff" />
+        </View>
       </Pressable>
     );
   }
@@ -107,3 +113,15 @@ export function StarRating({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  tapToPlay: { backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' },
+  playBtn: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

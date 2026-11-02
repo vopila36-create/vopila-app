@@ -21,7 +21,7 @@ import {
   type User,
 } from '@/data/mock';
 import { fetchFollowers, fetchFollowing, fetchProfile, isRealId } from '@/lib/social-api';
-import { useStore } from '@/store/app-store';
+import { useMe, useStore } from '@/store/app-store';
 
 type Tab = 'takipciler' | 'takip';
 
@@ -30,6 +30,7 @@ const normalize = (s: string) => s.toLocaleLowerCase('tr-TR');
 export default function Takip() {
   const params = useLocalSearchParams<{ tab?: string; user?: string }>();
   const store = useStore();
+  const me = useMe();
   const [tab, setTab] = useState<Tab>(params.tab === 'takip' ? 'takip' : 'takipciler');
   const [query, setQuery] = useState('');
 
@@ -70,12 +71,12 @@ export default function Takip() {
   const followers = realOwner
     ? real.followers
     : isMe
-      ? [...real.followers, ...byIds(myFollowerIds)]
+      ? [...real.followers, ...(store.myId ? [] : byIds(myFollowerIds))]
       : byIds([...followerIdsOf(ownerId), ...(store.isFollowing(ownerId) ? [ME_ID] : [])]);
   const following = realOwner
     ? real.following
     : isMe
-      ? [...real.following, ...users.filter((u) => u.id !== ME_ID && store.isFollowing(u.id))]
+      ? [...real.following, ...(store.myId ? [] : users.filter((u) => u.id !== ME_ID && store.isFollowing(u.id)))]
       : byIds(followingIdsOf(ownerId));
 
   const list = (tab === 'takipciler' ? followers : following).filter((u) => {
@@ -151,13 +152,13 @@ export default function Takip() {
               const isSelf = u.id === ME_ID || u.id === store.myId;
               const status = store.followStatus(u.id);
               const iFollow = status !== 'none';
-              const followsMe = myFollowerIds.includes(u.id) || (isRealId(u.id) && real.followers.some((f) => f.id === u.id) && isMe);
+              const followsMe = (!store.myId && myFollowerIds.includes(u.id)) || (isRealId(u.id) && real.followers.some((f) => f.id === u.id) && isMe);
               return (
                 <View key={u.id} style={[styles.person, i === list.length - 1 && { borderBottomWidth: 0 }]}>
                   <Pressable
                     style={styles.personMain}
                     onPress={() => router.push((isSelf ? '/profil' : `/kullanici/${u.id}`) as Href)}>
-                    <Avatar uri={isSelf ? store.state.profile.avatar : u.avatar} size={44} />
+                    <Avatar uri={isSelf ? me.avatar : u.avatar} size={44} />
                     <View style={{ flex: 1 }}>
                       <VText variant="label" numberOfLines={1}>
                         {isSelf ? `${store.state.profile.name} (Sen)` : u.name}

@@ -66,12 +66,29 @@ export async function createMoment(
   } catch (e: any) {
     if (momentId) await supabase.from('moments').delete().eq('id', momentId);
     if (uploaded.length) await supabase.storage.from('media').remove(uploaded);
+    if (String(e?.message ?? '').startsWith('Dosya çok büyük')) return { ok: false, error: String(e.message) };
     return { ok: false, error: toTurkish(e) };
   }
 }
 
 export async function deleteMoment(id: string): Promise<ApiResult> {
   const { error } = await supabase.from('moments').delete().eq('id', id);
+  if (error) return { ok: false, error: toTurkish(error) };
+  return { ok: true, data: undefined };
+}
+
+/** Beğendiğim anlar (verilen kimlikler arasında). */
+export async function fetchMyMomentLikes(myId: string, momentIds: string[]): Promise<string[]> {
+  if (!momentIds.length) return [];
+  const { data } = await supabase.from('moment_likes').select('moment_id').eq('user_id', myId).in('moment_id', momentIds);
+  return (data ?? []).map((r) => r.moment_id as string);
+}
+
+/** Anı beğen / beğeniyi kaldır (0030_moment_likes). */
+export async function setMomentLike(myId: string, momentId: string, on: boolean): Promise<ApiResult> {
+  const { error } = on
+    ? await supabase.from('moment_likes').upsert({ moment_id: momentId, user_id: myId }, { ignoreDuplicates: true })
+    : await supabase.from('moment_likes').delete().eq('moment_id', momentId).eq('user_id', myId);
   if (error) return { ok: false, error: toTurkish(error) };
   return { ok: true, data: undefined };
 }

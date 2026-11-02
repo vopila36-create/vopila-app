@@ -1,35 +1,48 @@
+/**
+ * Profil Etkisi: seçilen dönemde gönderilerine gelen beğeni ve yorumlar, yeni takipçiler (my_profile_impact)
+ * ve en çok beğenilen gönderilerin. Tüm sayılar sunucudan gelir.
+ */
 import { Image } from 'expo-image';
-import { router, type Href } from 'expo-router';
-import { Eye, Heart, TrendingUp, Users } from 'lucide-react-native';
-import { useMemo, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { router, useFocusEffect, type Href } from 'expo-router';
+import { Heart, ImageIcon, MessageCircle, UserPlus } from 'lucide-react-native';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { Chip, GlassCard, SectionHeader } from '@/components/ui/primitives';
 import { SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { ME_ID } from '@/data/mock';
+import { fetchImpact, type Impact } from '@/lib/profile-stats-api';
 import { formatCount, useStore } from '@/store/app-store';
 
 const PERIODS = [
-  { days: 7, label: '7 gün', views: 11900, eng: 940, growth: 18 },
-  { days: 30, label: '30 gün', views: 48200, eng: 3600, growth: 72 },
-  { days: 90, label: '90 gün', views: 131500, eng: 9800, growth: 140 },
+  { days: 7, label: '7 gün' },
+  { days: 30, label: '30 gün' },
+  { days: 90, label: '90 gün' },
 ] as const;
-
-/** Basit, tekrarlanabilir sahte günlük görüntülenme dağılımı. */
-function dailyBars(total: number, count: number) {
-  const raw = Array.from({ length: count }, (_, i) => 0.55 + 0.45 * Math.abs(Math.sin(i * 1.7 + total)));
-  const sum = raw.reduce((a, b) => a + b, 0);
-  return raw.map((r) => Math.round((r / sum) * total));
-}
 
 export default function Istatistikler() {
   const store = useStore();
+  const myId = store.myId;
   const [period, setPeriod] = useState<(typeof PERIODS)[number]>(PERIODS[1]);
+  const [data, setData] = useState<{ key: string; impact: Impact | null } | null>(null);
+  const key = `${myId}:${period.days}`;
 
-  const bars = useMemo(() => dailyBars(period.views, period.days === 7 ? 7 : 12), [period]);
-  const max = Math.max(...bars);
+  useFocusEffect(
+    useCallback(() => {
+      if (!myId) return;
+      let alive = true;
+      fetchImpact(period.days).then((impact) => {
+        if (alive) setData({ key: `${myId}:${period.days}`, impact });
+      });
+      return () => {
+        alive = false;
+      };
+    }, [myId, period.days]),
+  );
+  const impact = data?.key === key ? data.impact : null;
+  const loading = !!myId && data?.key !== key;
 
   const topPosts = useMemo(
     () =>
@@ -49,29 +62,28 @@ export default function Istatistikler() {
           ))}
         </View>
 
-        <View style={styles.kpis}>
-          <Kpi icon={<Eye size={16} color={Colors.cyan} />} value={formatCount(period.views)} label="Görüntüleme" />
-          <Kpi icon={<Users size={16} color={Colors.cyan} />} value={formatCount(period.eng)} label="Etkileşim" />
-          <Kpi icon={<TrendingUp size={16} color={Colors.success} />} value={`+%${period.growth}`} label="Keşif Artışı" color={Colors.success} />
-        </View>
-
-        <GlassCard style={{ padding: 14, marginTop: Spacing.lg }}>
-          <VText variant="bodyBold">Görüntülenme</VText>
-          <VText variant="caption">
-            Son {period.label} · {period.days === 7 ? 'günlük' : 'dönemlik'} dağılım
-          </VText>
-          <View style={styles.chart}>
-            {bars.map((b, i) => (
-              <View key={i} style={styles.barCol}>
-                <View style={[styles.bar, { height: `${Math.max(8, (b / max) * 100)}%` }, i === bars.length - 1 && styles.barNow]} />
-              </View>
-            ))}
-          </View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <VText variant="caption">Başlangıç</VText>
-            <VText variant="caption">Bugün</VText>
-          </View>
-        </GlassCard>
+        {loading ? (
+          <ActivityIndicator color={Colors.cyan} style={{ marginVertical: 30 }} />
+        ) : (
+          <>
+            <View style={styles.kpis}>
+              <Kpi icon={<Heart size={16} color={Colors.heart} />} value={formatCount(impact?.likes ?? 0)} label="Beğeni" />
+              <Kpi icon={<MessageCircle size={16} color={Colors.cyan} />} value={formatCount(impact?.comments ?? 0)} label="Yorum" />
+            </View>
+            <View style={[styles.kpis, { marginTop: 8 }]}>
+              <Kpi
+                icon={<UserPlus size={16} color={Colors.success} />}
+                value={`+${formatCount(impact?.newFollowers ?? 0)}`}
+                label="Yeni takipçi"
+                color={Colors.success}
+              />
+              <Kpi icon={<ImageIcon size={16} color={Colors.cyanSoft} />} value={formatCount(impact?.posts ?? 0)} label="Toplam gönderi" />
+            </View>
+            <VText variant="caption" style={{ marginTop: 8 }}>
+              Son {period.label} içinde gönderilerine gelen etkileşimler.
+            </VText>
+          </>
+        )}
 
         <View style={{ marginTop: Spacing.xl }}>
           <SectionHeader title="En Çok Beğenilenler" action={null} />
@@ -121,10 +133,6 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', gap: 8, marginBottom: Spacing.md, flexWrap: 'wrap' },
   kpis: { flexDirection: 'row', gap: 8 },
   kpi: { flex: 1, padding: 12, alignItems: 'center' },
-  chart: { height: 140, flexDirection: 'row', alignItems: 'flex-end', gap: 6, marginVertical: 12 },
-  barCol: { flex: 1, height: '100%', justifyContent: 'flex-end' },
-  bar: { width: '100%', borderRadius: 4, backgroundColor: 'rgba(34,211,238,0.45)' },
-  barNow: { backgroundColor: Colors.cyan },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

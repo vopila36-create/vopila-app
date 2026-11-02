@@ -6,6 +6,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 
 import { timeAgo, type ApiResult } from '@/lib/posts-api';
 import { supabase } from '@/lib/supabase';
+import { fileSize, MAX_DM_BYTES, tooBigMessage } from '@/lib/media-prep';
 import { toTurkish } from '@/store/auth';
 
 export type Conversation = {
@@ -171,6 +172,8 @@ export async function sendMediaMessage(
     : mime.startsWith('video') ? 'mp4' : mime.startsWith('audio') ? 'm4a' : 'jpg';
   const path = `${conversationId}/${myId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   try {
+    const size = await fileSize(input.uri);
+    if (size && size > MAX_DM_BYTES) return { ok: false, error: tooBigMessage(MAX_DM_BYTES) };
     const body = await fetch(input.uri).then((r) => r.arrayBuffer());
     const up = await supabase.storage.from('dm').upload(path, body, { contentType: mime, upsert: false });
     if (up.error) return { ok: false, error: 'Dosya yüklenemedi. Boyutu 50 MB’ı geçmemeli.' };

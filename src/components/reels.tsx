@@ -12,6 +12,7 @@ import {
 
 import { OnDark, VText } from '@/components/ui/text';
 import { useAge } from '@/store/age';
+import { useStore } from '@/store/app-store';
 import { Colors, OnImage } from '@/constants/theme';
 
 /** autoplay: 15–18 yaşta video kendiliğinden başlamaz (Yaş Doğrulama Yönetmeliği). */
@@ -83,6 +84,9 @@ export function ReelPager<T>({
     }
   };
 
+  // Ayarlar > Videoları otomatik oynat
+  const autoplayOn = useStore().state.settings.autoplayVideos;
+
   return (
     <OnDark>
     <View style={styles.root} onLayout={(e: LayoutChangeEvent) => setHeight(e.nativeEvent.layout.height)}>
@@ -92,7 +96,7 @@ export function ReelPager<T>({
           keyExtractor={keyOf}
           renderItem={({ item, index: i }) => (
             <View style={{ height }}>
-              {renderItem(item, { active: focused && i === index, height, autoplay: !isTeen })}
+              {renderItem(item, { active: focused && i === index, height, autoplay: !isTeen && autoplayOn })}
             </View>
           )}
           ListFooterComponent={

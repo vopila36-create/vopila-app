@@ -17,7 +17,8 @@ import { formatCount, useStore } from '@/store/app-store';
 export default function KullaniciProfil() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const store = useStore();
-  const user = users.find((u) => u.id === id);
+  // Örnek kişiler yalnızca oturumsuz önizlemede; oturumda yalnızca gerçek profiller açılır
+  const user = store.myId ? undefined : users.find((u) => u.id === id);
 
   const isMe = id === ME_ID || (!!store.myId && id === store.myId);
   useEffect(() => {

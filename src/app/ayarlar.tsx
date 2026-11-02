@@ -29,7 +29,6 @@ import {
   Package,
   PlayCircle,
   QrCode,
-  RotateCcw,
   ScanFace,
   Shield,
   ShieldAlert,
@@ -54,13 +53,15 @@ import { fetchAdminStatus, type AdminStatus } from '@/lib/admin-api';
 import { profileLink } from '@/lib/profile-link';
 import { signOutEverywhere } from '@/lib/settings-api';
 import { useStore } from '@/store/app-store';
+import Constants from 'expo-constants';
 import { useAuth } from '@/store/auth';
 
 const go = (p: string) => router.push(p as Href);
 
+const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
+
 export default function Ayarlar() {
-  const { state, updateSettings, resetDemo, myId } = useStore();
-  const [confirmReset, setConfirmReset] = useState(false);
+  const { state, updateSettings, myId } = useStore();
   const [themeNote, setThemeNote] = useState('');
   // Tema açılışta okunur: seçim kaydedilir ve uygulama yeniden başlatılır
   const changeTheme = (pref: ThemePref) => {
@@ -80,10 +81,11 @@ export default function Ayarlar() {
   // Davet: profil bağlantımla birlikte paylaşım menüsü
   const invite = () => {
     const u = auth.profile?.username;
+    // Kapalı betada kayıt davet koduyla açılır; davet kodunu yönetici verir
     Share.share({
       message: u
-        ? `VOPILA'ya katıl, keşfet ve arenalarda yarış! Beni takip et: ${profileLink(u)}`
-        : "VOPILA'ya katıl, keşfet ve arenalarda yarış!",
+        ? `VOPILA'yı keşfet: https://beta.vopila.com (şu an kapalı beta, kayıt davet koduyla). Beni takip et: ${profileLink(u)}`
+        : "VOPILA'yı keşfet: https://beta.vopila.com",
     }).catch(() => {});
   };
   // Face ID'yi açarken şifre sorulur
@@ -193,7 +195,7 @@ export default function Ayarlar() {
           <Row icon={<MessageCircle size={20} color={Colors.cyan} />} label="Mesajlar" onPress={() => go('/mesajlar')} />
           <Row
             icon={<Users size={20} color={Colors.cyanSoft} />}
-            label="Yorumlar, bahsetmeler, mesaj izni ve gizli kelimeler"
+            label="Bahsetmeler, mesaj izni ve gizli kelimeler"
             onPress={() => go('/etkilesim-ayarlari')}
           />
           <Row icon={<ShieldMinus size={20} color={Colors.cyanSoft} />} label="Kısıtlanan hesaplar" onPress={() => go('/kisitlananlar')} />
@@ -308,7 +310,7 @@ export default function Ayarlar() {
             <VText variant="label" style={{ flex: 1 }}>
               Uygulama sürümü
             </VText>
-            <VText variant="caption">1.0.0</VText>
+            <VText variant="caption">{APP_VERSION}</VText>
           </View>
         </Section>
 
@@ -319,28 +321,14 @@ export default function Ayarlar() {
               <Row icon={<Trash2 size={20} color={Colors.live} />} label="Hesabı sil" onPress={() => go('/hesap-sil')} />
             </>
           ) : null}
-          {/* Örnek veriler yayından önce kaldırılacak */}
-          {confirmReset ? (
-            <Confirm
-              text="Tüm demo verileri (beğeniler, siparişler, oylar) silinsin mi?"
-              yes="Evet, sıfırla"
-              onYes={() => {
-                resetDemo();
-                setConfirmReset(false);
-                setNote('Demo verileri sıfırlandı.');
-              }}
-              onNo={() => setConfirmReset(false)}
-            />
-          ) : (
-            <Row icon={<RotateCcw size={20} color={Colors.textSecondary} />} label="Demo verilerini sıfırla" onPress={() => setConfirmReset(true)} />
-          )}
           <Row
             icon={<LogOut size={20} color={Colors.live} />}
             label="Çıkış Yap"
             danger
-            onPress={() =>
-              auth.session ? auth.signOut() : setNote('Demo modundasın; Supabase bağlanınca buradan çıkış yapabileceksin.')
-            }
+            onPress={() => {
+              if (auth.session) auth.signOut();
+              else router.replace('/giris' as Href);
+            }}
             last
           />
         </Section>

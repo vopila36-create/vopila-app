@@ -83,7 +83,7 @@ import {
 } from '@/lib/shop-api';
 import { fetchMyInterests, pushInterests, resetMyInterests } from '@/lib/interests-api';
 import { fetchNews } from '@/lib/news-api';
-import { fetchNotifications, markNotificationsRead as markRemoteNotificationsRead } from '@/lib/notifications-api';
+import { fetchNotifications, markNotificationsRead as markRemoteNotificationsRead, subscribeToNotifications } from '@/lib/notifications-api';
 import { fetchMyFollowing, follow, isRealId, unfollow, type FollowStatus } from '@/lib/social-api';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { useAuth } from '@/store/auth';
@@ -171,6 +171,8 @@ const EMPTY_ARENA = {
   winners: {} as Record<string, SeasonResult>,
 };
 const EMPTY_NOTIFS: AppNotification[] = [];
+const EMPTY_PRODUCTS: Product[] = [];
+const EMPTY_NEWS: NewsArticle[] = [];
 const EMPTY_MOMENTS: Moment[] = [];
 const EMPTY_REL = { owner: null as string | null, muted: [] as string[], restricted: [] as string[] };
 
@@ -411,9 +413,9 @@ function useBuildStore() {
   );
   const isRemote = useCallback((id: string) => remoteIds.has(id), [remoteIds]);
 
-  // Giriş yapılmışsa telefonda kalmış eski demo paylaşımları gizlenir (gerçekleri sunucudan gelir)
+  // Giriş yapılmışsa yalnızca sunucudaki gerçek gönderiler; örnekler yalnızca oturumsuz önizlemede
   const allPosts = useMemo(
-    () => (myId ? [...remote.posts, ...seedPosts] : [...state.myPosts, ...seedPosts]),
+    () => (myId ? remote.posts : [...state.myPosts, ...seedPosts]),
     [myId, remote.posts, state.myPosts],
   );
 
@@ -446,9 +448,30 @@ function useBuildStore() {
 
   /** Gönderi / yorum sahibinin bilgisi: gerçek kullanıcıysa sunucudan, değilse örnek veriden. */
   // Gerçek kimlikli ama profili gelmeyen yazar = sunucunun gizlediği 18 yaş altı hesap
+  // Oturumda kendi kimliğim (ME_ID) gerçek profilden; bilinmeyen kimlik örnek kişiye düşmez
   const userOf = useCallback(
-    (id: string) => remote.authors[id] ?? (isRealId(id) ? hiddenUser(id) : userById(id)),
-    [remote.authors],
+    (id: string): User => {
+      const known = remote.authors[id];
+      if (known) return known;
+      if (myId && id === ME_ID && authProfile) {
+        return {
+          id: ME_ID,
+          name: authProfile.name,
+          username: authProfile.username,
+          avatar: authProfile.avatar_url ?? '',
+          verified: authProfile.verified,
+          bio: authProfile.bio,
+          location: authProfile.location,
+          cover: authProfile.cover_url ?? '',
+          followers: 0,
+          following: 0,
+          discoveryPoints: authProfile.discovery_points,
+        };
+      }
+      if (myId || isRealId(id)) return hiddenUser(id);
+      return userById(id);
+    },
+    [remote.authors, myId, authProfile],
   );
 
   const commentsFor = useCallback(
@@ -472,10 +495,10 @@ function useBuildStore() {
 
   const savedPostList = useMemo(
     () =>
-      [...remote.saved, ...state.savedPosts]
+      (myId ? remote.saved : state.savedPosts)
         .map((id) => allPosts.find((p) => p.id === id))
         .filter(Boolean) as Post[],
-    [remote.saved, state.savedPosts, allPosts],
+    [remote.saved, state.savedPosts, allPosts, myId],
   );
 
   /** Beğeni: ekranda hemen değişir, sunucu reddederse geri alınır. */
@@ -582,8 +605,8 @@ function useBuildStore() {
   /** Takip durumu: örnek kişiler telefonda, gerçek kişiler sunucuda. */
   const followStatus = useCallback(
     (id: string): FollowStatus =>
-      isRealId(id) ? (followMap[id] ?? 'none') : state.following.includes(id) ? 'accepted' : 'none',
-    [followMap, state.following],
+      isRealId(id) ? (followMap[id] ?? 'none') : !myId && state.following.includes(id) ? 'accepted' : 'none',
+    [followMap, state.following, myId],
   );
 
   /** Takip et / bırak / isteği geri çek. Ekranda hemen değişir, sunucu reddederse geri alınır. */
@@ -705,12 +728,12 @@ function useBuildStore() {
     };
   }, [myId, applyMoments]);
 
-  /** Akıştaki Anlar şeridi: önce benim anım, sonra diğer gerçek anlar, en sonda örnekler. */
+  /** Akıştaki Anlar şeridi: önce benim anım, sonra diğer gerçek anlar (örnekler yalnızca oturumsuz). */
   const allMoments = useMemo(() => {
     const mine = realMoments.filter((m) => m.authorId === ME_ID);
     const others = realMoments.filter((m) => m.authorId !== ME_ID);
-    return [...mine, ...others, ...demoMoments];
-  }, [realMoments]);
+    return myId ? [...mine, ...others] : [...mine, ...others, ...demoMoments];
+  }, [realMoments, myId]);
 
   const createMoment = useCallback(
     async (media: Media[], title: string, closeFriends = false): Promise<{ ok: boolean; error?: string }> => {
@@ -744,11 +767,16 @@ function useBuildStore() {
   useEffect(() => {
     if (!myId) return;
     let cancelled = false;
-    fetchNotifications(myId).then((res) => {
-      if (!cancelled) applyNotifs(myId, res);
-    });
+    const load = () =>
+      fetchNotifications(myId).then((res) => {
+        if (!cancelled) applyNotifs(myId, res);
+      });
+    load();
+    // Yeni bildirim gelince anında tazele (rozet sayısı da güncellenir)
+    const stop = subscribeToNotifications(myId, load);
     return () => {
       cancelled = true;
+      stop();
     };
   }, [myId, applyNotifs]);
 
@@ -769,15 +797,15 @@ function useBuildStore() {
   const unreadNotifications = useMemo(
     () =>
       realNotifications.filter((n) => !n.read).length +
-      demoNotifications.filter((n) => !state.readNotifications.includes(n.id)).length,
-    [realNotifications, state.readNotifications],
+      (myId ? 0 : demoNotifications.filter((n) => !state.readNotifications.includes(n.id)).length),
+    [realNotifications, state.readNotifications, myId],
   );
 
-  /** Takip ettiğim herkes (örnek + gerçek, yalnızca onaylı). */
-  const followingIds = useMemo(
-    () => [...state.following, ...Object.keys(followMap).filter((id) => followMap[id] === 'accepted')],
-    [state.following, followMap],
-  );
+  /** Takip ettiğim herkes (yalnızca onaylı; örnek kişiler yalnızca oturumsuz önizlemede). */
+  const followingIds = useMemo(() => {
+    const real = Object.keys(followMap).filter((id) => followMap[id] === 'accepted');
+    return myId ? real : [...state.following, ...real];
+  }, [state.following, followMap, myId]);
 
   // ─── Arenalar (gerçek) ────────────────────────────────────────────────────
   const [rawArena, setArena] = useState<{
@@ -839,25 +867,28 @@ function useBuildStore() {
   /** Takip ettiğim arenalar: giriş yapılmışsa sunucuda (arena_members), değilse telefonda. */
   const joinedArenas = myId ? arena.joined : state.joinedArenas;
 
-  /** Arenanın üye sayısı ve sezon bitişine kalan süre (örnek sayılar yayından önce kaldırılır). */
+  /** Arenanın üye sayısı ve sezon bitişine kalan süre (oturumda yalnızca sunucudaki gerçek sayılar). */
   const arenaMeta = useCallback(
     (key: ArenaKey) => {
       const base = arenaByKey(key);
       const st = arena.stats[key];
+      const prizes = st?.prizes?.length ? st.prizes : base.prizes;
+      if (myId) return { members: st?.members ?? 0, endsIn: st?.endsAt ? timeLeft(st.endsAt) : '', prizes };
       return {
         members: base.members + (st?.members ?? 0),
         endsIn: st?.endsAt ? timeLeft(st.endsAt) : base.endsIn,
+        prizes,
       };
     },
-    [arena.stats],
+    [arena.stats, myId],
   );
 
-  /** Bir arenadaki gönderiler; gerçekler + örnekler birlikte, oylar dahil sıralanmış. */
+  /** Bir arenadaki gönderiler, oylar dahil sıralanmış (örnekler yalnızca oturumsuz önizlemede). */
   const rankedEntries = useCallback(
     (arenaKey: ArenaKey): RankedEntry[] => {
       const real = arena.entries.filter((e) => e.arenaKey === arenaKey);
       const local = myId ? [] : state.myEntries.filter((e) => e.arenaKey === arenaKey);
-      const demo = seedEntries.filter((e) => e.arenaKey === arenaKey);
+      const demo = myId ? [] : seedEntries.filter((e) => e.arenaKey === arenaKey);
       const scored = [...real, ...local, ...demo].map((e) => {
         // Gerçek girişlerde oy sayısı sunucudan (benim oyum dahil) gelir
         const myVote = e.remote ? e.myVote : state.votes[e.id];
@@ -958,7 +989,8 @@ function useBuildStore() {
   const ledger = myId ? shop.ledger : state.ledger;
 
   /** Ürün kataloğu: giriş yapılmışsa sunucudaki güncel fiyat ve stok. */
-  const catalog: Product[] = (myId && shop.products) || demoProducts;
+  // Oturumda yalnızca sunucudaki ürünler (örnek ürünler sipariş edilemez); yüklenirken boş
+  const catalog: Product[] = myId ? (shop.products ?? EMPTY_PRODUCTS) : demoProducts;
   const productOf = useCallback((id: string) => catalog.find((p) => p.id === id), [catalog]);
 
   // ─── İlgi alanları sunucuda (her cihazda aynı kişisel sıralama) ──────────
@@ -1004,11 +1036,12 @@ function useBuildStore() {
       cancelled = true;
     };
   }, []);
-  const allNews: NewsArticle[] = realNews && realNews.length ? realNews : demoNews;
+  // Oturumda örnek haber gösterilmez (gelmezse boş durum); örnekler yalnızca oturumsuz önizlemede
+  const allNews: NewsArticle[] = realNews && realNews.length ? realNews : myId ? EMPTY_NEWS : demoNews;
   const newsOf = useCallback((id: string) => allNews.find((n) => n.id === id), [allNews]);
   /** Canlı gelişmeler: en yeni 20 gerçek haber (saatiyle); son 30 dakikadakiler "yeni". */
   const liveFeed: LiveUpdate[] = useMemo(() => {
-    if (!realNews?.length) return demoLiveUpdates;
+    if (!realNews?.length) return myId ? [] : demoLiveUpdates;
     return realNews.slice(0, 20).map((n) => ({
       id: `lu_${n.id}`,
       time: n.publishedAt ? new Date(n.publishedAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '',
@@ -1016,7 +1049,7 @@ function useBuildStore() {
       fresh: !!n.fresh,
       articleId: n.id,
     }));
-  }, [realNews]);
+  }, [realNews, myId]);
 
   const cartItems = useMemo(
     () =>
@@ -1224,6 +1257,7 @@ export function useMe() {
     bio: profile.bio,
     location: profile.location,
     avatar: profile.avatar_url ?? '',
+    cover: profile.cover_url ?? '',
     verified: profile.verified,
     discoveryPoints: profile.discovery_points,
   };

@@ -50,7 +50,8 @@ export default function Bildirimler() {
     }, [refreshNotifications]),
   );
 
-  const all: AppNotification[] = [...store.realNotifications, ...demoNotifications];
+  // Örnek bildirimler yalnızca oturumsuz önizlemede
+  const all: AppNotification[] = store.myId ? store.realNotifications : [...store.realNotifications, ...demoNotifications];
   const isUnread = (n: AppNotification) => (n.remote ? !n.read : !read.includes(n.id));
 
   const open = (n: AppNotification) => {

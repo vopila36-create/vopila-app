@@ -3,24 +3,50 @@
  * yalnızca kazandığı rozetler gösterilir (rozetler herkese açık).
  */
 import { Image } from 'expo-image';
-import { router, useLocalSearchParams, type Href } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import { Award, CheckCircle2, Lock } from 'lucide-react-native';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { GlassCard } from '@/components/ui/primitives';
 import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, scrim, Spacing } from '@/constants/theme';
-import { badges, earnedBadgesOf, ME_ID, userById, users } from '@/data/mock';
+import { badges as demoBadges, earnedBadgesOf, ME_ID, userById, users } from '@/data/mock';
+import { fetchBadges, type BadgeItem } from '@/lib/profile-stats-api';
+import { isRealId } from '@/lib/social-api';
+import { useStore } from '@/store/app-store';
 
 export default function Rozetler() {
   const params = useLocalSearchParams<{ user?: string }>();
-  const ownerId = params.user && users.some((u) => u.id === params.user) ? params.user : ME_ID;
-  const isMe = ownerId === ME_ID;
-  const owner = userById(ownerId);
+  const store = useStore();
+  const myId = store.myId;
+  // Oturumda rozetler sunucudan (badges / user_badges); örnekler yalnızca oturumsuz önizlemede
+  const realTarget = myId ? (params.user && isRealId(params.user) && params.user !== myId ? params.user : myId) : null;
+  const [server, setServer] = useState<{ id: string; list: BadgeItem[] | null } | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      if (!realTarget) return;
+      let alive = true;
+      fetchBadges(realTarget).then((list) => {
+        if (alive) setServer({ id: realTarget, list });
+      });
+      return () => {
+        alive = false;
+      };
+    }, [realTarget]),
+  );
 
-  const earned = earnedBadgesOf(ownerId);
+  const demoOwnerId = params.user && users.some((u) => u.id === params.user) ? params.user : ME_ID;
+  const isMe = realTarget ? realTarget === myId : demoOwnerId === ME_ID;
+  const owner = realTarget ? store.userOf(realTarget === myId ? ME_ID : realTarget) : userById(demoOwnerId);
+  const all: BadgeItem[] = realTarget
+    ? (server?.id === realTarget ? (server.list ?? []) : [])
+    : demoBadges.map((b) => ({ ...b, earned: earnedBadgesOf(demoOwnerId).some((e) => e.id === b.id) }));
+  const badges = all;
+  const earned = all.filter((b) => b.earned);
   const list = isMe ? badges : earned;
+  const loading = !!realTarget && server?.id !== realTarget;
 
   return (
     <SubScreen title={isMe ? 'Arena Başarıları' : `${owner.name} · Rozetler`}>
@@ -31,7 +57,7 @@ export default function Rozetler() {
               {badges.length} rozetten {earned.length} tanesini kazandın. Arenalarda yarışarak yeni rozetlerin kilidini aç.
             </VText>
             <View style={styles.track}>
-              <View style={[styles.fill, { width: `${(earned.length / badges.length) * 100}%` }]} />
+              <View style={[styles.fill, { width: `${badges.length ? (earned.length / badges.length) * 100 : 0}%` }]} />
             </View>
           </>
         ) : (
@@ -40,10 +66,12 @@ export default function Rozetler() {
           </VText>
         )}
 
-        {list.length ? (
+        {loading ? (
+          <ActivityIndicator color={Colors.cyan} style={{ marginTop: 30 }} />
+        ) : list.length ? (
           <View style={{ gap: 10, marginTop: Spacing.lg }}>
             {list.map((b) => {
-              const has = earned.some((e) => e.id === b.id);
+              const has = b.earned;
               return (
                 <Pressable key={b.id} disabled={has} onPress={() => router.push('/arena-listesi' as Href)}>
                   <GlassCard style={[styles.card, !has && { opacity: 0.75 }]}>

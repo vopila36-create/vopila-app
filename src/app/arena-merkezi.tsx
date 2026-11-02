@@ -28,7 +28,7 @@ import { SearchButton } from '@/components/ui/screen';
 import { SubScreen } from '@/components/ui/sub-screen';
 import { OnDark, VText } from '@/components/ui/text';
 import { Colors, Fonts, OnImage, Radius, scrim, Spacing } from '@/constants/theme';
-import { arenaByKey, arenas, levelInfo, ME_ID, userById, type ArenaKey } from '@/data/mock';
+import { arenaByKey, arenas, levelInfo, ME_ID, type ArenaKey } from '@/data/mock';
 import { formatCount, formatTokens, useStore } from '@/store/app-store';
 
 /** Arena Merkezi: sıralaman, kategoriler, liderlik tablosu (Arenalar sekmesindeki kupa simgesinden açılır). */
@@ -218,7 +218,7 @@ export default function ArenaMerkezi() {
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <View style={{ flex: 1, gap: 4 }}>
               {top5.map((r) => {
-                const u = userById(r.authorId);
+                const u = store.userOf(r.authorId);
                 const isMe = r.authorId === ME_ID;
                 return (
                   <Pressable

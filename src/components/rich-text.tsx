@@ -8,7 +8,7 @@ import { VText } from '@/components/ui/text';
 import { Colors, Fonts } from '@/constants/theme';
 import { users } from '@/data/mock';
 import { profileIdByUsername } from '@/lib/social-api';
-import { useMe } from '@/store/app-store';
+import { useMe, useStore } from '@/store/app-store';
 
 const TOKEN = /([@#][\p{L}\p{N}_]{2,30})/gu;
 
@@ -24,6 +24,7 @@ export function RichText({
   style?: StyleProp<TextStyle>;
 }) {
   const me = useMe();
+  const { myId } = useStore();
 
   const openMention = async (raw: string) => {
     const username = raw.toLowerCase();
@@ -31,7 +32,8 @@ export function RichText({
       router.push('/profil' as Href);
       return;
     }
-    const demo = users.find((u) => u.username.toLowerCase() === username);
+    // Örnek kişiler yalnızca oturumsuz önizlemede; oturumda yalnızca gerçek kullanıcı adları
+    const demo = myId ? undefined : users.find((u) => u.username.toLowerCase() === username);
     if (demo) {
       router.push(`/kullanici/${demo.id}` as Href);
       return;

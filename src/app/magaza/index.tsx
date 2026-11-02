@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { router, type Href } from 'expo-router';
 import { Check, Coins, Info, Package, Plus, ShoppingCart, Wallet } from 'lucide-react-native';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Chip, GlassCard } from '@/components/ui/primitives';
 import { SubScreen } from '@/components/ui/sub-screen';
@@ -81,6 +81,15 @@ export default function Magaza() {
         ))}
       </ScrollView>
 
+      {!products.length ? (
+        // Ürünler sunucudan yüklenirken (ya da katalog boşken)
+        <View style={[styles.pad, { alignItems: 'center', paddingVertical: 30 }]}>
+          <ActivityIndicator color={Colors.cyan} />
+          <VText variant="caption" style={{ marginTop: 8 }}>
+            Ürünler yükleniyor…
+          </VText>
+        </View>
+      ) : null}
       <View style={[styles.pad, styles.grid]}>
         {list.map((p) => {
           const affordable = p.price <= store.balance;

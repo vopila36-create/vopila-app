@@ -345,7 +345,7 @@ export default function Kamera() {
         flash={mode === 'picture' ? cameraFlash : 'off'}
         enableTorch={torch}
         mirror={facing === 'front'}
-        videoQuality="1080p"
+        videoQuality="720p"
         onCameraReady={() => {
           readyRef.current = true;
           setReady(true);

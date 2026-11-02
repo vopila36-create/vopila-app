@@ -12,7 +12,7 @@ import { OnDark, VText } from '@/components/ui/text';
 import { Colors, OnImage } from '@/constants/theme';
 import { ME_ID, type Moment } from '@/data/mock';
 import { useScreenshotGuard } from '@/lib/screen-guard';
-import { deleteMoment } from '@/lib/moments-api';
+import { deleteMoment, fetchMyMomentLikes, setMomentLike } from '@/lib/moments-api';
 import { useMe, useStore } from '@/store/app-store';
 
 const DURATION = 5000;
@@ -46,7 +46,20 @@ export default function AnGoruntuleyici() {
   const [pos, setPos] = useState<Pos>({ mi: startIndex, ii: 0, done: false });
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
+  // Beğeni sunucuda (0030): anın tamamı için tek beğeni; örnek anlarda yalnızca ekranda
   const [liked, setLiked] = useState<Record<string, boolean>>({});
+  const myId = store.myId;
+  useEffect(() => {
+    if (!myId) return;
+    let alive = true;
+    const ids = moments.filter((m) => m.remote).map((m) => m.id);
+    fetchMyMomentLikes(myId, ids).then((list) => {
+      if (alive) setLiked((l) => ({ ...Object.fromEntries(list.map((x) => [x, true])), ...l }));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [myId, moments]);
   const [deleting, setDeleting] = useState(false);
   const elapsed = useRef(0);
 
@@ -182,10 +195,17 @@ export default function AnGoruntuleyici() {
         )}
         <View style={{ flex: 1 }} />
         <Pressable
-          onPress={() => setLiked((l) => ({ ...l, [key]: !l[key] }))}
+          onPress={async () => {
+            const on = !liked[moment.id];
+            setLiked((l) => ({ ...l, [moment.id]: on }));
+            if (moment.remote && myId) {
+              const r = await setMomentLike(myId, moment.id, on);
+              if (!r.ok) setLiked((l) => ({ ...l, [moment.id]: !on }));
+            }
+          }}
           hitSlop={10}
           accessibilityLabel="Beğen">
-          <Heart size={30} color={liked[key] ? Colors.heart : '#fff'} fill={liked[key] ? Colors.heart : 'transparent'} />
+          <Heart size={30} color={liked[moment.id] ? Colors.heart : '#fff'} fill={liked[moment.id] ? Colors.heart : 'transparent'} />
         </Pressable>
       </View>
       </OnDark>

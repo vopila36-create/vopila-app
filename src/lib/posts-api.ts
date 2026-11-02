@@ -4,6 +4,7 @@
  * Giriş yapan kullanıcının kendi içerikleri ekranlarla uyumlu olsun diye `ME_ID` ile döner.
  */
 import { ME_ID, type ArenaKey, type Comment, type Media, type Post, type User } from '@/data/mock';
+import { fileSize, MAX_POST_BYTES, shrinkImage, tooBigMessage } from '@/lib/media-prep';
 import { mediaUrls, supabase } from '@/lib/supabase';
 import { toTurkish } from '@/store/auth';
 
@@ -199,9 +200,13 @@ function fileType(m: Media) {
 
 /** Telefondaki dosyayı kullanıcının kendi klasörüne ({uid}/...) yükler, dosya yolunu döner. */
 export async function uploadMedia(myId: string, m: Media, index: number) {
-  const { ext, contentType } = fileType(m);
+  // Fotoğraf küçültülür (JPEG); video boyutu yüklemeden önce kontrol edilir (media-prep.ts)
+  const uri = m.type === 'image' ? await shrinkImage(m.uri) : m.uri;
+  const { ext, contentType } = uri === m.uri ? fileType(m) : { ext: 'jpg', contentType: 'image/jpeg' };
+  const size = await fileSize(uri);
+  if (size && size > MAX_POST_BYTES) throw new Error(tooBigMessage(MAX_POST_BYTES));
   const path = `${myId}/${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const body = await fetch(m.uri).then((r) => r.arrayBuffer());
+  const body = await fetch(uri).then((r) => r.arrayBuffer());
   const { error } = await supabase.storage.from('media').upload(path, body, { contentType, upsert: false });
   if (error) throw error;
   return path;
@@ -274,6 +279,7 @@ export async function createRemotePost(myId: string, input: NewPost): Promise<Ap
     if (uploaded.length) await supabase.storage.from('media').remove(uploaded);
     if (String(e?.message ?? '').includes('season_closed'))
       return { ok: false, error: 'Bu arenanın sezonu şu an kapalı. Arenasız paylaşabilirsin.' };
+    if (String(e?.message ?? '').startsWith('Dosya çok büyük')) return { ok: false, error: String(e.message) };
     if (String(e?.message ?? '').toLowerCase().includes('exceeded the maximum allowed size'))
       return { ok: false, error: 'Dosya çok büyük. Daha kısa bir video ya da başka bir fotoğraf seç.' };
     return { ok: false, error: toTurkish(e) };

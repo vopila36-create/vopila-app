@@ -1,5 +1,5 @@
 /** Bildirim ayarları: hangi olaylarda bildirim gelsin (sunucuda uygulanır) + telefon tercihleri. */
-import { AtSign, Bell, CornerDownRight, Heart, MessageCircle, Trophy, UserPlus } from 'lucide-react-native';
+import { AtSign, CornerDownRight, Heart, MessageCircle, UserPlus } from 'lucide-react-native';
 import { ActivityIndicator, View } from 'react-native';
 
 import { Section, ToggleRow } from '@/components/settings-ui';
@@ -7,7 +7,6 @@ import { SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Spacing } from '@/constants/theme';
 import type { NotifKind } from '@/lib/settings-api';
-import { useStore } from '@/store/app-store';
 import { useMySettings } from '@/store/use-settings';
 
 const KINDS: { key: NotifKind; label: string; desc: string; icon: React.ReactNode }[] = [
@@ -19,29 +18,15 @@ const KINDS: { key: NotifKind; label: string; desc: string; icon: React.ReactNod
 ];
 
 export default function BildirimAyarlari() {
-  const store = useStore();
   const { myId, settings, save, error } = useMySettings();
 
   return (
     <SubScreen title="Bildirimler">
       <View style={{ paddingHorizontal: Spacing.screen }}>
-        <Section title="Telefon">
-          <ToggleRow
-            icon={<Bell size={20} color={Colors.cyan} />}
-            label="Tüm bildirimler"
-            desc="Kapatırsan hiçbir bildirim gösterilmez"
-            value={store.state.settings.pushNotifications}
-            onChange={(v) => store.updateSettings({ pushNotifications: v })}
-          />
-          <ToggleRow
-            icon={<Trophy size={20} color={Colors.gold} />}
-            label="Arena hatırlatmaları"
-            desc="Sezon bitişi ve oylama hatırlatmaları"
-            value={store.state.settings.arenaReminders}
-            onChange={(v) => store.updateSettings({ arenaReminders: v })}
-            last
-          />
-        </Section>
+        {/* Telefon bildirimleri (push) henüz yok; gelince "Tüm bildirimler" ve arena hatırlatmaları buraya eklenecek */}
+        <VText variant="caption" style={{ marginBottom: Spacing.md }}>
+          Bildirimler şimdilik uygulama içinde görünür. Telefon bildirimleri (uygulama kapalıyken) yakında geliyor.
+        </VText>
 
         {!myId ? (
           <VText variant="caption" style={{ marginTop: Spacing.lg }}>

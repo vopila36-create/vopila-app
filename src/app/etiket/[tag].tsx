@@ -31,9 +31,10 @@ export default function Etiket() {
 
   const needle = `#${tag}`.toLocaleLowerCase('tr-TR');
   const list = useMemo(() => {
-    const demo = demoPosts.filter((p) => p.caption.toLocaleLowerCase('tr-TR').includes(needle));
+    // Örnek gönderiler yalnızca oturumsuz önizlemede
+    const demo = store.myId ? [] : demoPosts.filter((p) => p.caption.toLocaleLowerCase('tr-TR').includes(needle));
     return [...(real?.tag === tag ? real.list : []), ...demo];
-  }, [real, tag, needle]);
+  }, [real, tag, needle, store.myId]);
 
   const loading = !!store.myId && real?.tag !== tag;
 
