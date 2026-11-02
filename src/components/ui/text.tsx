@@ -46,7 +46,14 @@ export function VText({ variant = 'body', color, style, ...rest }: Props) {
     const mapped = typeof flat?.color === 'string' ? ON_DARK[flat.color] : undefined;
     if (mapped) s2 = [style, { color: mapped }];
   }
-  return <Text style={[styles[variant], onDark && dark[variant], c ? { color: c } : null, s2]} {...rest} />;
+  // Yazı boyutu telefonun ayarını izler (Instagram gibi); düzen bozulmasın diye en fazla 1,4 kat büyür
+  return (
+    <Text
+      maxFontSizeMultiplier={1.4}
+      style={[styles[variant], onDark && dark[variant], c ? { color: c } : null, s2]}
+      {...rest}
+    />
+  );
 }
 
 const styles = StyleSheet.create({
