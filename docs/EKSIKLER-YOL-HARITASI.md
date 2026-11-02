@@ -55,22 +55,24 @@ Testçiler video yükleyince sorun çıkmasın.
 - 2.2 Dosyayı belleğe tamamen almadan yükle (büyük videoda uygulama çökmesin), yükleme yüzdesi göster.
 - 2.3 Fotoğrafları makul boyuta indir (ör. en uzun kenar 1600 px).
 
-## Faz 3 — Ayarları tamamlama (öncelik: orta · ben yaparım)
+## Faz 3 — Ayarları tamamlama (3.1–3.4 ✅ 2 Kasım 2026)
 
-- 3.1 **E-posta değiştir** (yeni adrese 6 haneli kod).
-- 3.2 **Şifre değiştir**: önce mevcut şifreyi sor, en az 8 karakter.
-- 3.3 **Günlük süre sınırı** sunucudan okunsun ve hesapla birlikte taşınsın (15–18 yaş kuralı buna dayanıyor).
-- 3.4 **Verilerimi indir**: dosya olarak (JSON) kaydet/paylaş.
+- ✅ 3.1 **E-posta değiştir** (mevcut şifre + yeni adrese 6 haneli kod). _Siz: Supabase > Emails > "Change email address" şablonuna {{ .Token }} ekleyin._
+- ✅ 3.2 **Şifre değiştir**: mevcut şifre sunucuda kontrol (15 dk'da 5 deneme), yeni şifre en az 8 karakter. _Siz: Supabase > Sign In / Providers > Email > Minimum password length = 8._
+- ✅ 3.3 **Günlük süre sınırı** hesapta; girişte telefona alınır.
+- ✅ 3.4 **Verilerimi indir**: JSON dosyası (telefonda paylaşım menüsü, web'de indirme).
 - 3.5 Beğeni sayılarını gizle, yazı boyutu, ayarlarda arama (Adım 5'ten kalanlar).
 - 3.6 Dil seçimi (İngilizce) — yayından sonra da olabilir.
 
-## Faz 4 — Android dağıtımı (öncelik: yüksek · ben + siz)
+## Faz 4 — Android dağıtımı (4.2 ✅; 4.1 derleniyor)
 
 - 4.1 APK derlemesini tamamla (son deneme internet kesintisinde yarıda kaldı).
-- 4.2 Uygulamaya **özel imza anahtarı** (şu an Android'in herkese açık test anahtarı kullanılıyor; Play Store
+- ✅ 4.2 Uygulamaya **özel imza anahtarı** (şu an Android'in herkese açık test anahtarı kullanılıyor; Play Store
   bunu kabul etmez ve testçilerin ileride güncelleme alabilmesi için anahtar baştan sabit olmalı).
   Anahtar dosyası depoya girmez; yedeğini siz saklarsınız.
 - 4.3 Siz: APK'yı Google Drive'a yükleyip bağlantıyı davet mesajına eklersiniz.
+- ✅ 4.4 Uygulama bağlantıları: beta.vopila.com/davet ve /u bağlantıları Android'de doğrudan uygulamada açılır (assetlinks yayında).
+- Not: Windows'un uzun dosya yolu sınırı yüzünden derleme `subst R: "...\wopila uygulama"` ile `R:opila-appndroid` içinden yapılır.
 
 ## Faz 5 — Hesap açmanız gerekenler (sizin kararınız)
 
