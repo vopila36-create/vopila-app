@@ -52,6 +52,8 @@ export default function Sohbet() {
   const [posts, setPosts] = useState<Record<string, Post | null>>({});
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  /** Fotoğraf/video yüklenirken yüzde (0–100); yükleme yoksa null */
+  const [upload, setUpload] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [noMore, setNoMore] = useState(false);
@@ -143,17 +145,21 @@ export default function Sohbet() {
       if (res.canceled || !res.assets?.[0]) return;
       const a = res.assets[0];
       setSending(true);
+      setUpload(0);
       setError(null);
-      const r = await sendMediaMessage(myId, cid, {
-        uri: a.uri,
-        kind: a.type === 'video' ? 'video' : 'image',
-        mimeType: a.mimeType,
-      });
+      const r = await sendMediaMessage(
+        myId,
+        cid,
+        { uri: a.uri, kind: a.type === 'video' ? 'video' : 'image', mimeType: a.mimeType },
+        (f) => setUpload(Math.round(f * 100)),
+      );
       setSending(false);
+      setUpload(null);
       if (!r.ok) setError(r.error);
       else addIncoming(r.data);
     } catch {
       setSending(false);
+      setUpload(null);
       setError('Galeri açılamadı. Fotoğraflara erişim izni vermen gerekebilir.');
     }
   };
@@ -250,6 +256,11 @@ export default function Sohbet() {
           </VText>
         ) : null}
 
+        {upload !== null ? (
+          <VText variant="caption" style={{ textAlign: 'center', paddingVertical: 4 }}>
+            Gönderiliyor… %{upload}
+          </VText>
+        ) : null}
         <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
           {!recording ? (
             <>

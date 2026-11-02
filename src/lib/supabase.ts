@@ -44,6 +44,33 @@ if (!isWeb) {
 // Web'de Google açılır penceresi geri döndüğünde pencereyi kapatıp sonucu ana sayfaya iletir
 WebBrowser.maybeCompleteAuthSession();
 
+/** Depoya doğrudan dosya yükleme adresi (upload.ts — dosya belleğe alınmadan gönderilir). */
+export function storageObjectUrl(bucket: string, path: string) {
+  return `${SUPABASE_URL}/storage/v1/object/${bucket}/${path.split('/').map(encodeURIComponent).join('/')}`;
+}
+
+/** Doğrudan yükleme için oturum başlıkları; oturum yoksa hata fırlatır. */
+export async function storageHeaders(contentType: string, upsert = false): Promise<Record<string, string>> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
+  return {
+    Authorization: `Bearer ${token}`,
+    apikey: SUPABASE_PUBLISHABLE_KEY,
+    'Content-Type': contentType,
+    'x-upsert': upsert ? 'true' : 'false',
+    'cache-control': 'max-age=3600',
+  };
+}
+
+/** Depolama sunucusunun hata yanıtını kullanıcıya gösterilecek metne çevirir. */
+export function storageErrorText(status: number, body?: string | null) {
+  const text = body ?? '';
+  if (status === 413 || /maximum allowed size|too large|413/i.test(text)) return 'Dosya çok büyük. Daha kısa bir video seç ya da kırp.';
+  if (status === 401 || status === 403) return 'Dosya yüklenemedi: oturumun sona ermiş olabilir. Tekrar giriş yap.';
+  return 'Dosya yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.';
+}
+
 /** Google girişinden sonra dönülecek adres (Supabase > Auth > URL Configuration'a eklenmeli). */
 export const authRedirectUrl = () => Linking.createURL('auth-callback');
 

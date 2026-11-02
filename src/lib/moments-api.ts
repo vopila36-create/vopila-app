@@ -5,6 +5,7 @@
 import type { Media, Moment, User } from '@/data/mock';
 import { AUTHOR, localId, one, toUser, uploadMedia, type ApiResult, type DbAuthor } from '@/lib/posts-api';
 import { mediaUrls, supabase } from '@/lib/supabase';
+import type { UploadProgress } from '@/lib/upload';
 import { toTurkish } from '@/store/auth';
 
 export async function fetchMoments(myId: string): Promise<ApiResult<{ moments: Moment[]; authors: User[] }>> {
@@ -46,11 +47,13 @@ export async function createMoment(
   media: Media[],
   title: string,
   closeFriends = false,
+  onProgress?: UploadProgress,
 ): Promise<ApiResult<{ id: string }>> {
   const uploaded: string[] = [];
   let momentId: string | null = null;
   try {
-    for (const [i, m] of media.entries()) uploaded.push(await uploadMedia(myId, m, i));
+    for (const [i, m] of media.entries())
+      uploaded.push(await uploadMedia(myId, m, i, onProgress && ((f) => onProgress((i + f) / media.length))));
     const { data, error } = await supabase
       .from('moments')
       .insert({ author_id: myId, title: title.slice(0, 40), close_friends: closeFriends })
@@ -66,7 +69,7 @@ export async function createMoment(
   } catch (e: any) {
     if (momentId) await supabase.from('moments').delete().eq('id', momentId);
     if (uploaded.length) await supabase.storage.from('media').remove(uploaded);
-    if (String(e?.message ?? '').startsWith('Dosya çok büyük')) return { ok: false, error: String(e.message) };
+    if (/^(Dosya|Oturum)/.test(String(e?.message ?? ''))) return { ok: false, error: String(e.message) };
     return { ok: false, error: toTurkish(e) };
   }
 }

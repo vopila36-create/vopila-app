@@ -6,6 +6,7 @@
 import { ME_ID, type ArenaKey, type Comment, type Media, type Post, type User } from '@/data/mock';
 import { fileSize, MAX_POST_BYTES, shrinkImage, tooBigMessage } from '@/lib/media-prep';
 import { mediaUrls, supabase } from '@/lib/supabase';
+import { uploadToStorage, type UploadProgress } from '@/lib/upload';
 import { toTurkish } from '@/store/auth';
 
 export type ApiResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
@@ -199,16 +200,15 @@ function fileType(m: Media) {
 }
 
 /** Telefondaki dosyayı kullanıcının kendi klasörüne ({uid}/...) yükler, dosya yolunu döner. */
-export async function uploadMedia(myId: string, m: Media, index: number) {
+export async function uploadMedia(myId: string, m: Media, index: number, onProgress?: UploadProgress) {
   // Fotoğraf küçültülür (JPEG); video boyutu yüklemeden önce kontrol edilir (media-prep.ts)
   const uri = m.type === 'image' ? await shrinkImage(m.uri) : m.uri;
   const { ext, contentType } = uri === m.uri ? fileType(m) : { ext: 'jpg', contentType: 'image/jpeg' };
   const size = await fileSize(uri);
   if (size && size > MAX_POST_BYTES) throw new Error(tooBigMessage(MAX_POST_BYTES));
   const path = `${myId}/${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const body = await fetch(uri).then((r) => r.arrayBuffer());
-  const { error } = await supabase.storage.from('media').upload(path, body, { contentType, upsert: false });
-  if (error) throw error;
+  // Dosya belleğe alınmadan, yüzde bildirerek yüklenir (upload.ts)
+  await uploadToStorage('media', path, uri, contentType, { onProgress });
   return path;
 }
 
@@ -228,11 +228,17 @@ export type NewPost = {
  * Dosyaları yükler, gönderiyi ve medya satırlarını yazar; arena seçildiyse açık sezona katılır.
  * Bir adım başarısız olursa yüklenenler geri alınır (yarım gönderi kalmaz).
  */
-export async function createRemotePost(myId: string, input: NewPost): Promise<ApiResult<{ id: string }>> {
+export async function createRemotePost(
+  myId: string,
+  input: NewPost,
+  onProgress?: UploadProgress,
+): Promise<ApiResult<{ id: string }>> {
   const uploaded: string[] = [];
   let postId: string | null = null;
   try {
-    for (const [i, m] of input.media.entries()) uploaded.push(await uploadMedia(myId, m, i));
+    const n = input.media.length;
+    for (const [i, m] of input.media.entries())
+      uploaded.push(await uploadMedia(myId, m, i, onProgress && ((f) => onProgress((i + f) / n))));
 
     const { data: post, error: postErr } = await supabase
       .from('posts')
@@ -279,7 +285,7 @@ export async function createRemotePost(myId: string, input: NewPost): Promise<Ap
     if (uploaded.length) await supabase.storage.from('media').remove(uploaded);
     if (String(e?.message ?? '').includes('season_closed'))
       return { ok: false, error: 'Bu arenanın sezonu şu an kapalı. Arenasız paylaşabilirsin.' };
-    if (String(e?.message ?? '').startsWith('Dosya çok büyük')) return { ok: false, error: String(e.message) };
+    if (/^(Dosya|Oturum)/.test(String(e?.message ?? ''))) return { ok: false, error: String(e.message) };
     if (String(e?.message ?? '').toLowerCase().includes('exceeded the maximum allowed size'))
       return { ok: false, error: 'Dosya çok büyük. Daha kısa bir video ya da başka bir fotoğraf seç.' };
     return { ok: false, error: toTurkish(e) };

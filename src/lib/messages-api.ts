@@ -6,6 +6,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 
 import { timeAgo, type ApiResult } from '@/lib/posts-api';
 import { supabase } from '@/lib/supabase';
+import { uploadToStorage, type UploadProgress } from '@/lib/upload';
 import { fileSize, MAX_DM_BYTES, tooBigMessage } from '@/lib/media-prep';
 import { toTurkish } from '@/store/auth';
 
@@ -158,6 +159,7 @@ export async function sendMediaMessage(
   myId: string,
   conversationId: string,
   input: { uri: string; kind: 'image' | 'video' | 'audio'; mimeType?: string | null; durationMs?: number },
+  onProgress?: UploadProgress,
 ): Promise<ApiResult<Message>> {
   const mime =
     input.mimeType ||
@@ -174,11 +176,10 @@ export async function sendMediaMessage(
   try {
     const size = await fileSize(input.uri);
     if (size && size > MAX_DM_BYTES) return { ok: false, error: tooBigMessage(MAX_DM_BYTES) };
-    const body = await fetch(input.uri).then((r) => r.arrayBuffer());
-    const up = await supabase.storage.from('dm').upload(path, body, { contentType: mime, upsert: false });
-    if (up.error) return { ok: false, error: 'Dosya yüklenemedi. Boyutu 50 MB’ı geçmemeli.' };
-  } catch {
-    return { ok: false, error: 'Dosya okunamadı, tekrar dene.' };
+    await uploadToStorage('dm', path, input.uri, mime, { onProgress });
+  } catch (e: any) {
+    const msg = String(e?.message ?? '');
+    return { ok: false, error: /^(Dosya|Oturum)/.test(msg) ? msg : 'Dosya okunamadı, tekrar dene.' };
   }
   const { data, error } = await supabase
     .from('messages')

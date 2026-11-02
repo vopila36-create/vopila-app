@@ -84,6 +84,8 @@ export default function Olustur() {
   };
   const [error, setError] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
+  /** Yükleme yüzdesi (0–100) */
+  const [percent, setPercent] = useState(0);
 
   const addAssets = (assets: ImagePicker.ImagePickerAsset[]) => {
     const picked: Media[] = assets.map((a) => ({ type: a.type === 'video' ? 'video' : 'image', uri: a.uri }));
@@ -138,8 +140,10 @@ export default function Olustur() {
       return;
     }
     setPublishing(true);
+    setPercent(0);
     setError(null);
-    const res = await store.createPost({
+    const res = await store.createPost(
+      {
       media,
       caption: caption.trim(),
       location: location.trim() || undefined,
@@ -147,7 +151,9 @@ export default function Olustur() {
       title: title.trim() || undefined,
       sensitive,
       aiGenerated,
-    });
+      },
+      (f) => setPercent(Math.round(f * 100)),
+    );
     setPublishing(false);
     if (!res.ok) {
       setError(res.error);
@@ -340,7 +346,7 @@ export default function Olustur() {
         ) : null}
 
         <PrimaryButton
-          label={publishing ? 'Yükleniyor…' : arenaKey ? 'Paylaş ve Yarışmaya Katıl' : 'Paylaş'}
+          label={publishing ? `Yükleniyor… %${percent}` : arenaKey ? 'Paylaş ve Yarışmaya Katıl' : 'Paylaş'}
           onPress={publish}
           style={{ marginTop: Spacing.xl, opacity: publishing ? 0.6 : 1 }}
         />

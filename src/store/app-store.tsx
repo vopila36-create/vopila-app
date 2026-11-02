@@ -746,9 +746,14 @@ function useBuildStore() {
   }, [realMoments, myId]);
 
   const createMoment = useCallback(
-    async (media: Media[], title: string, closeFriends = false): Promise<{ ok: boolean; error?: string }> => {
+    async (
+      media: Media[],
+      title: string,
+      closeFriends = false,
+      onProgress?: (fraction: number) => void,
+    ): Promise<{ ok: boolean; error?: string }> => {
       if (!myId) return { ok: false, error: 'An paylaşmak için giriş yapmalısın.' };
-      const res = await createRemoteMoment(myId, media, title, closeFriends);
+      const res = await createRemoteMoment(myId, media, title, closeFriends, onProgress);
       if (!res.ok) return { ok: false, error: res.error };
       await refreshMoments();
       return { ok: true };
@@ -1126,9 +1131,12 @@ function useBuildStore() {
        * Gönderi paylaşır. Giriş yapılmışsa dosyalar sunucuya yüklenir ve gönderi herkese görünür;
        * değilse (demo modu) yalnızca bu telefonda saklanır.
        */
-      createPost: async (input: NewPost): Promise<{ ok: true; post: Post } | { ok: false; error: string }> => {
+      createPost: async (
+        input: NewPost,
+        onProgress?: (fraction: number) => void,
+      ): Promise<{ ok: true; post: Post } | { ok: false; error: string }> => {
         if (myId) {
-          const res = await createRemotePost(myId, input);
+          const res = await createRemotePost(myId, input, onProgress);
           if (!res.ok) return res;
           if (input.arenaKey) refreshArenas();
           await refreshFeed();

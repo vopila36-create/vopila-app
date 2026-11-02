@@ -44,10 +44,11 @@ Testçiler davetle gelmeden önce yapılmalı.
 | 1.13 | Uygulama sürümü derlemeden okunsun; "Arkadaşlarını davet et" beta.vopila.com'u paylaşsın | Sabit "1.0.0" | `ayarlar.tsx` |
 | 1.14 | Uygulama çökünce beyaz ekran yerine "Bir şeyler ters gitti — tekrar dene" ekranı | Yok | `_layout.tsx` |
 
-## Faz 2 — Medya sağlamlığı ✅ büyük ölçüde TAMAMLANDI (2 Kasım 2026)
+## Faz 2 — Medya sağlamlığı ✅ TAMAMLANDI (2 Kasım 2026)
 
 Fotoğraflar yüklemeden önce 1600 px'e küçültülüyor, kamera 720p kaydediyor, sınırı aşan dosyada yükleme başlamadan
-uyarı veriliyor (gönderi 95 MB, mesaj 48 MB). Kalan: yükleme yüzdesi ve dosyayı belleğe almadan (parça parça) yükleme.
+uyarı veriliyor (gönderi 95 MB, mesaj 48 MB). Dosyalar telefonda belleğe alınmadan doğrudan diskten yükleniyor
+(`src/lib/upload.ts`) ve gönderi, an ve mesajda yükleme yüzdesi gösteriliyor.
 
 Testçiler video yükleyince sorun çıkmasın.
 

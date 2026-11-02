@@ -23,6 +23,8 @@ export default function AnOlustur() {
   const [closeFriends, setCloseFriends] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  /** Yükleme yüzdesi (0–100) */
+  const [percent, setPercent] = useState(0);
 
   // Kameradan gelen medya
   useFocusEffect(
@@ -64,8 +66,9 @@ export default function AnOlustur() {
       return;
     }
     setSending(true);
+    setPercent(0);
     setError(null);
-    const res = await store.createMoment(media, title.trim(), closeFriends);
+    const res = await store.createMoment(media, title.trim(), closeFriends, (f) => setPercent(Math.round(f * 100)));
     setSending(false);
     if (!res.ok) {
       setError(res.error ?? 'An paylaşılamadı.');
@@ -157,7 +160,12 @@ export default function AnOlustur() {
 
         <Pressable onPress={publish} disabled={sending} style={[styles.publish, sending && { opacity: 0.6 }]}>
           {sending ? (
-            <ActivityIndicator color={Colors.onCyan} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <ActivityIndicator color={Colors.onCyan} />
+              <VText variant="label" color={Colors.onCyan} style={{ fontFamily: Fonts.bold }}>
+                Yükleniyor… %{percent}
+              </VText>
+            </View>
           ) : (
             <VText variant="label" color={Colors.onCyan} style={{ fontFamily: Fonts.bold }}>
               Anı Paylaş
