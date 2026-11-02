@@ -24,7 +24,7 @@ export type Conversation = {
   unread: number;
 };
 
-export type MessageKind = 'text' | 'post' | 'image' | 'video' | 'audio';
+export type MessageKind = 'text' | 'post' | 'image' | 'video' | 'audio' | 'unsent';
 
 export type Message = {
   id: string;
@@ -38,6 +38,8 @@ export type Message = {
   /** Sesli mesaj süresi */
   durationMs: number | null;
   createdAt: string;
+  /** Kalp bırakan üyeler */
+  hearts: string[];
 };
 
 /** Gelen kutusunda son mesajın özeti */
@@ -46,6 +48,7 @@ export function kindPreview(kind: MessageKind, text: string) {
   if (kind === 'video') return '🎬 Video';
   if (kind === 'audio') return '🎤 Sesli mesaj';
   if (kind === 'post') return text || 'Bir gönderi paylaştı';
+  if (kind === 'unsent') return 'Mesaj geri alındı';
   return text;
 }
 
@@ -58,6 +61,7 @@ const toMessage = (r: any): Message => ({
   postId: r.post_id,
   mediaPath: r.media_path ?? null,
   durationMs: r.duration_ms ?? null,
+  hearts: Array.isArray(r.hearts) ? r.hearts : [],
   createdAt: r.created_at,
 });
 
@@ -120,7 +124,7 @@ export async function fetchConversationPeer(
 export async function fetchMessages(conversationId: string, before?: string): Promise<ApiResult<Message[]>> {
   let q = supabase
     .from('messages')
-    .select('id, conversation_id, sender_id, kind, text, post_id, media_path, duration_ms, created_at')
+    .select('id, conversation_id, sender_id, kind, text, post_id, media_path, duration_ms, created_at, hearts')
     .eq('conversation_id', conversationId)
     .order('created_at', { ascending: false })
     .limit(40);
@@ -145,7 +149,7 @@ export async function sendMessage(
       text,
       post_id: input.postId ?? null,
     })
-    .select('id, conversation_id, sender_id, kind, text, post_id, media_path, duration_ms, created_at')
+    .select('id, conversation_id, sender_id, kind, text, post_id, media_path, duration_ms, created_at, hearts')
     .single();
   if (error) return { ok: false, error: messageError(error) };
   return { ok: true, data: toMessage(data) };
@@ -191,7 +195,7 @@ export async function sendMediaMessage(
       media_path: path,
       duration_ms: input.kind === 'audio' ? Math.min(Math.round(input.durationMs ?? 0), 120000) : null,
     })
-    .select('id, conversation_id, sender_id, kind, text, post_id, media_path, duration_ms, created_at')
+    .select('id, conversation_id, sender_id, kind, text, post_id, media_path, duration_ms, created_at, hearts')
     .single();
   if (error) {
     await supabase.storage.from('dm').remove([path]);
@@ -227,13 +231,23 @@ export async function markRead(conversationId: string) {
 }
 
 /** Sohbete gelen yeni mesajları canlı dinler. Dönen fonksiyon dinlemeyi kapatır. */
-export function subscribeToConversation(conversationId: string, onMessage: (m: Message) => void): () => void {
+export function subscribeToConversation(
+  conversationId: string,
+  onMessage: (m: Message) => void,
+  onUpdate?: (m: Message) => void,
+): () => void {
   const channel: RealtimeChannel = supabase
     .channel(`dm:${conversationId}`)
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
       (payload) => onMessage(toMessage(payload.new)),
+    )
+    // Geri alma ve kalp tepkisi (0037)
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
+      (payload) => onUpdate?.(toMessage(payload.new)),
     )
     .subscribe();
   return () => {
@@ -300,4 +314,19 @@ export function subscribeTyping(conversationId: string, myId: string, onTyping: 
       supabase.removeChannel(channel);
     },
   };
+}
+
+/** Gönderimi geri al: mesaj iki taraftan da kalkar, varsa dosyası depodan silinir (0037). */
+export async function unsendMessage(messageId: string): Promise<ApiResult> {
+  const { data, error } = await supabase.rpc('unsend_message', { p_id: messageId });
+  if (error) return { ok: false, error: messageError(error) };
+  if (typeof data === 'string' && data) await supabase.storage.from('dm').remove([data]);
+  return { ok: true, data: undefined };
+}
+
+/** Mesaja kalp bırak / kaldır (0037). */
+export async function heartMessage(messageId: string, on: boolean): Promise<ApiResult> {
+  const { error } = await supabase.rpc('heart_message', { p_id: messageId, p_on: on });
+  if (error) return { ok: false, error: messageError(error) };
+  return { ok: true, data: undefined };
 }

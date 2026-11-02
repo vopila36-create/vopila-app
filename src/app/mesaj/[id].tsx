@@ -5,7 +5,7 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { BadgeCheck, ImageOff, ImagePlus, PlayCircle, Send } from 'lucide-react-native';
+import { BadgeCheck, Heart, ImageOff, ImagePlus, PlayCircle, Send, Undo2 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -30,11 +30,13 @@ import {
   chatTime,
   fetchConversationPeer,
   fetchMessages,
+  heartMessage,
   markRead,
   sendMediaMessage,
   sendMessage,
   subscribeToConversation,
   subscribeTyping,
+  unsendMessage,
   type Message,
 } from '@/lib/messages-api';
 import { fetchPosts } from '@/lib/posts-api';
@@ -101,6 +103,39 @@ export default function Sohbet() {
     [cid, myId, loadPosts],
   );
 
+  // Geri alma / kalp: canlı güncelleme ya da kendi işlemimiz
+  const applyUpdate = useCallback((m: Message) => {
+    setMessages((list) => (list ? list.map((x) => (x.id === m.id ? m : x)) : list));
+  }, []);
+  // Uzun basılan mesajın eylem menüsü; çift dokunuşla kalp
+  const [actionFor, setActionFor] = useState<string | null>(null);
+  const lastTap = useRef<{ id: string; at: number } | null>(null);
+  const toggleHeart = async (m: Message) => {
+    if (!myId || m.kind === 'unsent') return;
+    const on = !m.hearts.includes(myId);
+    const next = on ? [...m.hearts, myId] : m.hearts.filter((h) => h !== myId);
+    applyUpdate({ ...m, hearts: next });
+    setActionFor(null);
+    const r = await heartMessage(m.id, on);
+    if (!r.ok) {
+      applyUpdate(m);
+      setError(r.error);
+    }
+  };
+  const unsend = async (m: Message) => {
+    setActionFor(null);
+    const r = await unsendMessage(m.id);
+    if (!r.ok) setError(r.error);
+    else applyUpdate({ ...m, kind: 'unsent', text: '', mediaPath: null, postId: null, durationMs: null, hearts: [] });
+  };
+  // Dokunma zamanı olaydan alınır (çift dokunuş = kalp)
+  const onBubbleTap = (m: Message, now: number) => {
+    if (lastTap.current && lastTap.current.id === m.id && now - lastTap.current.at < 300) {
+      lastTap.current = null;
+      toggleHeart(m);
+    } else lastTap.current = { id: m.id, at: now };
+  };
+
   useEffect(() => {
     if (!myId) return;
     let cancelled = false;
@@ -114,16 +149,22 @@ export default function Sohbet() {
       } else setError(m.error);
       markRead(cid).then(() => refreshInbox());
     });
-    const stop = subscribeToConversation(cid, (msg) => {
-      if (!cancelled) addIncoming(msg);
-    });
+    const stop = subscribeToConversation(
+      cid,
+      (msg) => {
+        if (!cancelled) addIncoming(msg);
+      },
+      (msg) => {
+        if (!cancelled) applyUpdate(msg);
+      },
+    );
     return () => {
       cancelled = true;
       stop();
       // Çıkarken okunmamış rozeti tazelensin
       refreshInbox();
     };
-  }, [cid, myId, loadPosts, addIncoming, refreshInbox]);
+  }, [cid, myId, loadPosts, addIncoming, applyUpdate, refreshInbox]);
 
   const loadOlder = async () => {
     if (loadingOlder || noMore || !messages?.length) return;
@@ -244,7 +285,18 @@ export default function Sohbet() {
               return (
                 <View>
                   <View style={[styles.bubbleRow, mine && { justifyContent: 'flex-end' }]}>
-                    <View style={{ maxWidth: '78%', gap: 4 }}>
+                    <Pressable
+                      style={{ maxWidth: '78%', gap: 4 }}
+                      onPress={(e) => onBubbleTap(m, e.nativeEvent.timestamp)}
+                      onLongPress={() => m.kind !== 'unsent' && setActionFor((v) => (v === m.id ? null : m.id))}
+                      delayLongPress={350}>
+                      {m.kind === 'unsent' ? (
+                        <View style={[styles.bubble, styles.unsent]}>
+                          <VText variant="caption" style={{ fontStyle: 'italic' }}>
+                            {mine ? 'Mesajı geri aldın' : 'Bu mesaj geri alındı'}
+                          </VText>
+                        </View>
+                      ) : null}
                       {m.kind === 'image' || m.kind === 'video' || m.kind === 'audio' ? (
                         <DmMediaBubble message={m} mine={mine} />
                       ) : null}
@@ -256,8 +308,32 @@ export default function Sohbet() {
                           <VText color={mine ? Colors.onCyan : Colors.text}>{m.text}</VText>
                         </View>
                       ) : null}
-                    </View>
+                      {m.hearts.length ? (
+                        <View style={[styles.heartBadge, mine ? { alignSelf: 'flex-end' } : null]}>
+                          <Heart size={12} color={Colors.heart} fill={Colors.heart} />
+                          {m.hearts.length > 1 ? <VText variant="caption">{m.hearts.length}</VText> : null}
+                        </View>
+                      ) : null}
+                    </Pressable>
                   </View>
+                  {actionFor === m.id ? (
+                    <View style={[styles.actions, mine && { alignSelf: 'flex-end' }]}>
+                      <Pressable onPress={() => toggleHeart(m)} style={styles.actionBtn} hitSlop={4}>
+                        <Heart size={15} color={Colors.heart} fill={myId && m.hearts.includes(myId) ? Colors.heart : 'transparent'} />
+                        <VText variant="caption" color={Colors.text}>
+                          {myId && m.hearts.includes(myId) ? 'Kalbi kaldır' : 'Kalp bırak'}
+                        </VText>
+                      </Pressable>
+                      {mine ? (
+                        <Pressable onPress={() => unsend(m)} style={styles.actionBtn} hitSlop={4}>
+                          <Undo2 size={15} color={Colors.live} />
+                          <VText variant="caption" color={Colors.live}>
+                            Gönderimi geri al
+                          </VText>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  ) : null}
                   {showTime ? (
                     <VText variant="caption" style={[styles.time, mine && { textAlign: 'right' }]}>
                       {chatTime(m.createdAt)}
@@ -373,6 +449,33 @@ const styles = StyleSheet.create({
   intro: { alignItems: 'center', gap: 6, paddingVertical: 24 },
   bubbleRow: { flexDirection: 'row' },
   bubble: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18 },
+  unsent: { borderWidth: 1, borderColor: Colors.border, borderStyle: 'dashed' },
+  heartBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: -8,
+    marginHorizontal: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    backgroundColor: Colors.surfaceStrong,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignSelf: 'flex-start',
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+    padding: 4,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surfaceStrong,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignSelf: 'flex-start',
+  },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 6 },
   mine: { backgroundColor: Colors.cyan, borderBottomRightRadius: 6 },
   theirs: { backgroundColor: Colors.surfaceRaised, borderWidth: 1, borderColor: Colors.border, borderBottomLeftRadius: 6 },
   time: { fontSize: 10.5, marginTop: 2, marginHorizontal: 4 },

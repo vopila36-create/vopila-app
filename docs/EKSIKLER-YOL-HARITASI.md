@@ -62,7 +62,7 @@ Testçiler video yükleyince sorun çıkmasın.
 - ✅ 3.2 **Şifre değiştir**: mevcut şifre sunucuda kontrol (15 dk'da 5 deneme), yeni şifre en az 8 karakter. _Siz: Supabase > Sign In / Providers > Email > Minimum password length = 8._
 - ✅ 3.3 **Günlük süre sınırı** hesapta; girişte telefona alınır.
 - ✅ 3.4 **Verilerimi indir**: JSON dosyası (telefonda paylaşım menüsü, web'de indirme).
-- 3.5 Beğeni sayılarını gizle, yazı boyutu, ayarlarda arama (Adım 5'ten kalanlar).
+- ✅ 3.5 Beğeni sayılarını gizle, yazı boyutu (telefon ayarı), ayarlarda arama.
 - 3.6 Dil seçimi (İngilizce) — yayından sonra da olabilir.
 
 ## Faz 4 — Android dağıtımı (4.2 ✅; 4.1 derleniyor)
@@ -85,6 +85,20 @@ Testçiler video yükleyince sorun çıkmasın.
   (tarihli zaman çizelgesi, kargo takip bağlantısı, tahmini teslim), müşteri iptali (hazırlanırken), iade talebi
   (14 gün; yönetici onayıyla token iadesi), yönetimde iade ekranı ve çoklu ürün görseli.
 - Bilerek eklenmeyenler: kupon, taksit, ödeme yöntemi, satıcı pazaryeri (token mağazasına uymaz).
+
+## Instagram eksikleri — 2. tur ✅ (2 Kasım 2026)
+- **Gönderi**: sonradan düzenleme (açıklama, konum, etiketler; "düzenlendi" yazar), profilde sabitleme (en fazla 3),
+  yorumları kapatma, kalıcı silme (dosyalar da silinir) — 0035.
+- **Yorum beğenme** (+ bildirim, günde bir kez) — 0035.
+- **Kişi etiketleme**: paylaşırken ve düzenlerken; bahsetme iznine uyar, engelli etiketlenemez, en fazla 20;
+  etiketlenen kişi kendini kaldırabilir ve yeniden etiketlenemez; profilde "Etiketlenenler" sekmesi — 0035/0035b-d.
+- **Anlar**: kimler gördü listesi (yalnız sahibi), beğenenler işaretli; başkasının anına mesajla yanıt;
+  görülen anların halkası soluk, görülmeyenler önde — 0035.
+- **Arama geçmişi** (son aramalar; tek tek ya da tümden silme; telefonda, hesaba özel).
+- **Mesajlar**: "yazıyor…" (gizli kanal, yalnız üyeler, engellide kapalı — 0036), çift dokunuşla kalp,
+  uzun basınca "Gönderimi geri al" (dosya da silinir) — 0037.
+- **Yazı boyutu** telefonun ayarını izler (en fazla 1,4 kat). → 3.5 tamamlandı.
+- Yeni tablolar askı/hız sınırı korumalı, tarihler sunucuda yazılır (güvenlik incelemesi düzeltmeleri).
 
 ## Faz 5 — Hesap açmanız gerekenler (sizin kararınız)
 
