@@ -429,6 +429,7 @@ export async function setPostTags(postId: string, before: string[], after: strin
   for (const id of add) {
     const { error } = await supabase.from('post_tags').insert({ post_id: postId, user_id: id });
     if (error && error.code !== '23505') {
+      if (String(error.message).includes('tag_removed')) return { ok: false, error: 'Bu kişi kendini bu gönderiden kaldırdı; yeniden etiketlenemez.' };
       if (String(error.message).includes('tag_limit')) return { ok: false, error: 'Bir gönderide en fazla 20 kişi etiketlenebilir.' };
       if (error.code === '42501') return { ok: false, error: 'Seçtiğin kişilerden biri etiketlenmeye izin vermiyor.' };
       return { ok: false, error: toTurkish(error) };
