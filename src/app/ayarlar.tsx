@@ -23,6 +23,7 @@ import {
   LifeBuoy,
   Lock,
   LogOut,
+  Mail,
   MapPin,
   MessageCircle,
   MonitorSmartphone,
@@ -205,6 +206,7 @@ export default function Ayarlar() {
         {signedIn ? (
           <Section title="Güvenlik">
             <Row icon={<KeyRound size={20} color={Colors.cyan} />} label="Şifreyi değiştir" onPress={() => go('/yeni-sifre')} />
+            <Row icon={<Mail size={20} color={Colors.cyan} />} label="E-posta adresini değiştir" onPress={() => go('/eposta-degistir')} />
             <Row icon={<ShieldCheck size={20} color={Colors.success} />} label="İki adımlı doğrulama" onPress={() => go('/iki-adimli')} />
             <Row icon={<CalendarDays size={20} color={Colors.cyanSoft} />} label="Yaş doğrulama" onPress={() => go('/yas-dogrulama')} />
             <Row icon={<Users size={20} color={Colors.cyanSoft} />} label="Ebeveyn denetimi" onPress={() => go('/ebeveyn-denetimi')} />

@@ -153,6 +153,7 @@ export default function Giris() {
       }
       const addr = checkedEmail();
       if (!addr) return;
+      if (mode === 'kayit' && password.length < 8) return setError('Şifre en az 8 karakter olmalı.');
       if (password.length < 6) return setError('Şifre en az 6 karakter olmalı.');
 
       if (mode === 'kayit') {

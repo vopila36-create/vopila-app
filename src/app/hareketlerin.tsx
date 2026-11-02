@@ -12,7 +12,7 @@ import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import type { Post } from '@/data/mock';
 import { deleteComment, fetchLikedPosts, fetchMyComments, saveMySettings, type MyComment } from '@/lib/settings-api';
-import { getDailyLimit, lastWeek, setDailyLimit } from '@/lib/usage';
+import { getDailyLimit, lastWeek, setDailyLimit, syncDailyLimit } from '@/lib/usage';
 import { useStore } from '@/store/app-store';
 
 type Tab = 'likes' | 'comments' | 'time';
@@ -120,7 +120,8 @@ function TimeSpent() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([lastWeek(), getDailyLimit()]).then(([w, l]) => {
+    // Oturumda sınır hesaptan okunur (başka telefonda değiştirildiyse de doğru görünür)
+    Promise.all([lastWeek(), myId ? syncDailyLimit(myId) : getDailyLimit()]).then(([w, l]) => {
       if (cancelled) return;
       setWeek(w);
       setLimit(l ? String(l) : '0');
@@ -128,7 +129,7 @@ function TimeSpent() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [myId]);
 
   const changeLimit = async (v: string) => {
     setLimit(v);

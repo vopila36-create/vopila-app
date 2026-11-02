@@ -69,7 +69,8 @@
           "microphonePermission": "VOPILA, sesli mesaj kaydedebilmen için mikrofonuna erişmek istiyor."
         }
       ],
-      "./plugins/with-release-signing"
+      "./plugins/with-release-signing",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

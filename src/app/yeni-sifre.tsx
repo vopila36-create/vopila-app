@@ -1,6 +1,6 @@
 /**
  * "Şifremi unuttum" akışının son adımı: e-posta koduyla giriş yapıldıktan sonra yeni şifre belirlenir.
- * Ayarlar'dan "Şifreyi değiştir" ile de açılabilir.
+ * Ayarlar'dan "Şifreyi değiştir" ile açılınca önce mevcut şifre sunucuda doğrulanır (0032).
  */
 import { router, type Href } from 'expo-router';
 import { Eye, EyeOff, KeyRound } from 'lucide-react-native';
@@ -11,10 +11,16 @@ import { PrimaryButton } from '@/components/ui/primitives';
 import { SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/store/auth';
+
+const MIN_PASSWORD = 8;
 
 export default function YeniSifre() {
   const auth = useAuth();
+  // Şifremi unuttum akışında mevcut şifre bilinmez; Ayarlar'dan gelince sorulur
+  const changing = !auth.passwordRecovery;
+  const [current, setCurrent] = useState('');
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
   const [show, setShow] = useState(false);
@@ -25,9 +31,24 @@ export default function YeniSifre() {
   const save = async () => {
     if (busy) return;
     setError('');
-    if (pw.length < 6) return setError('Şifre en az 6 karakter olmalı.');
+    if (changing && !current) return setError('Mevcut şifreni yaz.');
+    if (pw.length < MIN_PASSWORD) return setError(`Yeni şifre en az ${MIN_PASSWORD} karakter olmalı.`);
     if (pw !== pw2) return setError('İki şifre birbirinin aynısı olmalı.');
+    if (changing && pw === current) return setError('Yeni şifre eskisiyle aynı olamaz.');
     setBusy(true);
+    if (changing) {
+      const { data, error: rpcErr } = await supabase.rpc('verify_my_password', { p_password: current });
+      if (rpcErr || data === 'wrong' || data === 'rate_limited') {
+        setBusy(false);
+        return setError(
+          data === 'rate_limited'
+            ? 'Çok fazla hatalı deneme. 15 dakika sonra tekrar dene ya da "Şifremi unuttum" ile e-posta kodu kullan.'
+            : data === 'wrong'
+              ? 'Mevcut şifren hatalı.'
+              : 'Şifre kontrol edilemedi. Bağlantını kontrol edip tekrar dene.',
+        );
+      }
+    }
     const res = await auth.setNewPassword(pw);
     setBusy(false);
     if (!res.ok) return setError(res.error);
@@ -48,8 +69,30 @@ export default function YeniSifre() {
           <KeyRound size={32} color={Colors.cyan} />
         </View>
         <VText variant="body" color={Colors.textSecondary} style={{ textAlign: 'center', marginTop: Spacing.md }}>
-          Hesabına giriş yaptın. Şimdi yeni şifreni belirle; bundan sonra bu şifreyle giriş yapacaksın.
+          {changing
+            ? 'Güvenliğin için önce mevcut şifreni yaz, sonra yeni şifreni belirle.'
+            : 'Hesabına giriş yaptın. Şimdi yeni şifreni belirle; bundan sonra bu şifreyle giriş yapacaksın.'}
         </VText>
+
+        {changing ? (
+          <>
+            <VText variant="label" color={Colors.textSecondary} style={{ marginTop: Spacing.xl }}>
+              Mevcut şifre
+            </VText>
+            <View style={styles.inputWrap}>
+              <TextInput
+                value={current}
+                onChangeText={setCurrent}
+                secureTextEntry={!show}
+                autoCapitalize="none"
+                autoComplete="current-password"
+                textContentType="password"
+                style={styles.input}
+                placeholderTextColor={Colors.textMuted}
+              />
+            </View>
+          </>
+        ) : null}
 
         <VText variant="label" color={Colors.textSecondary} style={{ marginTop: Spacing.xl }}>
           Yeni şifre
@@ -64,7 +107,7 @@ export default function YeniSifre() {
             textContentType="newPassword"
             style={styles.input}
             placeholderTextColor={Colors.textMuted}
-            placeholder="En az 6 karakter"
+            placeholder={`En az ${MIN_PASSWORD} karakter`}
           />
           {eye}
         </View>

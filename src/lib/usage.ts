@@ -1,10 +1,12 @@
 /**
  * Geçirdiğin süre: uygulama ön plandayken geçen süre gün gün telefonda tutulur.
- * Günlük sınır aşılınca (günde bir kez) hatırlatma gösterilir. 15–18 yaş kuralları için de kullanılacak.
+ * Günlük sınır aşılınca (günde bir kez) hatırlatma gösterilir. Sınır hesapta saklanır (syncDailyLimit).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect } from 'react';
 import { Alert, AppState } from 'react-native';
+
+import { fetchMySettings } from '@/lib/settings-api';
 
 const KEY = 'vopila-usage-v1';
 const LIMIT_KEY = 'vopila-usage-limit-v1';
@@ -59,6 +61,18 @@ export async function getDailyLimit(): Promise<number | null> {
 export async function setDailyLimit(minutes: number | null) {
   if (minutes) await AsyncStorage.setItem(LIMIT_KEY, String(minutes)).catch(() => {});
   else await AsyncStorage.removeItem(LIMIT_KEY).catch(() => {});
+}
+
+/**
+ * Hesaptaki günlük sınırı (user_settings.daily_limit_min) telefona alır: sınır hesapla birlikte taşınır,
+ * başka telefonda da aynı kalır. Sunucuya ulaşılamazsa telefondaki değer kullanılır.
+ */
+export async function syncDailyLimit(myId: string): Promise<number | null> {
+  const res = await fetchMySettings(myId);
+  if (!res.ok) return getDailyLimit();
+  const minutes = res.data.daily_limit_min && res.data.daily_limit_min > 0 ? res.data.daily_limit_min : null;
+  await setDailyLimit(minutes);
+  return minutes;
 }
 
 /** Uygulama açıkken süreyi sayar (kök yerleşimde bir kez çağrılır). */

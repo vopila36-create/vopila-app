@@ -24,7 +24,7 @@ import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from
 import { AgeGate } from '@/components/age-gate';
 import { MfaGate } from '@/components/mfa-gate';
 import { Colors, isLight } from '@/constants/theme';
-import { useUsageTracker } from '@/lib/usage';
+import { syncDailyLimit, useUsageTracker } from '@/lib/usage';
 import { AppStoreProvider } from '@/store/app-store';
 import { AgeProvider } from '@/store/age';
 import { AuthProvider, useAuth } from '@/store/auth';
@@ -113,8 +113,12 @@ function RootStack() {
     else if (session && first === 'giris') router.replace((passwordRecovery ? '/yeni-sifre' : '/') as Href);
   }, [enabled, ready, session, onAuthScreen, first, passwordRecovery]);
 
-  // Kullanım süresi (Ayarlar > Hareketlerin > Geçirdiğin süre)
+  // Kullanım süresi (Ayarlar > Hareketlerin > Geçirdiğin süre); günlük sınır hesaptan alınır
   useUsageTracker();
+  const uid = session?.user.id;
+  useEffect(() => {
+    if (uid) syncDailyLimit(uid).catch(() => {});
+  }, [uid]);
 
   // Oturum bilgisi gelene kadar açılış ekranı görünür kalır
   if (!ready) return null;
