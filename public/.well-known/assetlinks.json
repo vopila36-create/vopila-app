@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.vopila.app",
+      "sha256_cert_fingerprints": [
+        "06:20:28:CF:DF:F4:59:FC:04:F6:71:43:68:26:B7:77:C2:5C:15:9D:47:78:BF:26:A9:5C:E2:26:3C:81:91:C9"
+      ]
+    }
+  }
+]
