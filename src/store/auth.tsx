@@ -439,8 +439,9 @@ function useBuildAuth() {
       if (newAvatar) {
         const type = newAvatar.mimeType ?? 'image/jpeg';
         const ext = type.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg';
-        // Her seferinde yeni dosya adı: eski fotoğraf önbellekte takılı kalmasın
-        const path = `${userId}/avatar-${Date.now()}.${ext}`;
+        // Her seferinde yeni, tahmin edilemez dosya adı (eski fotoğraf önbellekte kalmasın; adres tahmin edilemesin)
+        const rand = Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 12);
+        const path = `${userId}/avatar-${Date.now()}-${rand}.${ext}`;
         const { error: upErr } = await supabase.storage
           .from('avatars')
           .upload(path, base64ToBytes(newAvatar.base64), { contentType: type, upsert: true });

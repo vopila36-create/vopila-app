@@ -24,12 +24,15 @@ import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from
 import { AgeGate } from '@/components/age-gate';
 import { MfaGate } from '@/components/mfa-gate';
 import { Colors, isLight } from '@/constants/theme';
+import { installMediaGuard } from '@/lib/media-guard';
 import { syncDailyLimit, useUsageTracker } from '@/lib/usage';
 import { AppStoreProvider } from '@/store/app-store';
 import { AgeProvider } from '@/store/age';
 import { AuthProvider, useAuth } from '@/store/auth';
 
 SplashScreen.preventAutoHideAsync();
+// Web: fotoğraf/video indirme koruması (sağ tık, sürükleme, video indir düğmesi)
+installMediaGuard();
 
 const theme = {
   ...(isLight ? DefaultTheme : DarkTheme),

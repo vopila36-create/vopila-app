@@ -21,6 +21,14 @@ robocopy $src $dst /MIR /XD "$src\.git" "$src\android\app\build" "$src\android\b
 if ($LASTEXITCODE -ge 8) { throw "Kopyalama başarısız (robocopy $LASTEXITCODE)" }
 
 Write-Host "3/3 Derleniyor (uzun sürebilir)..."
+# Uzun yol desteği: Windows'ta LongPathsEnabled=1 olmalı ve CMake 3.31+ (ninja 1.12) kullanılmalı
+$cmake = "$env:LOCALAPPDATA\Android\Sdk\cmake\3.31.6"
+if (Test-Path $cmake) {
+  $props = "sdk.dir=$($env:LOCALAPPDATA -replace '\\','\\')\\Android\\Sdk`ncmake.dir=$($cmake -replace '\\','\\')`n"
+  [System.IO.File]::WriteAllText("$dst\android\local.properties", $props)
+}
+$lp = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name LongPathsEnabled -ErrorAction SilentlyContinue).LongPathsEnabled
+if ($lp -ne 1) { Write-Warning "Windows uzun yol desteği kapalı (LongPathsEnabled). Derleme yol sınırına takılabilir." }
 Push-Location "$dst\android"
 .\gradlew.bat assembleRelease --max-workers=2 "-PreactNativeArchitectures=arm64-v8a,armeabi-v7a"
 $code = $LASTEXITCODE

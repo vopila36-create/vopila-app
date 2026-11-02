@@ -103,7 +103,8 @@ export function avatarUrl(path: string) {
  * kısa süreli imzalı bir adres alabilir (gizli hesabın fotoğrafını takipçi olmayan açamaz).
  * Yetki yoksa ilgili adres null döner.
  */
-export async function mediaUrls(paths: string[], expiresInSec = 60 * 60): Promise<Record<string, string | null>> {
+// İmzalı adres süresi kısa tutulur (bağlantı kopyalanıp paylaşılsa bile kısa sürede geçersiz olur)
+export async function mediaUrls(paths: string[], expiresInSec = 30 * 60): Promise<Record<string, string | null>> {
   const unique = Array.from(new Set(paths.filter(Boolean)));
   if (!unique.length) return {};
   const { data } = await supabase.storage.from('media').createSignedUrls(unique, expiresInSec);
