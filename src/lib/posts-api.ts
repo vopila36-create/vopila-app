@@ -41,10 +41,12 @@ export function hiddenUser(id: string): User {
   };
 }
 const POST_SELECT =
-  `id, author_id, caption, location, arena_key, created_at, sensitive, ai_generated, ` +
+  `id, author_id, caption, location, arena_key, created_at, sensitive, ai_generated, comments_off, pinned_at, edited_at, ` +
   `post_media(type, storage_path, poster_path, position), ` +
-  `author:profiles!posts_author_id_fkey(${AUTHOR}), likes(count), comments(count)`;
-const COMMENT_SELECT = `id, text, created_at, author_id, parent_id, author:profiles!comments_author_id_fkey(${AUTHOR})`;
+  `author:profiles!posts_author_id_fkey(${AUTHOR}), likes(count), comments(count), ` +
+  `post_tags(user_id, user:profiles!post_tags_user_id_fkey(${AUTHOR}))`;
+const COMMENT_SELECT =
+  `id, text, created_at, author_id, parent_id, author:profiles!comments_author_id_fkey(${AUTHOR}), comment_likes(count)`;
 
 /** "3 saat önce" gibi kısa zaman metni. */
 export function timeAgo(iso: string) {
@@ -116,18 +118,24 @@ export async function fetchFeed(myId: string): Promise<ApiResult<Feed>> {
 /** Belirli gönderiler: bir kullanıcının paylaşımları ya da #etiket araması. */
 export async function fetchPosts(
   myId: string,
-  filter: { authorId?: string; tag?: string; ids?: string[]; archived?: boolean },
+  filter: { authorId?: string; tag?: string; ids?: string[]; archived?: boolean; hideArchived?: boolean },
 ): Promise<ApiResult<{ posts: Post[]; authors: User[] }>> {
   let q = supabase.from('posts').select(POST_SELECT).order('created_at', { ascending: false }).limit(60);
   if (filter.authorId) q = q.eq('author_id', filter.authorId);
   // Arşivdekiler yalnızca Arşiv ekranında (sahibine) gösterilir
   if (filter.archived) q = q.not('archived_at', 'is', null);
-  else if (!filter.ids) q = q.is('archived_at', null);
+  else if (!filter.ids || filter.hideArchived) q = q.is('archived_at', null);
   if (filter.tag) q = q.ilike('caption', `%#${filter.tag.replace(/[%_]/g, '')}%`);
   if (filter.ids) q = q.in('id', filter.ids.length ? filter.ids : ['00000000-0000-0000-0000-000000000000']);
   const { data, error } = await q;
   if (error) return { ok: false, error: toTurkish(error) };
-  return { ok: true, data: await mapPostRows((data ?? []) as any[], myId) };
+  const mapped = await mapPostRows((data ?? []) as any[], myId);
+  // Profilde sabitlenen gönderiler en üstte (Instagram gibi)
+  if (filter.authorId && !filter.archived) {
+    const pinAt = new Map((data ?? []).map((r: any) => [r.id as string, r.pinned_at ? Date.parse(r.pinned_at) : 0]));
+    mapped.posts.sort((a, b) => (pinAt.get(b.id) ?? 0) - (pinAt.get(a.id) ?? 0));
+  }
+  return { ok: true, data: mapped };
 }
 
 /** Verilen gönderilerden hangilerini beğendim / kaydettim. */
@@ -153,6 +161,13 @@ async function mapPostRows(rows: any[], myId: string): Promise<{ posts: Post[]; 
   const posts: Post[] = rows.map((r) => {
     const author = one(r.author) as DbAuthor | null;
     if (author && author.id !== myId) authors.push(toUser(author));
+    const tagged: string[] = [];
+    for (const t of r.post_tags ?? []) {
+      const u = one(t.user) as DbAuthor | null;
+      if (!u) continue;
+      if (u.id !== myId) authors.push(toUser(u));
+      tagged.push(localId(u.id, myId));
+    }
     const media: Media[] = [...(r.post_media ?? [])]
       .sort((a: any, b: any) => a.position - b.position)
       .map((m: any) => ({
@@ -174,6 +189,10 @@ async function mapPostRows(rows: any[], myId: string): Promise<{ posts: Post[]; 
       arenaKey: r.arena_key ?? undefined,
       sensitive: !!r.sensitive,
       aiGenerated: !!r.ai_generated,
+      commentsOff: !!r.comments_off,
+      pinned: !!r.pinned_at,
+      edited: !!r.edited_at,
+      tagged,
       remote: true,
     };
   });
@@ -222,6 +241,8 @@ export type NewPost = {
   sensitive?: boolean;
   /** Yapay zekâ ile üretildi */
   aiGenerated?: boolean;
+  /** Etiketlenen kişilerin kimlikleri */
+  tags?: string[];
 };
 
 /**
@@ -259,6 +280,11 @@ export async function createRemotePost(
       input.media.map((m, i) => ({ post_id: postId, type: m.type, storage_path: uploaded[i], position: i })),
     );
     if (mediaErr) throw mediaErr;
+
+    // Etiketler: izin vermeyen kişi sessizce atlanır, gönderi yine paylaşılır
+    for (const uid of (input.tags ?? []).slice(0, 20)) {
+      await supabase.from('post_tags').insert({ post_id: postId, user_id: uid });
+    }
 
     if (input.arenaKey) {
       const { data: season } = await supabase
@@ -324,6 +350,8 @@ function mapComments(rows: any[], myId: string): CommentsResult {
       text: r.text,
       time: timeAgo(r.created_at),
       parentId: r.parent_id ?? undefined,
+      likes: countOf(r.comment_likes),
+      liked: false,
     };
   });
   return { comments, authors };
@@ -336,7 +364,98 @@ export async function fetchComments(myId: string, postId: string): Promise<ApiRe
     .eq('post_id', postId)
     .order('created_at', { ascending: true });
   if (error) return { ok: false, error: toTurkish(error) };
-  return { ok: true, data: mapComments(data ?? [], myId) };
+  const res = mapComments(data ?? [], myId);
+  const ids = res.comments.map((c) => c.id);
+  if (ids.length) {
+    const { data: mine } = await supabase.from('comment_likes').select('comment_id').eq('user_id', myId).in('comment_id', ids);
+    const set = new Set((mine ?? []).map((m) => m.comment_id as string));
+    for (const c of res.comments) c.liked = set.has(c.id);
+  }
+  return { ok: true, data: res };
+}
+
+/** Yorumu beğen / beğeniyi geri al. */
+export async function setCommentLike(myId: string, commentId: string, on: boolean): Promise<ApiResult> {
+  const { error } = on
+    ? await supabase.from('comment_likes').insert({ user_id: myId, comment_id: commentId })
+    : await supabase.from('comment_likes').delete().eq('user_id', myId).eq('comment_id', commentId);
+  if (error && error.code !== '23505') return { ok: false, error: toTurkish(error) };
+  return { ok: true, data: undefined };
+}
+
+// ─── Gönderi yönetimi (sahibi) ──────────────────────────────────────────────
+
+/** Açıklama ve konumu düzenler (sunucu "düzenlendi" işaretini koyar). */
+export async function editPost(postId: string, caption: string, location: string): Promise<ApiResult> {
+  const { error } = await supabase
+    .from('posts')
+    .update({ caption: caption.slice(0, 500), location: location.slice(0, 80) })
+    .eq('id', postId);
+  if (error) return { ok: false, error: toTurkish(error) };
+  return { ok: true, data: undefined };
+}
+
+/** Yorumları kapat/aç ya da profilde sabitle/kaldır. */
+export async function setPostFlags(postId: string, flags: { commentsOff?: boolean; pinned?: boolean }): Promise<ApiResult> {
+  const update: Record<string, unknown> = {};
+  if (flags.commentsOff !== undefined) update.comments_off = flags.commentsOff;
+  if (flags.pinned !== undefined) update.pinned_at = flags.pinned ? new Date().toISOString() : null;
+  const { error } = await supabase.from('posts').update(update).eq('id', postId);
+  if (error) {
+    if (String(error.message).includes('pin_limit')) return { ok: false, error: 'En fazla 3 gönderi sabitleyebilirsin.' };
+    return { ok: false, error: toTurkish(error) };
+  }
+  return { ok: true, data: undefined };
+}
+
+/** Gönderiyi kalıcı olarak siler; dosyaları da depodan kaldırır. */
+export async function deletePost(postId: string): Promise<ApiResult> {
+  const { data: media } = await supabase.from('post_media').select('storage_path, poster_path').eq('post_id', postId);
+  const { error } = await supabase.from('posts').delete().eq('id', postId);
+  if (error) return { ok: false, error: toTurkish(error) };
+  const paths = (media ?? []).flatMap((m: any) => [m.storage_path, m.poster_path]).filter(Boolean) as string[];
+  if (paths.length) await supabase.storage.from('media').remove(paths);
+  return { ok: true, data: undefined };
+}
+
+/** Gönderideki etiketleri verilen listeye eşitler (eklenenler eklenir, çıkarılanlar silinir). */
+export async function setPostTags(postId: string, before: string[], after: string[]): Promise<ApiResult> {
+  const add = after.filter((id) => !before.includes(id));
+  const remove = before.filter((id) => !after.includes(id));
+  if (remove.length) {
+    const { error } = await supabase.from('post_tags').delete().eq('post_id', postId).in('user_id', remove);
+    if (error) return { ok: false, error: toTurkish(error) };
+  }
+  for (const id of add) {
+    const { error } = await supabase.from('post_tags').insert({ post_id: postId, user_id: id });
+    if (error && error.code !== '23505') {
+      if (String(error.message).includes('tag_limit')) return { ok: false, error: 'Bir gönderide en fazla 20 kişi etiketlenebilir.' };
+      if (error.code === '42501') return { ok: false, error: 'Seçtiğin kişilerden biri etiketlenmeye izin vermiyor.' };
+      return { ok: false, error: toTurkish(error) };
+    }
+  }
+  return { ok: true, data: undefined };
+}
+
+/** Kendimi bir gönderiden etiket olarak kaldırırım. */
+export async function removeMyTag(myId: string, postId: string): Promise<ApiResult> {
+  const { error } = await supabase.from('post_tags').delete().eq('post_id', postId).eq('user_id', myId);
+  if (error) return { ok: false, error: toTurkish(error) };
+  return { ok: true, data: undefined };
+}
+
+/** Bir kişinin etiketlendiği gönderiler (profilde "Etiketlenenler" sekmesi). */
+export async function fetchTaggedPosts(myId: string, userId: string): Promise<ApiResult<{ posts: Post[]; authors: User[] }>> {
+  const { data, error } = await supabase
+    .from('post_tags')
+    .select('post_id')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(60);
+  if (error) return { ok: false, error: toTurkish(error) };
+  const ids = (data ?? []).map((d) => d.post_id as string);
+  if (!ids.length) return { ok: true, data: { posts: [], authors: [] } };
+  return fetchPosts(myId, { ids, hideArchived: true });
 }
 
 export async function addRemoteComment(

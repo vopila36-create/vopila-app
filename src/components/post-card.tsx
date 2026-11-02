@@ -8,9 +8,16 @@ import {
   Heart,
   Link2,
   MessageCircle,
+  MessageCircleOff,
   MoreHorizontal,
+  Pencil,
+  Pin,
+  PinOff,
   Send,
+  Trash2,
   Trophy,
+  UserMinus,
+  UserRound,
 } from 'lucide-react-native';
 import { useState } from 'react';
 import {
@@ -33,6 +40,7 @@ import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius } from '@/constants/theme';
 import { arenaByKey, ME_ID, type Post } from '@/data/mock';
 import { useScreenshotGuard } from '@/lib/screen-guard';
+import { deletePost, removeMyTag, setPostFlags } from '@/lib/posts-api';
 import { setArchived } from '@/lib/settings-api';
 import { formatCount, useMe, useStore } from '@/store/app-store';
 
@@ -53,6 +61,11 @@ export function PostCard({ post, detail }: { post: Post; detail?: boolean }) {
   const [width, setWidth] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  // Silme iki dokunuşla onaylanır
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const mine = post.authorId === ME_ID && !!post.remote;
+  const taggedMe = !mine && !!post.tagged?.includes(ME_ID);
+  const tagged = (post.tagged ?? []).map((id) => (id === ME_ID ? me : store.userOf(id)));
 
   const openAuthor = () =>
     router.push((post.authorId === ME_ID ? '/profil' : `/kullanici/${post.authorId}`) as Href);
@@ -77,8 +90,43 @@ export function PostCard({ post, detail }: { post: Post; detail?: boolean }) {
 
   const flash = (text: string) => {
     setMenuOpen(false);
+    setConfirmDelete(false);
     setFeedback(text);
     setTimeout(() => setFeedback(null), 2500);
+  };
+
+  const togglePin = async () => {
+    const res = await setPostFlags(post.id, { pinned: !post.pinned });
+    if (!res.ok) return flash(res.error);
+    store.patchPost(post.id, { pinned: !post.pinned });
+    flash(post.pinned ? 'Sabitleme kaldırıldı.' : 'Profilinin en üstüne sabitlendi.');
+  };
+
+  const toggleComments = async () => {
+    const res = await setPostFlags(post.id, { commentsOff: !post.commentsOff });
+    if (!res.ok) return flash(res.error);
+    store.patchPost(post.id, { commentsOff: !post.commentsOff });
+    flash(post.commentsOff ? 'Yorumlar açıldı.' : 'Yorumlar kapatıldı. Mevcut yorumlar görünmeye devam eder.');
+  };
+
+  const remove = async () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    const res = await deletePost(post.id);
+    if (!res.ok) return flash(res.error);
+    setMenuOpen(false);
+    store.dropPost(post.id);
+    if (detail) router.back();
+  };
+
+  const untagMe = async () => {
+    if (!store.myId) return;
+    const res = await removeMyTag(store.myId, post.id);
+    if (!res.ok) return flash(res.error);
+    store.patchPost(post.id, { tagged: (post.tagged ?? []).filter((x) => x !== ME_ID) });
+    flash('Etiketin kaldırıldı.');
   };
 
   return (
@@ -98,7 +146,11 @@ export function PostCard({ post, detail }: { post: Post; detail?: boolean }) {
             </VText>
           </View>
         </Pressable>
-        <VText variant="caption">{post.time}</VText>
+        {post.pinned ? <Pin size={14} color={Colors.cyan} accessibilityLabel="Sabitlenmiş gönderi" /> : null}
+        <VText variant="caption">
+          {post.time}
+          {post.edited ? ' · düzenlendi' : ''}
+        </VText>
         <Pressable onPress={() => setMenuOpen((v) => !v)} hitSlop={10} accessibilityLabel="Seçenekler">
           <MoreHorizontal size={20} color={Colors.text} />
         </Pressable>
@@ -122,7 +174,32 @@ export function PostCard({ post, detail }: { post: Post; detail?: boolean }) {
               share();
             }}
           />
-          {post.authorId === ME_ID && post.remote ? (
+          {mine ? (
+            <>
+              <MenuItem
+                icon={<Pencil size={16} color={Colors.text} />}
+                label="Düzenle"
+                onPress={() => {
+                  setMenuOpen(false);
+                  router.push(`/gonderi-duzenle/${post.id}` as Href);
+                }}
+              />
+              <MenuItem
+                icon={post.pinned ? <PinOff size={16} color={Colors.text} /> : <Pin size={16} color={Colors.text} />}
+                label={post.pinned ? 'Profilde sabitlemeyi kaldır' : 'Profilinde sabitle'}
+                onPress={togglePin}
+              />
+              <MenuItem
+                icon={<MessageCircleOff size={16} color={Colors.text} />}
+                label={post.commentsOff ? 'Yorumları aç' : 'Yorumları kapat'}
+                onPress={toggleComments}
+              />
+            </>
+          ) : null}
+          {taggedMe ? (
+            <MenuItem icon={<UserMinus size={16} color={Colors.text} />} label="Etiketimi kaldır" onPress={untagMe} />
+          ) : null}
+          {mine ? (
             <MenuItem
               icon={<Archive size={16} color={Colors.text} />}
               label="Arşivle (yalnızca sen görürsün)"
@@ -136,6 +213,14 @@ export function PostCard({ post, detail }: { post: Post; detail?: boolean }) {
                 await store.refreshFeed();
                 if (detail) router.back();
               }}
+            />
+          ) : null}
+          {mine ? (
+            <MenuItem
+              icon={<Trash2 size={16} color={Colors.live} />}
+              label={confirmDelete ? 'Kalıcı olarak silinsin mi? Onaylamak için dokun' : 'Sil'}
+              danger
+              onPress={remove}
             />
           ) : null}
           {post.authorId !== ME_ID ? (
@@ -208,6 +293,24 @@ export function PostCard({ post, detail }: { post: Post; detail?: boolean }) {
             {arenaByKey(post.arenaKey).name} Arenası
           </VText>
         </Pressable>
+      ) : null}
+
+      {tagged.length ? (
+        <View style={styles.tagRow}>
+          <UserRound size={14} color={Colors.textSecondary} />
+          <VText variant="caption" style={{ flex: 1 }} numberOfLines={detail ? undefined : 1}>
+            {tagged.map((u, i) => (
+              <VText
+                key={u.id}
+                variant="caption"
+                color={Colors.text}
+                style={{ fontFamily: Fonts.semibold }}
+                onPress={() => router.push((post.tagged?.[i] === ME_ID ? '/profil' : `/kullanici/${post.tagged?.[i]}`) as Href)}>
+                {i ? ', ' : ''}@{u.username}
+              </VText>
+            ))}
+          </VText>
+        </View>
       ) : null}
 
       <Pressable onPress={openDetail} disabled={detail}>
@@ -321,6 +424,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.goldSoft,
   },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 18, marginTop: 12 },
+  tagRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
   action: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   feedback: {
     marginTop: 10,

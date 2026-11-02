@@ -202,7 +202,17 @@ export const followingIdsOf = (id: string) => [
 
 export type Media = { type: 'image' | 'video'; uri: string; poster?: string };
 
-export type Comment = { id: string; authorId: string; text: string; time: string; /** Yanıtsa ana yorumun kimliği. */ parentId?: string };
+export type Comment = {
+  id: string;
+  authorId: string;
+  text: string;
+  time: string;
+  /** Yanıtsa ana yorumun kimliği. */
+  parentId?: string;
+  /** Yorum beğeni sayısı ve benim beğenip beğenmediğim (gerçek yorumlarda) */
+  likes?: number;
+  liked?: boolean;
+};
 
 export type Post = {
   id: string;
@@ -222,6 +232,14 @@ export type Post = {
   sensitive?: boolean;
   /** Paylaşan "yapay zekâ ile üretildi" olarak işaretledi */
   aiGenerated?: boolean;
+  /** Yorumlar kapalı (yalnız sahibi yazabilir) */
+  commentsOff?: boolean;
+  /** Profilde en üstte sabit */
+  pinned?: boolean;
+  /** Paylaşıldıktan sonra açıklama/konum düzenlendi */
+  edited?: boolean;
+  /** Gönderide etiketlenen kişiler (kullanıcı kimlikleri) */
+  tagged?: string[];
 };
 
 export const posts: Post[] = [

@@ -16,11 +16,13 @@ import {
   MapPin,
   MessageCircle,
   MoreHorizontal,
+  Pin,
   PlayCircle,
   ShieldMinus,
   Sparkles,
   UserCheck,
   UserPlus,
+  UserRound,
   Users,
 } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
@@ -32,7 +34,7 @@ import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
 import { OnDark, VText } from '@/components/ui/text';
 import { Colors, OnImage, Radius, scrim, Spacing } from '@/constants/theme';
 import type { Post } from '@/data/mock';
-import { fetchPosts } from '@/lib/posts-api';
+import { fetchPosts, fetchTaggedPosts } from '@/lib/posts-api';
 import { HighlightsRow } from '@/components/highlights-row';
 import { useScreenshotGuard } from '@/lib/screen-guard';
 import { fetchProfile, setBlocked, type RealProfile } from '@/lib/social-api';
@@ -48,6 +50,19 @@ export function RealProfileScreen({ id }: { id: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Paylaşımlar / Etiketlenenler sekmesi
+  const [view, setView] = useState<'posts' | 'tagged'>('posts');
+  const [tagged, setTagged] = useState<{ id: string; posts: Post[] } | null>(null);
+  useEffect(() => {
+    if (view !== 'tagged' || !store.myId) return;
+    let alive = true;
+    fetchTaggedPosts(store.myId, id).then((r) => {
+      if (alive && r.ok) setTagged({ id, posts: r.data.posts });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [view, id, store.myId]);
 
   const status = store.followStatus(id);
 
@@ -240,9 +255,23 @@ export function RealProfileScreen({ id }: { id: string }) {
           <Stat value={String(posts.length)} label="Gönderi" icon={<PlayCircle size={16} color={Colors.cyanSoft} />} />
         </GlassCard>
 
-        <VText variant="heading" style={styles.h}>
-          Paylaşımlar
-        </VText>
+        <View style={styles.viewTabs}>
+          {(
+            [
+              ['posts', 'Paylaşımlar'],
+              ['tagged', 'Etiketlenenler'],
+            ] as const
+          ).map(([key, label]) => (
+            <Pressable key={key} onPress={() => setView(key)} style={[styles.viewTab, view === key && styles.viewTabOn]}>
+              {key === 'tagged' ? (
+                <UserRound size={15} color={view === key ? Colors.cyan : Colors.textSecondary} />
+              ) : null}
+              <VText variant="label" color={view === key ? Colors.cyan : Colors.textSecondary}>
+                {label}
+              </VText>
+            </Pressable>
+          ))}
+        </View>
         {locked ? (
           <EmptyState
             icon={<Lock size={40} color={Colors.textSecondary} />}
@@ -253,9 +282,11 @@ export function RealProfileScreen({ id }: { id: string }) {
                 : 'Paylaşımlarını görmek için takip et.'
             }
           />
-        ) : posts.length ? (
+        ) : view === 'tagged' && tagged?.id !== id ? (
+          <ActivityIndicator color={Colors.cyan} style={{ marginTop: 20 }} />
+        ) : (view === 'tagged' ? (tagged?.posts ?? []) : posts).length ? (
           <View style={styles.grid}>
-            {posts.map((p) => {
+            {(view === 'tagged' ? (tagged?.posts ?? []) : posts).map((p) => {
               const cover = p.media[0];
               const uri = cover ? (cover.type === 'video' ? cover.poster ?? cover.uri : cover.uri) : '';
               return (
@@ -270,12 +301,20 @@ export function RealProfileScreen({ id }: { id: string }) {
                       <PlayCircle size={20} color="#fff" />
                     </View>
                   ) : null}
+                  {view === 'posts' && p.pinned ? (
+                    <View style={{ position: 'absolute', top: 6, right: 6 }}>
+                      <Pin size={15} color="#fff" fill="#fff" />
+                    </View>
+                  ) : null}
                 </Pressable>
               );
             })}
           </View>
         ) : (
-          <EmptyState icon={<ImageOff size={36} color={Colors.textMuted} />} title="Henüz paylaşım yok" />
+          <EmptyState
+            icon={<ImageOff size={36} color={Colors.textMuted} />}
+            title={view === 'tagged' ? 'Etiketlendiği gönderi yok' : 'Henüz paylaşım yok'}
+          />
         )}
       </View>
 
@@ -297,6 +336,18 @@ function Stat({ value, label, icon, onPress }: { value: string; label: string; i
 }
 
 const styles = StyleSheet.create({
+  viewTabs: { flexDirection: 'row', gap: 8, marginTop: Spacing.xl, marginBottom: Spacing.md },
+  viewTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  viewTabOn: { borderColor: Colors.cyan, backgroundColor: Colors.cyanDim },
   top: { paddingHorizontal: Spacing.screen, paddingTop: Spacing.xl, paddingBottom: Spacing.lg },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   pad: { paddingHorizontal: Spacing.screen },

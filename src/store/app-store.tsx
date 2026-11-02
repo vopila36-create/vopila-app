@@ -45,6 +45,7 @@ import {
 } from '@/data/mock';
 import {
   addRemoteComment,
+  setCommentLike,
   createRemotePost,
   fetchComments,
   fetchFeed,
@@ -564,6 +565,45 @@ function useBuildStore() {
       }));
     },
     [myId, remoteIds],
+  );
+
+  /** Gerçek gönderiyi ekranda günceller (düzenleme, sabitleme, etiketler) — sunucu ayrıca güncellenir. */
+  const patchPost = useCallback((postId: string, patch: Partial<Post>) => {
+    const fix = (p: Post) => (p.id === postId ? { ...p, ...patch } : p);
+    setRemote((r) => ({ ...r, posts: r.posts.map(fix), extra: r.extra.map(fix) }));
+  }, []);
+
+  /** Silinen gönderiyi ekrandan kaldırır. */
+  const dropPost = useCallback((postId: string) => {
+    setRemote((r) => ({
+      ...r,
+      posts: r.posts.filter((p) => p.id !== postId),
+      extra: r.extra.filter((p) => p.id !== postId),
+    }));
+  }, []);
+
+  /** Yorum beğenisi: ekranda hemen değişir, sunucu reddederse geri alınır. */
+  const toggleCommentLike = useCallback(
+    async (postId: string, commentId: string) => {
+      if (!myId) return;
+      const current = remote.comments[postId]?.find((c) => c.id === commentId);
+      if (!current) return;
+      const on = !current.liked;
+      const flip = (value: boolean) =>
+        setRemote((r) => ({
+          ...r,
+          comments: {
+            ...r.comments,
+            [postId]: (r.comments[postId] ?? []).map((c) =>
+              c.id === commentId ? { ...c, liked: value, likes: Math.max(0, (c.likes ?? 0) + (value ? 1 : -1)) } : c,
+            ),
+          },
+        }));
+      flip(on);
+      const res = await setCommentLike(myId, commentId, on);
+      if (!res.ok) flip(!on);
+    },
+    [myId, remote.comments],
   );
 
   const addComment = useCallback(
@@ -1261,6 +1301,9 @@ function useBuildStore() {
     feedError,
     refreshFeed,
     loadComments,
+    patchPost,
+    dropPost,
+    toggleCommentLike,
     myId,
     isFollowing: (id: string) => followStatus(id) === 'accepted',
     followStatus,

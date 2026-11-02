@@ -18,6 +18,7 @@ import {
   MessageCircle,
   Package,
   Pencil,
+  Pin,
   PlayCircle,
   Plus,
   QrCode,
@@ -27,6 +28,7 @@ import {
   Sparkles,
   TrendingUp,
   UserCheck,
+  UserRound,
   Users,
 } from 'lucide-react-native';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
@@ -39,6 +41,7 @@ import { EmptyState } from '@/components/ui/sub-screen';
 import { OnDark, VText } from '@/components/ui/text';
 import { Colors, Fonts, OnImage, Radius, scrim, Spacing } from '@/constants/theme';
 import { arenaByKey, badges as demoBadges, levelInfo, ME_ID, myFollowerIds, type ArenaKey, type Post } from '@/data/mock';
+import { fetchTaggedPosts } from '@/lib/posts-api';
 import {
   fetchBadges,
   fetchFollowCounts,
@@ -56,6 +59,7 @@ const TABS = [
   { key: 'videos', label: 'Videolar', Icon: PlayCircle },
   { key: 'collections', label: 'Koleksiyonlar', Icon: FolderOpen },
   { key: 'saved', label: 'Kaydedilenler', Icon: Bookmark },
+  { key: 'tagged', label: 'Etiketlenenler', Icon: UserRound },
 ] as const;
 type TabKey = (typeof TABS)[number]['key'];
 
@@ -90,7 +94,30 @@ export default function Profil() {
   );
   const real = myId && live?.owner === myId ? live : null;
 
-  const myPosts = useMemo(() => store.allPosts.filter((p) => p.authorId === ME_ID), [store.allPosts]);
+  // Sabitlenen gönderiler en üstte (Instagram gibi)
+  const myPosts = useMemo(
+    () =>
+      store.allPosts
+        .filter((p) => p.authorId === ME_ID)
+        .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned)),
+    [store.allPosts],
+  );
+
+  // Etiketlendiğim gönderiler (sekme açılınca yüklenir)
+  const [taggedData, setTaggedData] = useState<{ owner: string; posts: Post[] } | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      if (!myId || tab !== 'tagged') return;
+      let alive = true;
+      fetchTaggedPosts(myId, myId).then((r) => {
+        if (alive && r.ok) setTaggedData({ owner: myId, posts: r.data.posts });
+      });
+      return () => {
+        alive = false;
+      };
+    }, [myId, tab]),
+  );
+  const taggedPosts = myId && taggedData?.owner === myId ? taggedData.posts : [];
   const totalLikes = myPosts.reduce((s, p) => s + store.likeCount(p), 0) + (myId ? 0 : 600);
   const followerCount = myId ? (real?.counts?.followers ?? 0) : myFollowerIds.length;
   const followingCount = myId ? (real?.counts?.following ?? store.followingIds.length) : store.followingIds.length;
@@ -118,7 +145,15 @@ export default function Profil() {
   }, [myPosts]);
 
   const gridPosts =
-    tab === 'posts' ? myPosts : tab === 'videos' ? myPosts.filter((p) => p.media[0]?.type === 'video') : tab === 'saved' ? savedPosts : [];
+    tab === 'posts'
+      ? myPosts
+      : tab === 'videos'
+        ? myPosts.filter((p) => p.media[0]?.type === 'video')
+        : tab === 'saved'
+          ? savedPosts
+          : tab === 'tagged'
+            ? taggedPosts
+            : [];
 
   return (
     <Screen
@@ -395,6 +430,11 @@ export default function Profil() {
                   <PlayCircle size={22} color="#fff" />
                 </View>
               ) : null}
+              {tab === 'posts' && p.pinned ? (
+                <View style={styles.gridPin}>
+                  <Pin size={16} color="#fff" fill="#fff" />
+                </View>
+              ) : null}
               <LinearGradient colors={['transparent', 'rgba(0,0,0,0.6)']} style={[StyleSheet.absoluteFill, { top: '60%' }]} />
               <OnDark>
               <View style={styles.gridFoot}>
@@ -406,6 +446,14 @@ export default function Profil() {
               </OnDark>
             </Pressable>
           ))}
+        </View>
+      ) : tab === 'tagged' ? (
+        <View style={styles.pad}>
+          <EmptyState
+            icon={<UserRound size={40} color={Colors.textMuted} />}
+            title="Etiketlendiğin gönderi yok"
+            text="Biri seni bir gönderide etiketlediğinde burada görünür."
+          />
         </View>
       ) : (
         <View style={styles.pad}>
@@ -581,6 +629,7 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: Spacing.md },
   gridItem: { width: '32%', aspectRatio: 0.78, borderRadius: Radius.sm, overflow: 'hidden', backgroundColor: Colors.surfaceStrong },
   gridVideo: { position: 'absolute', top: 8, left: 8 },
+  gridPin: { position: 'absolute', top: 8, right: 8 },
   gridFoot: {
     position: 'absolute',
     left: 6,
