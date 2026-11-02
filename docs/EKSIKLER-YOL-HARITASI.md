@@ -130,6 +130,8 @@ ayarları gerçek olur), Sentry, Apple ile giriş, OTA güncelleme.
 ## Faz 7 — Mağazaya çıkış
 
 - Ayrı canlı Supabase projesi (Pro plan), test verisinden temiz.
+- Sunucu tarafı dosya temizliği için küçük bir Edge Function (yönetici anahtarıyla Storage API): şu an gece işi
+  sahipsiz/süresi dolan DM dosyalarının kaydını siler (erişilemez olur) ama dosyanın kendisi depoda kalabilir.
 - vopila.com'da web sitesi + uygulama bağlantıları (davet/profil linkleri doğrudan uygulamada açılsın).
 - Sürüm numaraları, Play Integrity / App Attest, bağımsız güvenlik testi.
 - Temel otomatik testler ve her değişiklikte kontrol (CI).
