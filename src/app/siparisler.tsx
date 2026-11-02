@@ -4,7 +4,7 @@
  */
 import { Image } from 'expo-image';
 import { router, useFocusEffect, type Href } from 'expo-router';
-import { AlertTriangle, Check, Coins, MapPin, Package, Pencil, Truck, XCircle } from 'lucide-react-native';
+import { AlertTriangle, Check, ChevronRight, Coins, MapPin, Package, Pencil, Truck, XCircle } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -120,12 +120,14 @@ function OrderCard({ order: o }: { order: RemoteOrder }) {
       ) : null}
 
       {o.items.map((it) => {
+        // Ürün adı/görseli sipariş anındaki kopyadan (ürün kaldırılsa da görünür)
         const p = store.productOf(it.productId);
+        const img = it.image ?? p?.image;
         return (
           <Pressable key={it.productId} style={styles.item} onPress={() => p && router.push(`/magaza/${p.id}` as Href)}>
-            {p?.image ? <Image source={{ uri: p.image }} style={styles.img} contentFit="cover" /> : <View style={styles.img} />}
+            {img ? <Image source={{ uri: img }} style={styles.img} contentFit="cover" /> : <View style={styles.img} />}
             <VText variant="label" numberOfLines={1} style={{ flex: 1 }}>
-              {it.qty} × {p?.name ?? it.productId}
+              {it.qty} × {it.name ?? p?.name ?? 'Ürün'}
             </VText>
             <VText variant="caption" color={Colors.gold}>
               {formatTokens(it.price * it.qty)}
@@ -133,6 +135,13 @@ function OrderCard({ order: o }: { order: RemoteOrder }) {
           </Pressable>
         );
       })}
+
+      <Pressable style={styles.detail} onPress={() => router.push(`/siparis/${o.id}` as Href)}>
+        <VText variant="label" color={Colors.cyan} style={{ flex: 1 }}>
+          Sipariş detayı · {o.status === 'preparing' ? 'iptal' : o.status === 'delivered' ? 'değerlendir, iade' : 'zaman çizelgesi'}
+        </VText>
+        <ChevronRight size={16} color={Colors.cyan} />
+      </Pressable>
 
       <View style={styles.divider} />
       <View style={styles.foot}>
@@ -218,4 +227,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
+  detail: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8 },
 });

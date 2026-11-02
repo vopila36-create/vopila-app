@@ -1,31 +1,82 @@
-import { Image } from 'expo-image';
+/**
+ * Token Mağazası (Trendyol/Amazon'dan uyanlar): arama, sıralama, filtreler (bakiyeme uygun, stokta),
+ * favoriler, puanlar, stok rozetleri, son baktıkların. Tokenler satın alınamaz; arenalarda kazanılır.
+ */
 import { router, type Href } from 'expo-router';
-import { Check, Coins, Info, Package, Plus, ShoppingCart, Wallet } from 'lucide-react-native';
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Coins, Heart, Info, Package, Search, ShoppingCart, Wallet, X } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
+import { ProductCard } from '@/components/product-card';
 import { Chip, GlassCard } from '@/components/ui/primitives';
-import { SubScreen } from '@/components/ui/sub-screen';
+import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import type { Product } from '@/data/mock';
+import { recentlyViewed } from '@/lib/recently-viewed';
 import { formatTokens, useStore } from '@/store/app-store';
 
+const SORTS = [
+  { key: 'recommended', label: 'Önerilen' },
+  { key: 'priceAsc', label: 'Fiyat ↑' },
+  { key: 'priceDesc', label: 'Fiyat ↓' },
+  { key: 'newest', label: 'En yeni' },
+  { key: 'bestseller', label: 'Çok satan' },
+  { key: 'rating', label: 'En beğenilen' },
+] as const;
+type SortKey = (typeof SORTS)[number]['key'];
+
+const norm = (s: string) => s.toLocaleLowerCase('tr-TR').normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
 
 export default function Magaza() {
   const store = useStore();
   const [cat, setCat] = useState<string>('Tümü');
-  const [added, setAdded] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<SortKey>('recommended');
+  const [affordableOnly, setAffordableOnly] = useState(false);
+  const [inStockOnly, setInStockOnly] = useState(false);
+  const [recent, setRecent] = useState<string[]>([]);
   const products = store.catalog;
   const CATEGORIES = ['Tümü', ...Array.from(new Set(products.map((p) => p.category)))];
-  const list = cat === 'Tümü' ? products : products.filter((p) => p.category === cat);
   const go = (href: string) => router.push(href as Href);
 
-  const add = (p: Product) => {
-    store.addToCart(p.id);
-    setAdded(p.id);
-    setTimeout(() => setAdded((cur) => (cur === p.id ? null : cur)), 1500);
-  };
+  useEffect(() => {
+    let alive = true;
+    recentlyViewed().then((ids) => {
+      if (alive) setRecent(ids);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const q = norm(query.trim());
+  const filtered = products.filter(
+    (p) =>
+      (cat === 'Tümü' || p.category === cat) &&
+      (!q || norm(`${p.name} ${p.category} ${p.description}`).includes(q)) &&
+      (!affordableOnly || p.price <= store.balance) &&
+      (!inStockOnly || p.stock > 0),
+  );
+  const score = (p: (typeof products)[number]) =>
+    (p.stock > 0 ? 1000 : 0) + (p.soldCount ?? 0) * 2 + (p.rating?.average ?? 0) * (p.rating?.count ?? 0);
+  const list = [...filtered].sort((a, b) => {
+    switch (sort) {
+      case 'priceAsc':
+        return a.price - b.price;
+      case 'priceDesc':
+        return b.price - a.price;
+      case 'newest':
+        return (b.createdAt ?? '').localeCompare(a.createdAt ?? '');
+      case 'bestseller':
+        return (b.soldCount ?? 0) - (a.soldCount ?? 0);
+      case 'rating':
+        return (b.rating?.average ?? 0) - (a.rating?.average ?? 0) || (b.rating?.count ?? 0) - (a.rating?.count ?? 0);
+      default:
+        return score(b) - score(a);
+    }
+  });
+  const recentProducts = recent.map((id) => store.productOf(id)).filter((p): p is NonNullable<typeof p> => !!p).slice(0, 10);
+  const browsing = !q && cat === 'Tümü' && !affordableOnly && !inStockOnly;
 
   return (
     <SubScreen
@@ -66,6 +117,15 @@ export default function Magaza() {
           </VText>
         </Pressable>
 
+        {store.myId ? (
+          <Pressable style={styles.ordersLink} onPress={() => go('/favorilerim')}>
+            <Heart size={18} color={Colors.heart} />
+            <VText variant="label" style={{ flex: 1 }}>
+              Favorilerim
+            </VText>
+            <VText variant="caption">{store.favoriteIds.length} ürün</VText>
+          </Pressable>
+        ) : null}
         <Pressable style={styles.ordersLink} onPress={() => go('/siparisler')}>
           <Package size={18} color={Colors.cyan} />
           <VText variant="label" style={{ flex: 1 }}>
@@ -75,57 +135,72 @@ export default function Magaza() {
         </Pressable>
       </View>
 
+      <View style={[styles.pad, { marginTop: Spacing.md }]}>
+        <View style={styles.search}>
+          <Search size={18} color={Colors.textMuted} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Ürün, kategori ara"
+            placeholderTextColor={Colors.textMuted}
+            style={styles.searchInput}
+            autoCorrect={false}
+            accessibilityLabel="Mağazada ara"
+          />
+          {query ? (
+            <Pressable onPress={() => setQuery('')} hitSlop={8} accessibilityLabel="Aramayı temizle">
+              <X size={18} color={Colors.textMuted} />
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
         {CATEGORIES.map((c) => (
           <Chip key={c} label={c} active={c === cat} onPress={() => setCat(c)} />
         ))}
       </ScrollView>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.chips, { paddingTop: 0 }]}>
+        <Chip label="Bakiyeme uygun" active={affordableOnly} onPress={() => setAffordableOnly((v) => !v)} />
+        <Chip label="Stokta olanlar" active={inStockOnly} onPress={() => setInStockOnly((v) => !v)} />
+        {SORTS.map((s2) => (
+          <Chip key={s2.key} label={s2.label} active={sort === s2.key} onPress={() => setSort(s2.key)} />
+        ))}
+      </ScrollView>
 
-      {!products.length ? (
-        // Ürünler sunucudan yüklenirken (ya da katalog boşken)
+      {browsing && recentProducts.length ? (
+        <View style={{ marginBottom: Spacing.md }}>
+          <VText variant="label" style={[styles.pad, { marginBottom: 8 }]}>
+            Son baktıkların
+          </VText>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: Spacing.screen, gap: 10 }}>
+            {recentProducts.map((p) => (
+              <ProductCard key={p.id} p={p} style={{ width: 150 }} />
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
+
+      {store.catalogLoading ? (
         <View style={[styles.pad, { alignItems: 'center', paddingVertical: 30 }]}>
           <ActivityIndicator color={Colors.cyan} />
           <VText variant="caption" style={{ marginTop: 8 }}>
             Ürünler yükleniyor…
           </VText>
         </View>
-      ) : null}
-      <View style={[styles.pad, styles.grid]}>
-        {list.map((p) => {
-          const affordable = p.price <= store.balance;
-          const justAdded = added === p.id;
-          return (
-            <Pressable key={p.id} style={styles.card} onPress={() => go(`/magaza/${p.id}`)}>
-              <Image source={{ uri: p.image }} style={styles.img} contentFit="cover" transition={200} />
-              <View style={{ padding: 10, gap: 4, flex: 1 }}>
-                <VText variant="caption" style={{ fontSize: 10.5 }}>
-                  {p.category}
-                </VText>
-                <VText variant="label" numberOfLines={2} style={{ minHeight: 34 }}>
-                  {p.name}
-                </VText>
-                <View style={styles.priceRow}>
-                  <Coins size={14} color={Colors.gold} />
-                  <VText variant="bodyBold" color={Colors.gold}>
-                    {formatTokens(p.price)}
-                  </VText>
-                </View>
-                {!affordable ? (
-                  <VText variant="caption" color={Colors.textMuted} style={{ fontSize: 10.5 }}>
-                    {formatTokens(p.price - store.balance)} token eksik
-                  </VText>
-                ) : null}
-                <Pressable
-                  style={[styles.addBtn, justAdded && { backgroundColor: Colors.success, borderColor: Colors.success }]}
-                  onPress={() => add(p)}>
-                  {justAdded ? <Check size={14} color={Colors.onCyan} /> : <Plus size={14} color={Colors.onCyan} />}
-                  <VText style={styles.addText}>{justAdded ? 'Eklendi' : 'Sepete ekle'}</VText>
-                </Pressable>
-              </View>
-            </Pressable>
-          );
-        })}
-      </View>
+      ) : !list.length ? (
+        <EmptyState
+          icon={<Search size={40} color={Colors.textMuted} />}
+          title={products.length ? 'Sonuç bulunamadı' : 'Mağaza şu an boş'}
+          text={products.length ? 'Aramanı ya da filtrelerini değiştirmeyi dene.' : 'Yeni ürünler eklendiğinde burada görünecek.'}
+        />
+      ) : (
+        <View style={[styles.pad, styles.grid]}>
+          {list.map((p) => (
+            <ProductCard key={p.id} p={p} />
+          ))}
+        </View>
+      )}
     </SubScreen>
   );
 }
@@ -180,29 +255,18 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     backgroundColor: Colors.surface,
   },
-  chips: { paddingHorizontal: Spacing.screen, gap: 8, paddingVertical: Spacing.lg },
+  chips: { paddingHorizontal: Spacing.screen, gap: 8, paddingVertical: Spacing.md },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  card: {
-    width: '48.5%',
+  search: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    height: 44,
+    paddingHorizontal: 12,
     borderRadius: Radius.md,
-    overflow: 'hidden',
     backgroundColor: Colors.surfaceStrong,
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  img: { width: '100%', aspectRatio: 1.1 },
-  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  addBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    height: 32,
-    marginTop: 4,
-    borderRadius: Radius.sm,
-    backgroundColor: Colors.cyan,
-    borderWidth: 1,
-    borderColor: Colors.cyan,
-  },
-  addText: { fontFamily: Fonts.bold, fontSize: 12, color: Colors.onCyan },
+  searchInput: { flex: 1, color: Colors.text, fontFamily: Fonts.medium, fontSize: 15 },
 });

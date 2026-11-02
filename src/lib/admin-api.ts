@@ -91,7 +91,7 @@ export type AdminProduct = Product & { active: boolean };
 export async function fetchAllProducts(): Promise<ApiResult<AdminProduct[]>> {
   const { data, error } = await supabase
     .from('products')
-    .select('id, name, category, price, image_url, description, stock, active')
+    .select('id, name, category, price, image_url, images, description, stock, active, sold_count')
     .order('created_at', { ascending: false });
   if (error) return { ok: false, error: err(error) };
   return ok(
@@ -101,6 +101,8 @@ export async function fetchAllProducts(): Promise<ApiResult<AdminProduct[]>> {
       category: p.category,
       price: p.price,
       image: p.image_url ?? '',
+      images: (p.images ?? []).length ? p.images : p.image_url ? [p.image_url] : [],
+      soldCount: p.sold_count ?? 0,
       description: p.description,
       stock: p.stock,
       active: p.active,
@@ -124,6 +126,63 @@ export async function saveProduct(p: Omit<AdminProduct, 'id'> & { id?: string })
 }
 
 /** Ürün görselini herkese açık "catalog" kovasına yükler, adresini döner. */
+/** Ürün galerisi (en çok 8; ilki kapak görseli olur). */
+export async function saveProductImages(id: string, images: string[]): Promise<ApiResult<null>> {
+  const { error } = await supabase.rpc('admin_set_product_images', { p_id: id, p_images: images });
+  if (error) return { ok: false, error: err(error) };
+  return ok(null);
+}
+
+// ─── İade talepleri ─────────────────────────────────────────────────────────
+
+export type AdminReturn = {
+  id: string;
+  orderId: string;
+  shortId: string;
+  status: 'requested' | 'approved' | 'rejected';
+  reason: string;
+  adminNote: string | null;
+  total: number;
+  userName: string;
+  username: string;
+  items: { name: string; qty: number }[];
+  date: string;
+};
+
+export async function fetchReturns(status?: AdminReturn['status']): Promise<ApiResult<AdminReturn[]>> {
+  let q = supabase
+    .from('return_requests')
+    .select(
+      'id, order_id, status, reason, admin_note, created_at, user:profiles!return_requests_user_id_fkey(name, username), order:orders!return_requests_order_id_fkey(total, order_items(name, qty))',
+    )
+    .order('created_at', { ascending: false })
+    .limit(200);
+  if (status) q = q.eq('status', status);
+  const { data, error } = await q;
+  if (error) return { ok: false, error: err(error) };
+  return ok(
+    ((data ?? []) as any[]).map((r) => ({
+      id: r.id,
+      orderId: r.order_id,
+      shortId: String(r.order_id).slice(0, 8).toUpperCase(),
+      status: r.status,
+      reason: r.reason,
+      adminNote: r.admin_note,
+      total: r.order?.total ?? 0,
+      userName: r.user?.name ?? '',
+      username: r.user?.username ?? '',
+      items: (r.order?.order_items ?? []).map((i: any) => ({ name: i.name ?? 'Ürün', qty: i.qty })),
+      date: new Date(r.created_at).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+    })),
+  );
+}
+
+export async function resolveReturn(id: string, approve: boolean, note: string): Promise<ApiResult<null>> {
+  const { error } = await supabase.rpc('admin_resolve_return', { p_id: id, p_approve: approve, p_note: note.trim() || null });
+  if (error) return { ok: false, error: err(error) };
+  return ok(null);
+}
+
 export async function uploadCatalogImage(uri: string, mimeType = 'image/jpeg'): Promise<ApiResult<string>> {
   const ext = mimeType.includes('png') ? 'png' : mimeType.includes('webp') ? 'webp' : 'jpg';
   const path = `products/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
@@ -210,7 +269,7 @@ export async function saveArena(a: DbArena): Promise<ApiResult> {
 export type ReportGroup = {
   key: string;
   firstReportId: string;
-  targetType: 'post' | 'comment' | 'user' | 'moment' | 'live' | 'highlight';
+  targetType: 'post' | 'comment' | 'user' | 'moment' | 'live' | 'highlight' | 'review';
   targetId: string;
   count: number;
   reasons: Record<string, number>;

@@ -181,7 +181,7 @@ export const REPORT_REASONS: { key: ReportReason; label: string }[] = [
 
 export async function report(
   myId: string,
-  target: { type: 'post' | 'comment' | 'user' | 'moment' | 'live' | 'highlight'; id: string },
+  target: { type: 'post' | 'comment' | 'user' | 'moment' | 'live' | 'highlight' | 'review'; id: string },
   reason: ReportReason,
   details = '',
 ): Promise<ApiResult> {

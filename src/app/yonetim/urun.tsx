@@ -11,7 +11,7 @@ import { Chip } from '@/components/ui/primitives';
 import { VText } from '@/components/ui/text';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import type { Product } from '@/data/mock';
-import { fetchAllProducts, saveProduct, uploadCatalogImage } from '@/lib/admin-api';
+import { fetchAllProducts, saveProduct, saveProductImages, uploadCatalogImage } from '@/lib/admin-api';
 import { useStore } from '@/store/app-store';
 
 const CATEGORIES: Product['category'][] = ['Elektronik', 'Kozmetik', 'Ev & Yaşam', 'Moda', 'Spor'];
@@ -25,7 +25,7 @@ export default function YonetimUrun() {
     price: '',
     stock: '',
     description: '',
-    image: '',
+    images: [] as string[],
     active: true,
   });
   const [busy, setBusy] = useState(false);
@@ -45,7 +45,7 @@ export default function YonetimUrun() {
           price: String(p.price),
           stock: String(p.stock),
           description: p.description,
-          image: p.image,
+          images: p.images?.length ? p.images : p.image ? [p.image] : [],
           active: p.active,
         });
     });
@@ -60,9 +60,12 @@ export default function YonetimUrun() {
     setUploading(true);
     const up = await uploadCatalogImage(res.assets[0].uri, res.assets[0].mimeType ?? 'image/jpeg');
     setUploading(false);
-    if (up.ok) set('image', up.data);
+    if (up.ok) setForm((f) => ({ ...f, images: [...f.images, up.data].slice(0, 8) }));
     else setMsg({ ok: false, text: up.error });
   };
+  const removeImage = (i: number) => setForm((f) => ({ ...f, images: f.images.filter((_, j) => j !== i) }));
+  const makeCover = (i: number) =>
+    setForm((f) => ({ ...f, images: [f.images[i], ...f.images.filter((_, j) => j !== i)] }));
 
   const save = async () => {
     const price = Number(form.price);
@@ -72,7 +75,24 @@ export default function YonetimUrun() {
       return;
     }
     setBusy(true);
-    const r = await saveProduct({ id, name: form.name, category: form.category, price, stock, description: form.description, image: form.image, active: form.active });
+    const r = await saveProduct({
+      id,
+      name: form.name,
+      category: form.category,
+      price,
+      stock,
+      description: form.description,
+      image: form.images[0] ?? '',
+      active: form.active,
+    });
+    if (r.ok) {
+      const g = await saveProductImages(r.data, form.images);
+      if (!g.ok) {
+        setBusy(false);
+        setMsg({ ok: false, text: g.error });
+        return;
+      }
+    }
     setBusy(false);
     if (!r.ok) {
       setMsg({ ok: false, text: r.error });
@@ -85,16 +105,27 @@ export default function YonetimUrun() {
   return (
     <AdminScreen title={id ? 'Ürünü Düzenle' : 'Yeni Ürün'}>
       <View style={{ paddingHorizontal: Spacing.screen }}>
-        <Pressable onPress={pickImage} style={styles.image}>
-          {form.image ? (
-            <Image source={{ uri: form.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
-          ) : (
-            <>
-              <ImagePlus size={30} color={Colors.cyan} />
-              <VText variant="caption">{uploading ? 'Yükleniyor…' : 'Görsel seç'}</VText>
-            </>
-          )}
-        </Pressable>
+        <VText variant="label" style={{ marginBottom: 6 }}>
+          Görseller ({form.images.length}/8) · ilki kapak; kapak yapmak için dokun
+        </VText>
+        <View style={styles.thumbs}>
+          {form.images.map((uri, i) => (
+            <Pressable key={`${uri}-${i}`} style={[styles.thumb, i === 0 && { borderColor: Colors.gold }]} onPress={() => makeCover(i)}>
+              <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+              <Pressable style={styles.thumbX} onPress={() => removeImage(i)} hitSlop={6} accessibilityLabel="Görseli kaldır">
+                <VText style={{ color: '#fff', fontSize: 12 }}>✕</VText>
+              </Pressable>
+            </Pressable>
+          ))}
+          {form.images.length < 8 ? (
+            <Pressable onPress={pickImage} style={[styles.thumb, styles.thumbAdd]}>
+              <ImagePlus size={24} color={Colors.cyan} />
+              <VText variant="caption" style={{ fontSize: 10 }}>
+                {uploading ? 'Yükleniyor…' : 'Ekle'}
+              </VText>
+            </Pressable>
+          ) : null}
+        </View>
         <Field label="Ürün adı" value={form.name} onChange={(v) => set('name', v)} max={80} />
         <VText variant="label" style={{ marginTop: Spacing.md, marginBottom: 6 }}>
           Kategori
@@ -147,4 +178,26 @@ const styles = StyleSheet.create({
   },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   switchRow: { flexDirection: 'row', alignItems: 'center', marginTop: Spacing.lg },
+  thumbs: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: Spacing.md },
+  thumb: {
+    width: 76,
+    height: 76,
+    borderRadius: 10,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surfaceStrong,
+  },
+  thumbAdd: { alignItems: 'center', justifyContent: 'center', borderStyle: 'dashed', gap: 2 },
+  thumbX: {
+    position: 'absolute',
+    top: 3,
+    right: 3,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

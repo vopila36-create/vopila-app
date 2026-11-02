@@ -8,6 +8,7 @@ import {
   LifeBuoy,
   Newspaper,
   Package,
+  RotateCcw,
   ShoppingBag,
   Ticket,
   Trophy,
@@ -70,6 +71,7 @@ export default function YonetimAna() {
 
         <Section title="Mağaza">
           <Row icon={<ShoppingBag size={20} color={Colors.gold} />} label="Siparişler ve kargo" value={o?.orders_preparing ? `${o.orders_preparing} bekliyor` : undefined} onPress={() => go('/yonetim/siparisler')} />
+          <Row icon={<RotateCcw size={20} color={Colors.gold} />} label="İade talepleri" onPress={() => go('/yonetim/iadeler')} />
           <Row icon={<Package size={20} color={Colors.cyanSoft} />} label="Ürünler" onPress={() => go('/yonetim/urunler')} last />
         </Section>
 

@@ -12,7 +12,15 @@ import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { fetchOpenReports, resolveReport, setUserStatus, type ReportGroup } from '@/lib/admin-api';
 import { REPORT_REASONS } from '@/lib/social-api';
 
-const TYPE: Record<string, string> = { post: 'Gönderi', comment: 'Yorum', user: 'Profil', moment: 'An', live: 'Canlı yayın' };
+const TYPE: Record<string, string> = {
+  post: 'Gönderi',
+  comment: 'Yorum',
+  user: 'Profil',
+  moment: 'An',
+  live: 'Canlı yayın',
+  highlight: 'Öne Çıkan',
+  review: 'Ürün değerlendirmesi',
+};
 const reasonLabel = (k: string) => REPORT_REASONS.find((r) => r.key === k)?.label ?? k;
 
 export default function YonetimSikayetler() {

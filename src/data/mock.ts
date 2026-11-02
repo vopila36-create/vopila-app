@@ -458,6 +458,13 @@ export type Product = {
   image: string;
   description: string;
   stock: number;
+  /** Tüm görseller (galeri); boşsa yalnızca `image` */
+  images?: string[];
+  /** Satış sayısı (çok satanlar sıralaması) */
+  soldCount?: number;
+  /** Doğrulanmış alıcı puanı */
+  rating?: { average: number; count: number };
+  createdAt?: string;
 };
 
 export const products: Product[] = [

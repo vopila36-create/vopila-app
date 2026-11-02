@@ -1,13 +1,21 @@
+/**
+ * Ürün detayı (Trendyol/Amazon'dan uyanlar): kaydırmalı galeri, favori, doğrulanmış alıcı puanı ve yorumları,
+ * tahmini teslim, stok, benzer ürünler. Ürün "Son baktıkların"a eklenir.
+ */
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
-import { Check, Coins, Minus, PackageX, Plus, ShoppingCart, Truck } from 'lucide-react-native';
-import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { BadgeCheck, Check, Coins, Flag, Heart, Minus, PackageX, Plus, RotateCcw, ShoppingCart, Truck } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 
-import { GlassCard, OutlineButton, PrimaryButton } from '@/components/ui/primitives';
+import { ProductCard, Stars } from '@/components/product-card';
+import { ReportSheet, type ReportTarget } from '@/components/report-sheet';
+import { Avatar, GlassCard, OutlineButton, PrimaryButton } from '@/components/ui/primitives';
 import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
 import { VText } from '@/components/ui/text';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { markViewed } from '@/lib/recently-viewed';
+import { deliveryEstimate, fetchReviews, type Review } from '@/lib/shop-api';
 import { formatTokens, useStore } from '@/store/app-store';
 
 export default function UrunDetay() {
@@ -16,6 +24,22 @@ export default function UrunDetay() {
   const product = store.productOf(id ?? '');
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
+  const [slide, setSlide] = useState(0);
+  const [width, setWidth] = useState(0);
+  const [reviews, setReviews] = useState<{ id: string; list: Review[] } | null>(null);
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    markViewed(String(id));
+    let alive = true;
+    fetchReviews(String(id)).then((list) => {
+      if (alive) setReviews({ id: String(id), list });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [id]);
 
   if (!product) {
     return (
@@ -33,6 +57,10 @@ export default function UrunDetay() {
   const maxQty = Math.max(0, product.stock - inCart);
   const total = product.price * qty;
   const affordable = store.cartTotal + total <= store.balance;
+  const images = product.images?.length ? product.images : [product.image];
+  const fav = store.favoriteIds.includes(product.id);
+  const list = reviews?.id === product.id ? reviews.list : [];
+  const similar = store.catalog.filter((p) => p.category === product.category && p.id !== product.id).slice(0, 8);
 
   const addToCart = () => {
     if (maxQty <= 0) return;
@@ -44,22 +72,53 @@ export default function UrunDetay() {
     <SubScreen
       title={product.category}
       right={
-        <Pressable onPress={() => router.push('/sepet' as Href)} hitSlop={8} accessibilityLabel="Sepet">
-          <ShoppingCart size={24} color={Colors.text} />
-          {store.cartCount ? (
-            <View style={styles.badge}>
-              <VText style={styles.badgeText}>{store.cartCount}</VText>
-            </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
+          {store.myId ? (
+            <Pressable onPress={() => store.toggleFavorite(product.id)} hitSlop={8} accessibilityLabel={fav ? 'Favorilerden çıkar' : 'Favorilere ekle'}>
+              <Heart size={24} color={fav ? Colors.heart : Colors.text} fill={fav ? Colors.heart : 'transparent'} />
+            </Pressable>
           ) : null}
-        </Pressable>
+          <Pressable onPress={() => router.push('/sepet' as Href)} hitSlop={8} accessibilityLabel="Sepet">
+            <ShoppingCart size={24} color={Colors.text} />
+            {store.cartCount ? (
+              <View style={styles.badge}>
+                <VText style={styles.badgeText}>{store.cartCount}</VText>
+              </View>
+            ) : null}
+          </Pressable>
+        </View>
       }>
       <View style={styles.pad}>
-        <View style={styles.imgWrap}>
-          <Image source={{ uri: product.image }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+        <View style={styles.imgWrap} onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}>
+          {width ? (
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={(e) => setSlide(Math.round(e.nativeEvent.contentOffset.x / width))}>
+              {images.map((uri, i) => (
+                <Image key={`${uri}-${i}`} source={{ uri }} style={{ width, height: '100%' }} contentFit="cover" transition={200} />
+              ))}
+            </ScrollView>
+          ) : null}
+          {images.length > 1 ? (
+            <View style={styles.dots}>
+              {images.map((_, i) => (
+                <View key={i} style={[styles.dot, i === slide && styles.dotOn]} />
+              ))}
+            </View>
+          ) : null}
         </View>
         <VText variant="title" style={{ marginTop: Spacing.lg, fontSize: 24, lineHeight: 30 }}>
           {product.name}
         </VText>
+        {product.rating?.count ? (
+          <View style={styles.ratingRow}>
+            <Stars value={product.rating.average} />
+            <VText variant="label">{product.rating.average.toFixed(1)}</VText>
+            <VText variant="caption">· {product.rating.count} değerlendirme</VText>
+          </View>
+        ) : null}
         <View style={styles.priceRow}>
           <Coins size={20} color={Colors.gold} />
           <VText style={styles.price}>{formatTokens(product.price)}</VText>
@@ -73,7 +132,7 @@ export default function UrunDetay() {
           <View style={styles.line}>
             <Truck size={16} color={Colors.cyan} />
             <VText variant="body" style={{ flex: 1, fontSize: 13 }}>
-              Ücretsiz kargo · 3-5 iş günü içinde adresine teslim
+              Ücretsiz kargo · {deliveryEstimate('preparing')}
             </VText>
           </View>
           <View style={styles.line}>
@@ -81,6 +140,12 @@ export default function UrunDetay() {
             <VText variant="body" style={{ flex: 1, fontSize: 13 }}>
               {product.stock > 0 ? `Stokta ${product.stock} adet` : 'Stokta yok'}
               {inCart ? ` · Sepetinde ${inCart} adet` : ''}
+            </VText>
+          </View>
+          <View style={styles.line}>
+            <RotateCcw size={16} color={Colors.cyanSoft} />
+            <VText variant="body" style={{ flex: 1, fontSize: 13 }}>
+              Teslimden sonra 14 gün içinde iade talebi
             </VText>
           </View>
         </GlassCard>
@@ -138,7 +203,63 @@ export default function UrunDetay() {
             style={{ flex: 1 }}
           />
         </View>
+
+        {/* Doğrulanmış alıcı yorumları */}
+        <VText variant="heading" style={{ marginTop: Spacing.xxl }}>
+          Değerlendirmeler
+        </VText>
+        <VText variant="caption" style={{ marginTop: 2 }}>
+          Yalnızca bu ürünü satın alıp teslim alanlar değerlendirebilir.
+        </VText>
+        {list.length ? (
+          <View style={{ gap: 8, marginTop: Spacing.md }}>
+            {list.map((r) => (
+              <GlassCard key={r.id} style={{ padding: 12, gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Avatar uri={r.avatar} size={28} />
+                  <View style={{ flex: 1 }}>
+                    <VText variant="label" numberOfLines={1}>
+                      {r.name}
+                    </VText>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <BadgeCheck size={12} color={Colors.success} />
+                      <VText variant="caption" style={{ fontSize: 11 }}>
+                        Doğrulanmış alıcı · {r.date}
+                      </VText>
+                    </View>
+                  </View>
+                  <Stars value={r.rating} size={12} />
+                  {store.myId && r.userId !== store.myId ? (
+                    <Pressable onPress={() => setReportTarget({ type: 'review', id: r.id })} hitSlop={8} accessibilityLabel="Yorumu şikâyet et">
+                      <Flag size={14} color={Colors.textMuted} />
+                    </Pressable>
+                  ) : null}
+                </View>
+                {r.text ? <VText>{r.text}</VText> : null}
+              </GlassCard>
+            ))}
+          </View>
+        ) : (
+          <VText variant="caption" style={{ marginTop: Spacing.sm }}>
+            Henüz değerlendirme yok.
+          </VText>
+        )}
+
+        {similar.length ? (
+          <>
+            <VText variant="heading" style={{ marginTop: Spacing.xxl, marginBottom: Spacing.md }}>
+              Benzer ürünler
+            </VText>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+              {similar.map((p) => (
+                <ProductCard key={p.id} p={p} style={{ width: 160 }} />
+              ))}
+            </ScrollView>
+          </>
+        ) : null}
+        <View style={{ height: Spacing.xl }} />
       </View>
+      <ReportSheet target={reportTarget} onClose={() => setReportTarget(null)} />
     </SubScreen>
   );
 }
@@ -168,6 +289,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceStrong,
   },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  dots: { position: 'absolute', bottom: 10, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 6 },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.5)' },
+  dotOn: { backgroundColor: '#fff', width: 16 },
   price: { fontFamily: Fonts.extrabold, fontSize: 24, color: Colors.gold },
   card: { padding: 14, marginTop: Spacing.lg, gap: 10 },
   line: { flexDirection: 'row', alignItems: 'center', gap: 10 },

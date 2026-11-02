@@ -73,10 +73,12 @@ import { createMoment as createRemoteMoment, fetchMoments } from '@/lib/moments-
 import { fetchRelationIds, setRelation } from '@/lib/settings-api';
 import {
   fetchAddresses,
+  fetchFavorites,
   fetchLedger,
   fetchOrders,
   fetchProducts,
   placeOrder as placeRemoteOrder,
+  setFavorite,
   type LedgerRow,
   type RemoteOrder,
   type SavedAddress,
@@ -178,6 +180,7 @@ const EMPTY_ARENA = {
   winners: {} as Record<string, SeasonResult>,
 };
 const EMPTY_NOTIFS: AppNotification[] = [];
+const EMPTY_IDS: string[] = [];
 const EMPTY_PRODUCTS: Product[] = [];
 const EMPTY_NEWS: NewsArticle[] = [];
 const EMPTY_MOMENTS: Moment[] = [];
@@ -962,6 +965,35 @@ function useBuildStore() {
   }>(EMPTY_SHOP);
   const shop = rawShop.owner === myId ? rawShop : EMPTY_SHOP;
 
+  // ─── Favoriler (sunucuda; ekranda hemen değişir, sunucu reddederse geri alınır) ──
+  const [rawFav, setFav] = useState<{ owner: string | null; ids: string[] }>({ owner: null, ids: [] });
+  const favoriteIds = rawFav.owner === myId ? rawFav.ids : EMPTY_IDS;
+  useEffect(() => {
+    if (!myId) return;
+    let alive = true;
+    fetchFavorites(myId).then((ids) => {
+      if (alive) setFav({ owner: myId, ids });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [myId]);
+  const toggleFavorite = useCallback(
+    async (productId: string) => {
+      if (!myId) return;
+      const on = !favoriteIds.includes(productId);
+      const flip = (v: boolean) =>
+        setFav((f) => {
+          const base = f.owner === myId ? f.ids : [];
+          return { owner: myId, ids: v ? [productId, ...base.filter((x) => x !== productId)] : base.filter((x) => x !== productId) };
+        });
+      flip(on);
+      const res = await setFavorite(myId, productId, on);
+      if (!res.ok) flip(!on);
+    },
+    [myId, favoriteIds],
+  );
+
   const loadShop = useCallback(async (owner: string) => {
     const [ledger, orders, products, addresses] = await Promise.all([
       fetchLedger(owner),
@@ -1147,7 +1179,12 @@ function useBuildStore() {
         if (!p) return;
         dispatch({ type: 'setCartQty', productId, qty: Math.min(qty, p.stock) });
       },
-      addToCart: (productId: string) => dispatch({ type: 'setCartQty', productId, qty: (state.cart[productId] ?? 0) + 1 }),
+      // Stoktan fazlası sepete eklenmez (ızgaradaki "Sepete ekle" de)
+      addToCart: (productId: string) => {
+        const p = productOf(productId);
+        if (!p) return;
+        dispatch({ type: 'setCartQty', productId, qty: Math.min((state.cart[productId] ?? 0) + 1, p.stock) });
+      },
       setAddress: (address: Address) => dispatch({ type: 'setAddress', address }),
       updateProfile: (profile: Partial<Profile>) => dispatch({ type: 'updateProfile', profile }),
       updateSettings: (settings: Partial<Settings>) => dispatch({ type: 'updateSettings', settings }),
@@ -1184,7 +1221,11 @@ function useBuildStore() {
     orders: shop.orders,
     addresses: shop.addresses,
     catalog,
+    /** Ürünler sunucudan yükleniyor mu (boş katalogla karışmasın) */
+    catalogLoading: !!myId && shop.products === null,
     productOf,
+    favoriteIds,
+    toggleFavorite,
     refreshShop,
     placeOrder,
     allPosts,

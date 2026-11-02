@@ -232,6 +232,7 @@ export default function Ayarlar() {
         title: 'Alışveriş',
         items: [
           { key: 'orders', label: 'Siparişlerim', Icon: Package, href: '/siparisler', keywords: 'kargo iade iptal' },
+          { key: 'favorites', label: 'Favorilerim', Icon: Heart, color: Colors.heart, href: '/favorilerim', keywords: 'beğendiğim ürün' },
           { key: 'addresses', label: 'Adreslerim', Icon: MapPin, href: '/adreslerim' },
           { key: 'wallet', label: 'Token cüzdanım', Icon: Coins, color: Colors.gold, href: '/cuzdan', keywords: 'bakiye' },
         ],

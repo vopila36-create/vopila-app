@@ -26,6 +26,8 @@ const ACTION: Record<string, string> = {
   invites_created: 'Beta daveti oluşturuldu',
   invite_revoked: 'Beta daveti iptal edildi',
   beta_invite_required: 'Kapalı beta ayarı değişti',
+  return_approved: 'İade onaylandı',
+  return_rejected: 'İade reddedildi',
 };
 const label = (a: string) => ACTION[a] ?? (a.startsWith('user_status:') ? `Hesap durumu: ${a.split(':')[1]}` : a);
 

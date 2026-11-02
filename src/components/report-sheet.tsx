@@ -8,7 +8,7 @@ import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { isRealId, report, REPORT_REASONS, type ReportReason } from '@/lib/social-api';
 import { useStore } from '@/store/app-store';
 
-export type ReportTarget = { type: 'post' | 'comment' | 'user' | 'moment' | 'live' | 'highlight'; id: string };
+export type ReportTarget = { type: 'post' | 'comment' | 'user' | 'moment' | 'live' | 'highlight' | 'review'; id: string };
 
 /**
  * Şikayet penceresi: sebep seçilir, sunucuya gönderilir.

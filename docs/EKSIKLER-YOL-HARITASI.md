@@ -74,6 +74,17 @@ Testçiler video yükleyince sorun çıkmasın.
 - ✅ 4.4 Uygulama bağlantıları: beta.vopila.com/davet ve /u bağlantıları Android'de doğrudan uygulamada açılır (assetlinks yayında).
 - Not: Windows'un uzun dosya yolu sınırı yüzünden APK, proje `C:\vb\vopila-app` klasörüne kopyalanarak derlenir: `scripts\build-apk.ps1` (çıktı: `beta\VOPILA-beta-<sürüm>.apk`).
 
+## Instagram / Trendyol modeli (2 Kasım 2026) ✅
+- **Ayarlar** Instagram düzeninde: arama, Hesap Merkezi (şifre, e-posta, 2FA, Face ID, cihazlar, veriler, hesap silme),
+  Hesap gizliliği, Ne göreceğin, Uygulaman ve medya, Aile merkezi, Alışveriş, Hakkında.
+- **İçerik koruması**: arena girişleri hesap gizliliğine uyar (0033); web'de sağ tık/sürükle/video indir kapalı;
+  imzalı dosya adresleri 30 dk; avatar dosya adları tahmin edilemez. Telefonda indirme yolu yok (Instagram gibi).
+- **Mağaza** (0034): arama, sıralama, "bakiyeme uygun"/"stokta" filtreleri, favoriler, çoklu görsel galerisi,
+  doğrulanmış alıcı yorumları (şikâyet edilebilir), stok rozetleri, son baktıkların, benzer ürünler, sipariş detayı
+  (tarihli zaman çizelgesi, kargo takip bağlantısı, tahmini teslim), müşteri iptali (hazırlanırken), iade talebi
+  (14 gün; yönetici onayıyla token iadesi), yönetimde iade ekranı ve çoklu ürün görseli.
+- Bilerek eklenmeyenler: kupon, taksit, ödeme yöntemi, satıcı pazaryeri (token mağazasına uymaz).
+
 ## Faz 5 — Hesap açmanız gerekenler (sizin kararınız)
 
 | Hizmet | Ne sağlar | Maliyet | Not |
