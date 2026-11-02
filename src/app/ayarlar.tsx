@@ -18,6 +18,7 @@ import {
   FileEdit,
   FileText,
   History,
+  Heart,
   Info,
   KeyRound,
   LifeBuoy,
@@ -292,6 +293,13 @@ export default function Ayarlar() {
             desc="Akışta videolar sessiz başlar"
             value={state.settings.autoplayVideos}
             onChange={(v) => updateSettings({ autoplayVideos: v })}
+          />
+          <ToggleRow
+            icon={<Heart size={20} color={Colors.heart} />}
+            label="Beğeni sayılarını gizle"
+            desc="Başkalarının gönderilerinde beğeni sayısı görünmez; kendi gönderilerinde görmeye devam edersin"
+            value={!!state.settings.hideLikeCounts}
+            onChange={(v) => updateSettings({ hideLikeCounts: v })}
             last
           />
         </Section>

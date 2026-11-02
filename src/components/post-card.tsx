@@ -217,7 +217,10 @@ export function PostCard({ post, detail }: { post: Post; detail?: boolean }) {
       <View style={styles.actions}>
         <Pressable style={styles.action} onPress={() => store.toggleLike(post.id)} hitSlop={6} accessibilityLabel="Beğen">
           <Heart size={22} color={liked ? Colors.heart : Colors.text} fill={liked ? Colors.heart : 'transparent'} />
-          <VText variant="label">{formatCount(store.likeCount(post))}</VText>
+          {/* Ayarlar > Beğeni sayılarını gizle: başkalarının gönderilerinde sayı gösterilmez */}
+          {store.state.settings.hideLikeCounts && post.authorId !== ME_ID ? null : (
+            <VText variant="label">{formatCount(store.likeCount(post))}</VText>
+          )}
         </Pressable>
         <Pressable style={styles.action} onPress={openDetail} hitSlop={6} accessibilityLabel="Yorumlar">
           <MessageCircle size={21} color={Colors.text} />

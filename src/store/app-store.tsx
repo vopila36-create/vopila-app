@@ -107,7 +107,14 @@ export type Order = {
   date: string;
 };
 
-export type Settings = { pushNotifications: boolean; arenaReminders: boolean; privateAccount: boolean; autoplayVideos: boolean };
+export type Settings = {
+  pushNotifications: boolean;
+  arenaReminders: boolean;
+  privateAccount: boolean;
+  autoplayVideos: boolean;
+  /** Başkalarının gönderilerinde beğeni sayısını gösterme (kendi gönderilerinde görünür). */
+  hideLikeCounts?: boolean;
+};
 
 type State = {
   profile: Profile;
