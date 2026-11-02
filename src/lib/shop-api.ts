@@ -249,7 +249,6 @@ export async function setFavorite(myId: string, productId: string, on: boolean):
 
 export type Review = {
   id: string;
-  orderId: string;
   userId: string;
   name: string;
   username: string;
@@ -262,13 +261,12 @@ export type Review = {
 export async function fetchReviews(productId: string): Promise<Review[]> {
   const { data } = await supabase
     .from('product_reviews')
-    .select('id, order_id, user_id, rating, text, created_at, user:profiles(name, username, avatar_url)')
+    .select('id, user_id, rating, text, created_at, user:profiles(name, username, avatar_url)')
     .eq('product_id', productId)
     .order('created_at', { ascending: false })
     .limit(50);
   return (data ?? []).map((r: any) => ({
     id: r.id,
-    orderId: r.order_id,
     userId: r.user_id,
     // Profili gizli (18 altı vb.) olan alıcının adı gösterilmez
     name: r.user?.name ?? 'VOPILA kullanıcısı',
@@ -315,7 +313,8 @@ export async function fetchOrderExtras(
   const [h, r, rv] = await Promise.all([
     supabase.from('order_status_history').select('status, at').eq('order_id', orderId).order('at'),
     supabase.from('return_requests').select('id, status, reason, admin_note, created_at').eq('order_id', orderId).maybeSingle(),
-    supabase.from('product_reviews').select('product_id, rating').eq('order_id', orderId).eq('user_id', myId),
+    // Sipariş numarası başkalarına açık değil; kendi değerlendirmelerim ayrı fonksiyonla (0034b)
+    supabase.rpc('my_order_reviews', { p_order: orderId }),
   ]);
   return {
     history: (h.data ?? []).map((x) => ({ status: x.status as OrderStatusKey, at: x.at as string })),
@@ -328,7 +327,7 @@ export async function fetchOrderExtras(
           date: dateTr(r.data.created_at),
         }
       : null,
-    reviewed: Object.fromEntries((rv.data ?? []).map((x) => [x.product_id as string, x.rating as number])),
+    reviewed: Object.fromEntries(((rv.data ?? []) as { product_id: string; rating: number }[]).map((x) => [x.product_id, x.rating])),
   };
 }
 
