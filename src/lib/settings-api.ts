@@ -214,9 +214,8 @@ export async function deleteMyAccount(myId: string): Promise<ApiResult> {
   try {
     await removeAllFiles('media', myId);
     await removeAllFiles('avatars', myId);
-    // Mesajlarda gönderdiğim fotoğraf / video / sesler: <sohbet>/<ben>/
-    const { data: convs } = await supabase.rpc('my_conversations');
-    for (const c of (convs ?? []) as { id: string }[]) await removeAllFiles('dm', `${c.id}/${myId}`);
+    // Mesaj dosyaları: hesap silinince mesajlarla bağı kalmaz; sunucunun gece işi siler
+    // (geri alınmış olanlar güvenlik için 30 gün arşivde kalır — 0037d)
   } catch {
     // Dosya silme başarısız olsa da hesap silinir; kalan dosyalar sahipsiz kalır ve sonra temizlenir
   }
