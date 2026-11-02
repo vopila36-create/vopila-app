@@ -1,8 +1,8 @@
 /**
- * Ayarlar (Instagram düzenine göre): Hesap · Etkinliğin · Bildirimler · Gizlilik · Etkileşimler ·
- * Güvenlik · Tercihler · Destek · Yasal · Hesap işlemleri.
+ * Ayarlar ve hareketler (Instagram düzeni, VOPILA'ya uyarlanmış): en üstte arama, Hesap Merkezi,
+ * kullanım, gizlilik, etkileşim, ne göreceğin, uygulama ve medya, aile, alışveriş, profil, destek, giriş.
+ * Satırlar tek bir listeden üretilir; arama bu listeyi etiket, açıklama ve anahtar kelimelere göre süzer.
  */
-import { reloadAppAsync } from 'expo';
 import { router, type Href } from 'expo-router';
 import {
   Archive,
@@ -12,89 +12,66 @@ import {
   BellOff,
   Bookmark,
   BookOpen,
-  CalendarDays,
   Coins,
-  Download,
+  EyeOff,
   FileEdit,
-  FileText,
-  History,
   Heart,
+  History,
   Info,
-  KeyRound,
   LifeBuoy,
   Lock,
   LogOut,
-  Mail,
   MapPin,
   MessageCircle,
-  MonitorSmartphone,
   Package,
-  PlayCircle,
+  Palette,
   QrCode,
-  ScanFace,
-  Shield,
   ShieldAlert,
   ShieldCheck,
   ShieldMinus,
   Sparkles,
   Star,
   Timer,
-  Trash2,
-  UserPen,
+  UserCircle,
   UserPlus,
   Users,
+  type LucideIcon,
 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Platform, Pressable, Share, StyleSheet, Switch, TextInput, View } from 'react-native';
+import { Share, View } from 'react-native';
 
-import { ChoiceList, Row, Section, ToggleRow } from '@/components/settings-ui';
-import { SubScreen } from '@/components/ui/sub-screen';
-import { VText } from '@/components/ui/text';
-import { Colors, Fonts, Radius, saveThemePref, Spacing, themePref, type ThemePref } from '@/constants/theme';
+import { Row, Section, SettingsSearch, ToggleRow } from '@/components/settings-ui';
+import { EmptyState, SubScreen } from '@/components/ui/sub-screen';
+import { Colors, Spacing } from '@/constants/theme';
 import { fetchAdminStatus, type AdminStatus } from '@/lib/admin-api';
 import { profileLink } from '@/lib/profile-link';
-import { signOutEverywhere } from '@/lib/settings-api';
 import { useStore } from '@/store/app-store';
-import Constants from 'expo-constants';
 import { useAuth } from '@/store/auth';
 
 const go = (p: string) => router.push(p as Href);
 
-const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
+type Item = {
+  key: string;
+  label: string;
+  desc?: string;
+  Icon: LucideIcon;
+  color?: string;
+  /** Aramada bulunması için ek kelimeler */
+  keywords?: string;
+  href?: string;
+  onPress?: () => void;
+  toggle?: { value: boolean; onChange: (v: boolean) => void };
+  value?: string;
+  danger?: boolean;
+};
+type Group = { title: string; items: Item[] };
+
+const norm = (s: string) => s.toLocaleLowerCase('tr-TR').normalize('NFKD').replace(/[̀-ͯ]/g, '');
 
 export default function Ayarlar() {
   const { state, updateSettings, myId } = useStore();
-  const [themeNote, setThemeNote] = useState('');
-  // Tema açılışta okunur: seçim kaydedilir ve uygulama yeniden başlatılır
-  const changeTheme = (pref: ThemePref) => {
-    if (pref === themePref) return;
-    saveThemePref(pref);
-    if (Platform.OS === 'web') {
-      globalThis.location?.reload();
-      return;
-    }
-    reloadAppAsync('Tema değişti').catch(() =>
-      setThemeNote('Yeni tema, uygulamayı kapatıp açtığında görünecek.'),
-    );
-  };
-  const [confirmEverywhere, setConfirmEverywhere] = useState(false);
-  const [note, setNote] = useState('');
   const auth = useAuth();
-  // Davet: profil bağlantımla birlikte paylaşım menüsü
-  const invite = () => {
-    const u = auth.profile?.username;
-    // Kapalı betada kayıt davet koduyla açılır; davet kodunu yönetici verir
-    Share.share({
-      message: u
-        ? `VOPILA'yı keşfet: https://beta.vopila.com (şu an kapalı beta, kayıt davet koduyla). Beni takip et: ${profileLink(u)}`
-        : "VOPILA'yı keşfet: https://beta.vopila.com",
-    }).catch(() => {});
-  };
-  // Face ID'yi açarken şifre sorulur
-  const [bioPw, setBioPw] = useState<string | null>(null);
-  const [bioBusy, setBioBusy] = useState(false);
-  const bioLabel = auth.biometric.label;
-  const signedIn = !!auth.session;
+  const [query, setQuery] = useState('');
 
   // Yönetici hesabıysa panel satırı gösterilir
   const [adminStatus, setAdminStatus] = useState<AdminStatus>('none');
@@ -109,293 +86,243 @@ export default function Ayarlar() {
     };
   }, [myId]);
 
-  const toggleBiometric = async (on: boolean) => {
-    setNote('');
-    if (!on) {
-      await auth.disableBiometric();
-      setBioPw(null);
-      setNote(`${bioLabel} ile giriş kapatıldı.`);
-    } else setBioPw('');
-  };
-  const confirmBiometric = async () => {
-    const email = auth.session?.user.email;
-    if (!email || bioPw === null || bioBusy) return;
-    setBioBusy(true);
-    const res = await auth.enableBiometric(email, bioPw, true);
-    setBioBusy(false);
-    if (res.ok) {
-      setBioPw(null);
-      setNote(`${bioLabel} ile giriş açıldı. Bir dahaki girişte şifre yazmana gerek yok.`);
-    } else if (res.error) setNote(res.error);
+  // Davet: kapalı betada kayıt davet koduyla açılır; davet kodunu yönetici verir
+  const invite = () => {
+    const u = auth.profile?.username;
+    Share.share({
+      message: u
+        ? `VOPILA'yı keşfet: https://beta.vopila.com (şu an kapalı beta, kayıt davet koduyla). Beni takip et: ${profileLink(u)}`
+        : "VOPILA'yı keşfet: https://beta.vopila.com",
+    }).catch(() => {});
   };
 
-  // Gizli hesap ayarı giriş yapılmışsa Supabase'deki profilde tutulur
-  const privateAccount = auth.profile ? auth.profile.is_private : state.settings.privateAccount;
-  const setPrivate = async (v: boolean) => {
-    updateSettings({ privateAccount: v });
-    if (auth.profile) {
-      const res = await auth.saveProfile({ is_private: v });
-      if (!res.ok) setNote(res.error);
-      else setNote(v ? 'Hesabın artık gizli. Yeni takipçileri sen onaylarsın.' : 'Hesabın artık herkese açık. Bekleyen istekler onaylandı.');
-    }
-  };
+  const isPrivate = auth.profile ? auth.profile.is_private : state.settings.privateAccount;
 
-  const everywhere = async () => {
-    setConfirmEverywhere(false);
-    const res = await signOutEverywhere();
-    if (!res.ok) setNote(res.error);
+  // React Compiler ekranı zaten önbelleğe alır; liste her çizimde kurulur
+  const groups: Group[] = (() => {
+    const g: Group[] = [];
+    if (adminStatus !== 'none')
+      g.push({
+        title: 'Yönetim',
+        items: [
+          {
+            key: 'admin',
+            label: 'Yönetici Paneli',
+            Icon: ShieldCheck,
+            color: Colors.gold,
+            href: '/yonetim',
+            value: adminStatus === 'needs_2fa' ? '2FA gerekli' : undefined,
+          },
+        ],
+      });
+    g.push(
+      {
+        title: 'Hesabın',
+        items: [
+          {
+            key: 'center',
+            label: 'Hesap Merkezi',
+            desc: 'Şifre, güvenlik, kişisel bilgiler',
+            Icon: UserCircle,
+            color: Colors.cyan,
+            keywords: 'şifre e-posta eposta iki adımlı 2fa face id parmak izi biyometrik yaş verilerim indir hesabı sil cihaz çıkış profil düzenle',
+            href: '/hesap-merkezi',
+          },
+        ],
+      },
+      {
+        title: "VOPILA'yı nasıl kullanıyorsun",
+        items: [
+          { key: 'saved', label: 'Kaydedilenler', Icon: Bookmark, href: '/kaydedilenler' },
+          { key: 'archive', label: 'Arşiv', Icon: Archive, href: '/arsiv' },
+          { key: 'drafts', label: 'Taslaklar', Icon: FileEdit, href: '/taslaklar' },
+          { key: 'activity', label: 'Hareketlerin', desc: 'Beğenilerin ve yorumların', Icon: History, href: '/hareketlerin' },
+          { key: 'notif', label: 'Bildirimler', Icon: Bell, href: '/bildirim-ayarlari' },
+          { key: 'time', label: 'Geçirdiğin süre', desc: 'Günlük süre sınırı', Icon: Timer, href: '/hareketlerin?tab=sure' },
+        ],
+      },
+      {
+        title: 'İçeriğini kimler görebilir',
+        items: [
+          {
+            key: 'privacy',
+            label: 'Hesap gizliliği',
+            Icon: Lock,
+            value: isPrivate ? 'Gizli' : 'Herkese açık',
+            keywords: 'gizli hesap',
+            href: '/hesap-gizliligi',
+          },
+          { key: 'close', label: 'Yakın Arkadaşlar', Icon: Star, color: '#22C55E', href: '/yakin-arkadaslar' },
+          { key: 'requests', label: 'Takip istekleri', Icon: UserPlus, href: '/takip-istekleri' },
+          { key: 'blocked', label: 'Engellenenler', Icon: Ban, color: Colors.live, href: '/engellenenler' },
+        ],
+      },
+      {
+        title: 'Başkaları seninle nasıl etkileşim kurabilir',
+        items: [
+          { key: 'messages', label: 'Mesajlar', Icon: MessageCircle, href: '/mesajlar' },
+          {
+            key: 'interact',
+            label: 'Bahsetmeler ve mesaj izni',
+            desc: 'Kimler senden bahsedebilir, kimler mesaj atabilir',
+            Icon: Users,
+            keywords: 'etiket mention',
+            href: '/etkilesim-ayarlari',
+          },
+          {
+            key: 'hidden',
+            label: 'Gizli kelimeler',
+            desc: 'Rahatsız edici yorum ve mesajları gizle',
+            Icon: EyeOff,
+            keywords: 'filtre kelime',
+            href: '/etkilesim-ayarlari',
+          },
+          { key: 'restricted', label: 'Kısıtlananlar', Icon: ShieldMinus, href: '/kisitlananlar' },
+        ],
+      },
+      {
+        title: 'Ne göreceğin',
+        items: [
+          { key: 'muted', label: 'Sessize alınan hesaplar', Icon: BellOff, href: '/sessize-alinanlar' },
+          {
+            key: 'interests',
+            label: 'Önerilen içerik',
+            desc: 'İlgi alanların ve akış tercihlerin',
+            Icon: Sparkles,
+            keywords: 'ilgi alanları keşfet',
+            href: '/ilgi-alanlarim',
+          },
+          {
+            key: 'likes',
+            label: 'Beğeni sayılarını gizle',
+            desc: 'Başkalarının gönderilerinde beğeni sayısı görünmez',
+            Icon: Heart,
+            color: Colors.heart,
+            toggle: { value: !!state.settings.hideLikeCounts, onChange: (v) => updateSettings({ hideLikeCounts: v }) },
+          },
+        ],
+      },
+      {
+        title: 'Uygulaman ve medya',
+        items: [
+          {
+            key: 'appmedia',
+            label: 'Uygulaman ve medya',
+            desc: 'Tema, videoları otomatik oynatma',
+            Icon: Palette,
+            keywords: 'tema koyu açık pembe video otomatik oynat',
+            href: '/uygulama-ve-medya',
+          },
+        ],
+      },
+      {
+        title: 'Aile merkezi',
+        items: [
+          {
+            key: 'parent',
+            label: 'Ebeveyn denetimi',
+            desc: '15–18 yaş hesaplar için aile gözetimi',
+            Icon: Users,
+            keywords: 'aile çocuk',
+            href: '/ebeveyn-denetimi',
+          },
+        ],
+      },
+      {
+        title: 'Alışveriş',
+        items: [
+          { key: 'orders', label: 'Siparişlerim', Icon: Package, href: '/siparisler', keywords: 'kargo iade iptal' },
+          { key: 'addresses', label: 'Adreslerim', Icon: MapPin, href: '/adreslerim' },
+          { key: 'wallet', label: 'Token cüzdanım', Icon: Coins, color: Colors.gold, href: '/cuzdan', keywords: 'bakiye' },
+        ],
+      },
+      {
+        title: 'Profilin',
+        items: [
+          { key: 'qr', label: 'QR kod', Icon: QrCode, href: '/qr-kod' },
+          { key: 'badges', label: 'Rozetlerim', Icon: Award, color: Colors.gold, href: '/rozetler' },
+          { key: 'invite', label: 'Arkadaşlarını davet et', Icon: UserPlus, onPress: invite },
+        ],
+      },
+      {
+        title: 'Daha fazla bilgi ve destek',
+        items: [
+          { key: 'help', label: 'Yardım', desc: 'Sık sorulanlar ve sorun bildir', Icon: LifeBuoy, href: '/destek', keywords: 'destek' },
+          { key: 'status', label: 'Hesap durumu', Icon: ShieldAlert, color: Colors.gold, href: '/hesap-durumu', keywords: 'ihlal askı' },
+          { key: 'rules', label: 'Topluluk kuralları', Icon: BookOpen, href: '/topluluk-kurallari' },
+          {
+            key: 'about',
+            label: 'Hakkında',
+            desc: 'Gizlilik, kullanım koşulları, sürüm',
+            Icon: Info,
+            keywords: 'kvkk aydınlatma yasal telif sürüm',
+            href: '/hakkinda',
+          },
+        ],
+      },
+      {
+        title: 'Giriş',
+        items: [
+          {
+            key: 'logout',
+            label: auth.profile ? `@${auth.profile.username} hesabından çıkış yap` : 'Çıkış yap',
+            Icon: LogOut,
+            color: Colors.live,
+            danger: true,
+            onPress: () => {
+              if (auth.session) auth.signOut();
+              else router.replace('/giris' as Href);
+            },
+          },
+        ],
+      },
+    );
+    return g;
+  })();
+
+  const q = norm(query.trim());
+  const results = q
+    ? groups
+        .flatMap((gr) => gr.items)
+        .filter((it) => norm(`${it.label} ${it.desc ?? ''} ${it.keywords ?? ''}`).includes(q))
+    : null;
+
+  const renderItem = (it: Item, last: boolean) => {
+    const icon = <it.Icon size={20} color={it.color ?? Colors.cyanSoft} />;
+    if (it.toggle)
+      return <ToggleRow key={it.key} icon={icon} label={it.label} desc={it.desc} value={it.toggle.value} onChange={it.toggle.onChange} last={last} />;
+    return (
+      <Row
+        key={it.key}
+        icon={icon}
+        label={it.label}
+        desc={it.desc}
+        value={it.value}
+        danger={it.danger}
+        onPress={it.onPress ?? (() => it.href && go(it.href))}
+        last={last}
+      />
+    );
   };
 
   return (
-    <SubScreen title="Ayarlar ve Etkinlik">
-      <View style={styles.pad}>
-        {adminStatus !== 'none' ? (
-          <Section title="Yönetim">
-            <Row
-              icon={<ShieldCheck size={20} color={Colors.gold} />}
-              label="Yönetici Paneli"
-              value={adminStatus === 'needs_2fa' ? '2FA gerekli' : undefined}
-              onPress={() => go('/yonetim')}
-              last
-            />
-          </Section>
-        ) : null}
-        <Section title="Hesap">
-          <Row icon={<UserPen size={20} color={Colors.cyan} />} label="Profili düzenle" onPress={() => go('/profil-duzenle')} />
-          <Row icon={<QrCode size={20} color={Colors.cyan} />} label="QR kod" onPress={() => go('/qr-kod')} />
-          <Row icon={<UserPlus size={20} color={Colors.cyan} />} label="Arkadaşlarını davet et" onPress={invite} />
-          <Row icon={<Coins size={20} color={Colors.gold} />} label="Token cüzdanım" onPress={() => go('/cuzdan')} />
-          <Row icon={<Package size={20} color={Colors.cyanSoft} />} label="Siparişlerim" onPress={() => go('/siparisler')} />
-          <Row icon={<MapPin size={20} color={Colors.cyanSoft} />} label="Adreslerim" onPress={() => go('/adreslerim')} />
-          <Row icon={<Award size={20} color={Colors.gold} />} label="Rozetlerim" onPress={() => go('/rozetler')} last />
-        </Section>
-
-        <Section title="VOPILA'yı nasıl kullanıyorsun">
-          <Row icon={<Bookmark size={20} color={Colors.cyan} />} label="Kaydedilenler" onPress={() => go('/kaydedilenler')} />
-          <Row icon={<Archive size={20} color={Colors.cyanSoft} />} label="Arşiv" onPress={() => go('/arsiv')} />
-          <Row icon={<FileEdit size={20} color={Colors.cyanSoft} />} label="Taslaklar" onPress={() => go('/taslaklar')} />
-          <Row icon={<History size={20} color={Colors.cyanSoft} />} label="Hareketlerin" onPress={() => go('/hareketlerin')} />
-          <Row icon={<Timer size={20} color={Colors.cyanSoft} />} label="Geçirdiğin süre" onPress={() => go('/hareketlerin?tab=sure')} />
-          <Row icon={<Sparkles size={20} color={Colors.cyan} />} label="İlgi alanların" onPress={() => go('/ilgi-alanlarim')} />
-          <Row icon={<Bell size={20} color={Colors.cyan} />} label="Bildirimler" onPress={() => go('/bildirim-ayarlari')} last />
-        </Section>
-
-        <Section title="İçeriğini kimler görebilir">
-          <Row icon={<Star size={20} color="#22C55E" />} label="Yakın Arkadaşlar" onPress={() => go('/yakin-arkadaslar')} />
-          <ToggleRow
-            icon={<Lock size={20} color={Colors.cyanSoft} />}
-            label="Gizli hesap"
-            desc="Paylaşımlarını ve takipçi/takip listelerini yalnızca onayladığın takipçiler görür"
-            value={privateAccount}
-            onChange={setPrivate}
-          />
-          <Row icon={<UserPlus size={20} color={Colors.cyanSoft} />} label="Takip istekleri" onPress={() => go('/takip-istekleri')} />
-          <Row icon={<Ban size={20} color={Colors.live} />} label="Engellenen hesaplar" onPress={() => go('/engellenenler')} last />
-        </Section>
-
-        <Section title="Başkaları seninle nasıl etkileşim kurabilir">
-          <Row icon={<MessageCircle size={20} color={Colors.cyan} />} label="Mesajlar" onPress={() => go('/mesajlar')} />
-          <Row
-            icon={<Users size={20} color={Colors.cyanSoft} />}
-            label="Bahsetmeler, mesaj izni ve gizli kelimeler"
-            onPress={() => go('/etkilesim-ayarlari')}
-          />
-          <Row icon={<ShieldMinus size={20} color={Colors.cyanSoft} />} label="Kısıtlanan hesaplar" onPress={() => go('/kisitlananlar')} />
-          <Row icon={<BellOff size={20} color={Colors.cyanSoft} />} label="Sessize alınan hesaplar" onPress={() => go('/sessize-alinanlar')} last />
-        </Section>
-
-        {signedIn ? (
-          <Section title="Güvenlik">
-            <Row icon={<KeyRound size={20} color={Colors.cyan} />} label="Şifreyi değiştir" onPress={() => go('/yeni-sifre')} />
-            <Row icon={<Mail size={20} color={Colors.cyan} />} label="E-posta adresini değiştir" onPress={() => go('/eposta-degistir')} />
-            <Row icon={<ShieldCheck size={20} color={Colors.success} />} label="İki adımlı doğrulama" onPress={() => go('/iki-adimli')} />
-            <Row icon={<CalendarDays size={20} color={Colors.cyanSoft} />} label="Yaş doğrulama" onPress={() => go('/yas-dogrulama')} />
-            <Row icon={<Users size={20} color={Colors.cyanSoft} />} label="Ebeveyn denetimi" onPress={() => go('/ebeveyn-denetimi')} />
-            {auth.biometric.available ? (
-              <View style={[styles.row, { flexWrap: 'wrap' }]}>
-                <ScanFace size={20} color={Colors.cyanSoft} />
-                <View style={{ flex: 1 }}>
-                  <VText variant="label">{bioLabel} ile giriş</VText>
-                  <VText variant="caption">Şifre yazmadan hızlı ve güvenli giriş</VText>
-                </View>
-                <Switch
-                  value={auth.biometric.enabled || bioPw !== null}
-                  onValueChange={toggleBiometric}
-                  trackColor={{ true: Colors.cyan, false: 'rgba(255,255,255,0.15)' }}
-                  thumbColor="#fff"
-                />
-                {bioPw !== null && !auth.biometric.enabled ? (
-                  <View style={styles.bioBox}>
-                    <VText variant="caption">Açmak için şifreni yaz:</VText>
-                    <View style={styles.bioRow}>
-                      <TextInput
-                        value={bioPw}
-                        onChangeText={setBioPw}
-                        onSubmitEditing={confirmBiometric}
-                        secureTextEntry
-                        autoCapitalize="none"
-                        autoComplete="current-password"
-                        placeholder="Şifren"
-                        placeholderTextColor={Colors.textMuted}
-                        style={styles.bioInput}
-                      />
-                      <Pressable onPress={confirmBiometric} hitSlop={8}>
-                        <VText variant="label" color={Colors.cyan}>
-                          {bioBusy ? 'Bekle…' : 'Onayla'}
-                        </VText>
-                      </Pressable>
-                    </View>
-                  </View>
-                ) : null}
-              </View>
-            ) : null}
-            {confirmEverywhere ? (
-              <Confirm
-                text="Bu hesap açık olan tüm telefon ve tarayıcılardan çıkış yapılsın mı? Bu cihazdan da çıkılır."
-                yes="Evet, hepsinden çık"
-                onYes={everywhere}
-                onNo={() => setConfirmEverywhere(false)}
-                last
-              />
-            ) : (
-              <Row
-                icon={<MonitorSmartphone size={20} color={Colors.cyanSoft} />}
-                label="Tüm cihazlardan çıkış yap"
-                onPress={() => setConfirmEverywhere(true)}
-                last
-              />
-            )}
-          </Section>
-        ) : null}
-
-        <Section title="Tema" note="Tema değişince uygulama bir saniyeliğine yeniden açılır.">
-          <ChoiceList<ThemePref>
-            value={themePref}
-            onChange={changeTheme}
-            options={[
-              { key: 'dark', label: 'Koyu', desc: 'Lacivert zemin, turkuaz vurgular' },
-              { key: 'light', label: 'Açık', desc: 'Beyaz zemin' },
-              { key: 'pink', label: 'Pembe', desc: 'Açık pembe zemin, pembe vurgular' },
-              { key: 'system', label: 'Telefona göre', desc: 'Telefonun açık/koyu ayarını izler' },
-            ]}
-          />
-        </Section>
-        {themeNote ? (
-          <VText variant="caption" color={Colors.gold} style={{ marginTop: -8, marginBottom: 8 }}>
-            {themeNote}
-          </VText>
-        ) : null}
-
-        <Section title="Uygulama tercihleri">
-          <ToggleRow
-            icon={<PlayCircle size={20} color={Colors.cyanSoft} />}
-            label="Videoları otomatik oynat"
-            desc="Akışta videolar sessiz başlar"
-            value={state.settings.autoplayVideos}
-            onChange={(v) => updateSettings({ autoplayVideos: v })}
-          />
-          <ToggleRow
-            icon={<Heart size={20} color={Colors.heart} />}
-            label="Beğeni sayılarını gizle"
-            desc="Başkalarının gönderilerinde beğeni sayısı görünmez; kendi gönderilerinde görmeye devam edersin"
-            value={!!state.settings.hideLikeCounts}
-            onChange={(v) => updateSettings({ hideLikeCounts: v })}
-            last
-          />
-        </Section>
-
-        <Section title="Destek">
-          <Row icon={<LifeBuoy size={20} color={Colors.cyan} />} label="Yardım ve sorun bildir" onPress={() => go('/destek')} />
-          <Row icon={<ShieldAlert size={20} color={Colors.gold} />} label="Hesap durumu" onPress={() => go('/hesap-durumu')} />
-          <Row icon={<BookOpen size={20} color={Colors.cyanSoft} />} label="Topluluk kuralları" onPress={() => go('/topluluk-kurallari')} last />
-        </Section>
-
-        <Section title="Yasal">
-          <Row icon={<Shield size={20} color={Colors.cyanSoft} />} label="Aydınlatma Metni ve Gizlilik" onPress={() => go('/yasal/aydinlatma')} />
-          <Row icon={<FileText size={20} color={Colors.cyanSoft} />} label="Kullanım Koşulları" onPress={() => go('/yasal/kosullar')} />
-          <Row icon={<Users size={20} color={Colors.cyanSoft} />} label="Çocukları Koruma Önlemleri" onPress={() => go('/yasal/cocuk-koruma')} />
-          <Row icon={<FileText size={20} color={Colors.cyanSoft} />} label="Telif ve İçerik Bildirimi" onPress={() => go('/yasal/telif')} />
-          <View style={[styles.row, { borderBottomWidth: 0 }]}>
-            <Info size={20} color={Colors.textSecondary} />
-            <VText variant="label" style={{ flex: 1 }}>
-              Uygulama sürümü
-            </VText>
-            <VText variant="caption">{APP_VERSION}</VText>
-          </View>
-        </Section>
-
-        <Section title="Hesap işlemleri">
-          {myId ? (
-            <>
-              <Row icon={<Download size={20} color={Colors.cyanSoft} />} label="Verilerimi indir" onPress={() => go('/verilerim')} />
-              <Row icon={<Trash2 size={20} color={Colors.live} />} label="Hesabı sil" onPress={() => go('/hesap-sil')} />
-            </>
-          ) : null}
-          <Row
-            icon={<LogOut size={20} color={Colors.live} />}
-            label="Çıkış Yap"
-            danger
-            onPress={() => {
-              if (auth.session) auth.signOut();
-              else router.replace('/giris' as Href);
-            }}
-            last
-          />
-        </Section>
-
-        {note ? (
-          <VText variant="caption" color={Colors.cyan} style={{ textAlign: 'center', marginTop: 10 }}>
-            {note}
-          </VText>
-        ) : null}
+    <SubScreen title="Ayarlar ve hareketler">
+      <View style={{ paddingHorizontal: Spacing.screen, paddingBottom: Spacing.xl }}>
+        <SettingsSearch value={query} onChange={setQuery} />
+        {results ? (
+          results.length ? (
+            <Section title="Sonuçlar">{results.map((it, i) => renderItem(it, i === results.length - 1))}</Section>
+          ) : (
+            <EmptyState icon={<Info size={36} color={Colors.textMuted} />} title="Sonuç yok" text={`"${query.trim()}" için ayar bulunamadı.`} />
+          )
+        ) : (
+          groups.map((gr) => (
+            <Section key={gr.title} title={gr.title}>
+              {gr.items.map((it, i) => renderItem(it, i === gr.items.length - 1))}
+            </Section>
+          ))
+        )}
       </View>
     </SubScreen>
   );
 }
-
-function Confirm({ text, yes, onYes, onNo, last }: { text: string; yes: string; onYes: () => void; onNo: () => void; last?: boolean }) {
-  return (
-    <View style={[styles.row, { flexDirection: 'column', alignItems: 'stretch' }, last && { borderBottomWidth: 0 }]}>
-      <VText variant="label">{text}</VText>
-      <View style={{ flexDirection: 'row', gap: 20, marginTop: 10 }}>
-        <Pressable onPress={onYes}>
-          <VText variant="label" color={Colors.live}>
-            {yes}
-          </VText>
-        </Pressable>
-        <Pressable onPress={onNo}>
-          <VText variant="label" color={Colors.textSecondary}>
-            Vazgeç
-          </VText>
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  bioBox: { width: '100%', marginTop: 10 },
-  bioRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 6 },
-  bioInput: {
-    flex: 1,
-    height: 44,
-    paddingHorizontal: 12,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surfaceStrong,
-    color: Colors.text,
-    fontFamily: Fonts.medium,
-    fontSize: 15,
-  },
-  pad: { paddingHorizontal: Spacing.screen },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-});

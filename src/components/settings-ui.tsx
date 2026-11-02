@@ -1,11 +1,11 @@
-/** Ayar ekranlarının ortak parçaları: bölüm, satır, aç/kapa, seçenek listesi. */
-import { Check, ChevronRight } from 'lucide-react-native';
+/** Ayar ekranlarının ortak parçaları: bölüm, satır, aç/kapa, seçenek listesi, arama kutusu. */
+import { Check, ChevronRight, Search, X } from 'lucide-react-native';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Switch, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, TextInput, View } from 'react-native';
 
 import { GlassCard } from '@/components/ui/primitives';
 import { VText } from '@/components/ui/text';
-import { Colors, Spacing } from '@/constants/theme';
+import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 
 export function Section({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
   return (
@@ -26,6 +26,7 @@ export function Section({ title, note, children }: { title: string; note?: strin
 export function Row({
   icon,
   label,
+  desc,
   value,
   onPress,
   last,
@@ -33,6 +34,8 @@ export function Row({
 }: {
   icon: ReactNode;
   label: string;
+  /** Satırın altında kısa açıklama (Instagram'daki gibi) */
+  desc?: string;
   value?: string;
   onPress: () => void;
   last?: boolean;
@@ -41,9 +44,12 @@ export function Row({
   return (
     <Pressable style={({ pressed }) => [styles.row, last && styles.last, pressed && { opacity: 0.7 }]} onPress={onPress}>
       {icon}
-      <VText variant="label" color={danger ? Colors.live : Colors.text} style={{ flex: 1 }}>
-        {label}
-      </VText>
+      <View style={{ flex: 1 }}>
+        <VText variant="label" color={danger ? Colors.live : Colors.text}>
+          {label}
+        </VText>
+        {desc ? <VText variant="caption">{desc}</VText> : null}
+      </View>
       {value ? (
         <VText variant="caption" numberOfLines={1} style={{ maxWidth: 140 }}>
           {value}
@@ -116,7 +122,43 @@ export function ChoiceList<T extends string>({
   );
 }
 
+/** Ayarlarda arama kutusu (Instagram'daki gibi en üstte). */
+export function SettingsSearch({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <View style={styles.search}>
+      <Search size={18} color={Colors.textMuted} />
+      <TextInput
+        value={value}
+        onChangeText={onChange}
+        placeholder="Ara"
+        placeholderTextColor={Colors.textMuted}
+        autoCorrect={false}
+        style={styles.searchInput}
+        accessibilityLabel="Ayarlarda ara"
+      />
+      {value ? (
+        <Pressable onPress={() => onChange('')} hitSlop={8} accessibilityLabel="Aramayı temizle">
+          <X size={18} color={Colors.textMuted} />
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  search: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    height: 42,
+    paddingHorizontal: 12,
+    marginTop: Spacing.sm,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surfaceStrong,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  searchInput: { flex: 1, color: Colors.text, fontFamily: Fonts.medium, fontSize: 15 },
   sectionTitle: { letterSpacing: 1, marginBottom: 6, marginLeft: 4 },
   row: {
     flexDirection: 'row',
