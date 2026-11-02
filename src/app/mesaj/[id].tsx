@@ -6,7 +6,7 @@ import { Image } from 'expo-image';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { BadgeCheck, ImageOff, ImagePlus, PlayCircle, Send } from 'lucide-react-native';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -34,6 +34,7 @@ import {
   sendMediaMessage,
   sendMessage,
   subscribeToConversation,
+  subscribeTyping,
   type Message,
 } from '@/lib/messages-api';
 import { fetchPosts } from '@/lib/posts-api';
@@ -51,6 +52,23 @@ export default function Sohbet() {
   const [messages, setMessages] = useState<Message[] | null>(null);
   const [posts, setPosts] = useState<Record<string, Post | null>>({});
   const [text, setText] = useState('');
+  // Karşı taraf yazıyor mu (gizli canlı kanal)
+  const [peerTyping, setPeerTyping] = useState(false);
+  const typing = useRef<ReturnType<typeof subscribeTyping> | null>(null);
+  useEffect(() => {
+    if (!myId) return;
+    const t = subscribeTyping(cid, myId, setPeerTyping);
+    typing.current = t;
+    return () => {
+      t.close();
+      typing.current = null;
+    };
+  }, [cid, myId]);
+  const onChangeText = (v: string) => {
+    setText(v);
+    if (v.trim()) typing.current?.ping();
+    else typing.current?.stop();
+  };
   const [sending, setSending] = useState(false);
   /** Fotoğraf/video yüklenirken yüzde (0–100); yükleme yoksa null */
   const [upload, setUpload] = useState<number | null>(null);
@@ -130,6 +148,7 @@ export default function Sohbet() {
       return;
     }
     setText('');
+    typing.current?.stop();
     addIncoming(res.data);
   };
 
@@ -256,6 +275,11 @@ export default function Sohbet() {
           </VText>
         ) : null}
 
+        {peerTyping && peer ? (
+          <VText variant="caption" color={Colors.cyan} style={{ paddingHorizontal: Spacing.screen, paddingVertical: 2 }}>
+            {peer.name} yazıyor…
+          </VText>
+        ) : null}
         {upload !== null ? (
           <VText variant="caption" style={{ textAlign: 'center', paddingVertical: 4 }}>
             Gönderiliyor… %{upload}
@@ -269,7 +293,7 @@ export default function Sohbet() {
               </Pressable>
               <TextInput
                 value={text}
-                onChangeText={setText}
+                onChangeText={onChangeText}
                 placeholder="Mesaj yaz…"
                 placeholderTextColor={Colors.textMuted}
                 style={styles.input}

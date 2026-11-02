@@ -262,3 +262,42 @@ export function chatTime(iso: string) {
     return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
   return timeAgo(iso);
 }
+
+/**
+ * "Yazıyor…" göstergesi: gizli yayın kanalı (yalnız sohbet üyeleri; 0036). Mesaj veritabanına yazılmaz.
+ * `ping()` yazarken çağrılır (en fazla 2 sn'de bir gönderir); karşı taraf yazınca `onTyping(true)`,
+ * 4 sn sinyal gelmezse `onTyping(false)`.
+ */
+export function subscribeTyping(conversationId: string, myId: string, onTyping: (typing: boolean) => void) {
+  const channel: RealtimeChannel = supabase.channel(`typing:${conversationId}`, { config: { private: true } });
+  let hide: ReturnType<typeof setTimeout> | null = null;
+  let lastSent = 0;
+  channel
+    .on('broadcast', { event: 'typing' }, ({ payload }) => {
+      if (payload?.from === myId) return;
+      if (hide) clearTimeout(hide);
+      if (payload?.stop) {
+        onTyping(false);
+        return;
+      }
+      onTyping(true);
+      hide = setTimeout(() => onTyping(false), 4000);
+    })
+    .subscribe();
+  return {
+    ping() {
+      const now = Date.now();
+      if (now - lastSent < 2000) return;
+      lastSent = now;
+      channel.send({ type: 'broadcast', event: 'typing', payload: { from: myId } });
+    },
+    stop() {
+      lastSent = 0;
+      channel.send({ type: 'broadcast', event: 'typing', payload: { from: myId, stop: true } });
+    },
+    close() {
+      if (hide) clearTimeout(hide);
+      supabase.removeChannel(channel);
+    },
+  };
+}
