@@ -1,0 +1,32 @@
+# VOPILA otomatik kontrol: her gönderimde (push) ve birleştirme isteğinde çalışır.
+name: Kontrol
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  uygulama:
+    name: Tür kontrolü, kod kuralları, uygulama testleri
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test -- --ci
+
+  veritabani:
+    name: Veritabanı güvenlik testleri
+    runs-on: ubuntu-latest
+    # Bağlantı adresi GitHub > Settings > Secrets > Actions altında SUPABASE_DB_URL olarak eklenince çalışır.
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/db-tests.sh

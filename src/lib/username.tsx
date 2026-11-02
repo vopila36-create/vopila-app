@@ -10,11 +10,13 @@ import { supabase } from '@/lib/supabase';
 
 export type UsernameStatus = 'ok' | 'taken' | 'invalid' | 'reserved';
 
-/** Kullanıcı adı alanına yazılanı izin verilen biçime çevirir (küçük harf, rakam, _). */
+const TR_ASCII: Record<string, string> = { ı: 'i', ş: 's', ğ: 'g', ü: 'u', ö: 'o', ç: 'c', â: 'a', î: 'i', û: 'u' };
+
+/** Kullanıcı adı alanına yazılanı izin verilen biçime çevirir (küçük harf, rakam, _; Türkçe harfler karşılığına). */
 export const cleanUsername = (t: string) =>
   t
     .toLocaleLowerCase('tr-TR')
-    .replace(/ı/g, 'i')
+    .replace(/[ışğüöçâîû]/g, (c) => TR_ASCII[c])
     .replace(/[^a-z0-9_]/g, '')
     .slice(0, 20);
 

@@ -96,7 +96,7 @@ Testçiler video yükleyince sorun çıkmasın.
   görülen anların halkası soluk, görülmeyenler önde — 0035.
 - **Arama geçmişi** (son aramalar; tek tek ya da tümden silme; telefonda, hesaba özel).
 - **Mesajlar**: "yazıyor…" (gizli kanal, yalnız üyeler, engellide kapalı — 0036), çift dokunuşla kalp,
-  uzun basınca "Gönderimi geri al" (dosya da silinir) — 0037.
+  uzun basınca "Gönderimi geri al" (içerik iki taraftan kalkar; güvenlik için 30 gün gizli arşivde tutulur) — 0037.
 - **Yazı boyutu** telefonun ayarını izler (en fazla 1,4 kat). → 3.5 tamamlandı.
 - Yeni tablolar askı/hız sınırı korumalı, tarihler sunucuda yazılır (güvenlik incelemesi düzeltmeleri).
 
@@ -134,7 +134,15 @@ ayarları gerçek olur), Sentry, Apple ile giriş, OTA güncelleme.
   sahipsiz/süresi dolan DM dosyalarının kaydını siler (erişilemez olur) ama dosyanın kendisi depoda kalabilir.
 - vopila.com'da web sitesi + uygulama bağlantıları (davet/profil linkleri doğrudan uygulamada açılsın).
 - Sürüm numaraları, Play Integrity / App Attest, bağımsız güvenlik testi.
-- Temel otomatik testler ve her değişiklikte kontrol (CI).
+- ✅ Otomatik testler ve her gönderimde kontrol (2 Kasım 2026):
+  - `npm test`: uygulama mantığı (kullanıcı adı, ayrılmış ad, profil bağlantısı/QR, akış sıralaması, arama geçmişi, mesaj önizlemesi).
+  - `supabase/tests/*.sql`: veritabanı güvenlik testleri — gizli hesap, takip isteği, engelleme, mesaj gizliliği,
+    geri alma/kalp, yorum/etiket/sabitleme kuralları, token ve stok, sipariş gizliliği/iptal/iade, 15 yaş altı kayıt,
+    18 altı koruması, askı, yönetici yetkisi, iki adımlı doğrulama, oturumsuz ziyaretçi. Test kullanıcıları geçici açılır,
+    her şey sonunda geri alınır.
+  - GitHub Actions (`.github/workflows/ci.yml`): her gönderimde tür kontrolü + kod kuralları + uygulama testleri.
+    _Siz (isteğe bağlı): veritabanı testlerinin de otomatik çalışması için GitHub > Settings > Secrets > Actions altına
+    `SUPABASE_DB_URL` (Supabase > Connect > bağlantı adresi) ekleyin._
 - Play Store ve App Store başvurusu.
 
 ---
