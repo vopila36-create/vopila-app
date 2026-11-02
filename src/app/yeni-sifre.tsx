@@ -21,6 +21,9 @@ export default function YeniSifre() {
   // Şifremi unuttum akışında mevcut şifre bilinmez; Ayarlar'dan gelince sorulur
   const changing = !auth.passwordRecovery;
   const [current, setCurrent] = useState('');
+  // Sunucu yeniden doğrulama isterse e-postaya gelen kod (Supabase "Secure password change")
+  const [needNonce, setNeedNonce] = useState(false);
+  const [nonce, setNonce] = useState('');
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
   const [show, setShow] = useState(false);
@@ -38,7 +41,7 @@ export default function YeniSifre() {
     setBusy(true);
     if (changing) {
       const { data, error: rpcErr } = await supabase.rpc('verify_my_password', { p_password: current });
-      if (rpcErr || data === 'wrong' || data === 'rate_limited') {
+      if (rpcErr || (data !== 'ok' && data !== 'no_password')) {
         setBusy(false);
         return setError(
           data === 'rate_limited'
@@ -49,7 +52,17 @@ export default function YeniSifre() {
         );
       }
     }
-    const res = await auth.setNewPassword(pw);
+    const res = await auth.setNewPassword(pw, {
+      currentPassword: changing ? current : undefined,
+      nonce: needNonce ? nonce.replace(/\D/g, '') : undefined,
+    });
+    if (!res.ok && res.code === 'reauthentication_needed') {
+      // Oturum eski: e-postaya doğrulama kodu gönder, kod girilince tekrar kaydet
+      const r = await supabase.auth.reauthenticate();
+      setBusy(false);
+      setNeedNonce(true);
+      return setError(r.error ? res.error : 'E-postana bir doğrulama kodu gönderdik. Kodu aşağıya yazıp tekrar kaydet.');
+    }
     setBusy(false);
     if (!res.ok) return setError(res.error);
     setDone(true);
@@ -128,6 +141,23 @@ export default function YeniSifre() {
             placeholderTextColor={Colors.textMuted}
           />
         </View>
+
+        {needNonce ? (
+          <>
+            <VText variant="label" color={Colors.textSecondary} style={{ marginTop: Spacing.lg }}>
+              E-postana gelen doğrulama kodu
+            </VText>
+            <View style={styles.inputWrap}>
+              <TextInput
+                value={nonce}
+                onChangeText={(t) => setNonce(t.replace(/\D/g, '').slice(0, 10))}
+                keyboardType="number-pad"
+                textContentType="oneTimeCode"
+                style={styles.input}
+              />
+            </View>
+          </>
+        ) : null}
 
         {error ? (
           <VText variant="caption" color={Colors.live} style={styles.msg}>

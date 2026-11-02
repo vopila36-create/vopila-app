@@ -3,6 +3,8 @@
  * kod girilince adres değişir. Supabase'in "güvenli e-posta değişikliği" açıksa eski adrese de kod
  * gider; o kod da girilmelidir (iki kutu).
  * Not: Supabase > Authentication > Emails > "Change email address" şablonunda {{ .Token }} olmalı.
+ * Asıl koruma sunucuda: "Secure email change" açıkken değişiklik eski adresten de onaylanmadan olmaz
+ * (oturumu ele geçiren biri şifre sormayı atlasa bile eski adrese erişemez).
  */
 import { router, type Href } from 'expo-router';
 import { Mail } from 'lucide-react-native';
@@ -52,6 +54,7 @@ export default function EpostaDegistir() {
       if (rpcErr) return setError('Şifre kontrol edilemedi. Bağlantını kontrol edip tekrar dene.');
       if (data === 'wrong') return setError('Şifren hatalı.');
       if (data === 'rate_limited') return setError('Çok fazla hatalı deneme. 15 dakika sonra tekrar dene.');
+      if (data !== 'ok' && data !== 'no_password') return setError('Şifre kontrol edilemedi. Tekrar dene.');
       const { error: upErr } = await supabase.auth.updateUser({ email: addr });
       if (upErr) return setError(toTurkish(upErr));
       setEmail(addr);

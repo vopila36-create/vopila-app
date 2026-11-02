@@ -69,6 +69,8 @@ export function toTurkish(err: { message?: string; code?: string } | null | unde
   if (code === 'otp_disabled' || msg.includes('signups not allowed'))
     return 'Bu e-posta ile kayıtlı bir hesap yok. "Kayıt Ol" sekmesinden hesap oluşturabilirsin.';
   if (code === 'same_password') return 'Yeni şifre eski şifrenle aynı olamaz.';
+  if (code === 'reauthentication_not_valid') return 'Doğrulama kodu hatalı ya da süresi dolmuş. Yeni kod iste.';
+  if (code === 'reauthentication_needed') return 'Güvenliğin için e-postana gelen doğrulama kodunu yaz.';
   if (code === 'weak_password' || msg.includes('password should be')) return 'Şifre en az 6 karakter olmalı.';
   if (code === 'email_address_invalid' || msg.includes('invalid format') || msg.includes('is invalid'))
     return 'Geçerli bir e-posta adresi yaz.';
@@ -396,10 +398,18 @@ function useBuildAuth() {
     return { ok: true };
   }, []);
 
-  /** Yeni şifre belirler (şifremi unuttum akışının son adımı). */
+  /**
+   * Yeni şifre belirler. Ayarlar'dan değiştirirken mevcut şifre de gönderilir; Supabase'de
+   * "Secure password change" açıksa ve oturum 24 saatten eskiyse sunucu e-posta kodu (nonce) ister
+   * (code: reauthentication_needed) — kod `nonce` ile tekrar gönderilir. Kontrol sunucuda yapılır.
+   */
   const setNewPassword = useCallback(
-    async (password: string): Promise<Result> => {
-      const { data, error } = await supabase.auth.updateUser({ password });
+    async (password: string, opts?: { currentPassword?: string; nonce?: string }): Promise<Result> => {
+      const { data, error } = await supabase.auth.updateUser({
+        password,
+        ...(opts?.currentPassword ? { current_password: opts.currentPassword } : {}),
+        ...(opts?.nonce ? { nonce: opts.nonce } : {}),
+      });
       if (error) return { ok: false, error: toTurkish(error), code: error.code };
       setPasswordRecovery(false);
       if (data.user.email) await updateStoredPassword(data.user.email, password);
