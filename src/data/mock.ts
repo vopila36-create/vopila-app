@@ -328,6 +328,8 @@ export type Moment = {
   remote?: boolean;
   /** Yalnızca yakın arkadaşlara (yeşil çerçeve) */
   closeFriends?: boolean;
+  /** Bu anı gördüm (şeritte halkası soluk) */
+  seen?: boolean;
 };
 
 export const moments: Moment[] = [

@@ -781,7 +781,10 @@ function useBuildStore() {
   /** Akıştaki Anlar şeridi: önce benim anım, sonra diğer gerçek anlar (örnekler yalnızca oturumsuz). */
   const allMoments = useMemo(() => {
     const mine = realMoments.filter((m) => m.authorId === ME_ID);
-    const others = realMoments.filter((m) => m.authorId !== ME_ID);
+    // Görülmemiş anlar önce (Instagram gibi)
+    const others = realMoments
+      .filter((m) => m.authorId !== ME_ID)
+      .sort((a, b) => Number(!!a.seen) - Number(!!b.seen));
     return myId ? [...mine, ...others] : [...mine, ...others, ...demoMoments];
   }, [realMoments, myId]);
 

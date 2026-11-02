@@ -112,7 +112,7 @@ export default function Akis() {
               <Pressable
                 key={m.id}
                 onPress={() => router.push(`/an/${m.id}` as Href)}
-                style={[styles.moment, (m.remote || i < 2) && styles.momentNew, m.closeFriends && styles.momentClose]}>
+                style={[styles.moment, (m.remote ? !m.seen : i < 2) && styles.momentNew, m.closeFriends && styles.momentClose]}>
                 {first?.type === 'video' ? (
                   <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.surfaceStrong }]} />
                 ) : (

@@ -2,8 +2,8 @@
  * Anlar (24 saatlik hikâyeler). Süresi dolanlar ve görme yetkin olmayanlar sunucu kuralıyla
  * (RLS) zaten gelmez; dosyalar gizli kovadan kısa süreli imzalı adreslerle açılır.
  */
-import type { Media, Moment, User } from '@/data/mock';
-import { AUTHOR, localId, one, toUser, uploadMedia, type ApiResult, type DbAuthor } from '@/lib/posts-api';
+import { ME_ID, type Media, type Moment, type User } from '@/data/mock';
+import { AUTHOR, localId, one, timeAgo, toUser, uploadMedia, type ApiResult, type DbAuthor } from '@/lib/posts-api';
 import { mediaUrls, supabase } from '@/lib/supabase';
 import type { UploadProgress } from '@/lib/upload';
 import { toTurkish } from '@/store/auth';
@@ -38,6 +38,8 @@ export async function fetchMoments(myId: string): Promise<ApiResult<{ moments: M
       };
     })
     .filter((m) => m.items.length);
+  const seen = new Set(await fetchSeenMoments(myId, moments.filter((m) => m.authorId !== ME_ID).map((m) => m.id)));
+  for (const m of moments) (m as Moment).seen = m.authorId === ME_ID || seen.has(m.id);
   return { ok: true, data: { moments, authors } };
 }
 
@@ -94,4 +96,42 @@ export async function setMomentLike(myId: string, momentId: string, on: boolean)
     : await supabase.from('moment_likes').delete().eq('moment_id', momentId).eq('user_id', myId);
   if (error) return { ok: false, error: toTurkish(error) };
   return { ok: true, data: undefined };
+}
+
+// ─── Görüntüleme (0035) ─────────────────────────────────────────────────────
+
+/** Anı gördüm olarak işaretle (kendi anım hariç; aynı kişi bir kez sayılır). */
+export async function markMomentSeen(myId: string, momentId: string): Promise<void> {
+  await supabase.from('moment_views').upsert({ moment_id: momentId, viewer_id: myId }, { ignoreDuplicates: true });
+}
+
+/** Gördüğüm anlar (akıştaki şeritte halkası soluk görünür). */
+export async function fetchSeenMoments(myId: string, momentIds: string[]): Promise<string[]> {
+  if (!momentIds.length) return [];
+  const { data } = await supabase.from('moment_views').select('moment_id').eq('viewer_id', myId).in('moment_id', momentIds);
+  return (data ?? []).map((d) => d.moment_id as string);
+}
+
+export type MomentViewer = { user: User; time: string; liked: boolean };
+
+/** Anımı görenler (yalnız anın sahibi okuyabilir), en yeniden eskiye; beğenenler işaretli. */
+export async function fetchMomentViewers(momentId: string): Promise<ApiResult<MomentViewer[]>> {
+  const [views, likes] = await Promise.all([
+    supabase
+      .from('moment_views')
+      .select(`viewer_id, viewed_at, viewer:profiles!moment_views_viewer_id_fkey(${AUTHOR})`)
+      .eq('moment_id', momentId)
+      .order('viewed_at', { ascending: false })
+      .limit(200),
+    supabase.from('moment_likes').select('user_id').eq('moment_id', momentId),
+  ]);
+  if (views.error) return { ok: false, error: toTurkish(views.error) };
+  const liked = new Set((likes.data ?? []).map((l) => l.user_id as string));
+  const list: MomentViewer[] = [];
+  for (const r of (views.data ?? []) as any[]) {
+    const a = one(r.viewer) as DbAuthor | null;
+    if (!a) continue;
+    list.push({ user: toUser(a), time: timeAgo(r.viewed_at), liked: liked.has(a.id) });
+  }
+  return { ok: true, data: list };
 }

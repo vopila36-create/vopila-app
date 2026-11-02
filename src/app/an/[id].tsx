@@ -1,9 +1,9 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
-import { Heart, Pause, Play, X } from 'lucide-react-native';
+import { Eye, Heart, Pause, Play, Send, X } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { VideoPlayer } from '@/components/ui/media';
@@ -12,7 +12,15 @@ import { OnDark, VText } from '@/components/ui/text';
 import { Colors, OnImage } from '@/constants/theme';
 import { ME_ID, type Moment } from '@/data/mock';
 import { useScreenshotGuard } from '@/lib/screen-guard';
-import { deleteMoment, fetchMyMomentLikes, setMomentLike } from '@/lib/moments-api';
+import { openDm, sendMessage } from '@/lib/messages-api';
+import {
+  deleteMoment,
+  fetchMomentViewers,
+  fetchMyMomentLikes,
+  markMomentSeen,
+  setMomentLike,
+  type MomentViewer,
+} from '@/lib/moments-api';
 import { useMe, useStore } from '@/store/app-store';
 
 const DURATION = 5000;
@@ -62,6 +70,11 @@ export default function AnGoruntuleyici() {
   }, [myId, moments]);
   const [deleting, setDeleting] = useState(false);
   const elapsed = useRef(0);
+  // Yanıt (başkasının anı) ve görenler listesi (kendi anım)
+  const [reply, setReply] = useState('');
+  const [replyNote, setReplyNote] = useState<string | null>(null);
+  const [sendingReply, setSendingReply] = useState(false);
+  const [viewers, setViewers] = useState<{ id: string; list: MomentViewer[] | null } | null>(null);
 
   const momentIndex = pos.mi;
   const itemIndex = pos.ii;
@@ -74,6 +87,37 @@ export default function AnGoruntuleyici() {
   const duration = item.type === 'video' ? VIDEO_DURATION : DURATION;
 
   const close = useCallback(() => (router.canGoBack() ? router.back() : router.replace('/akis' as Href)), []);
+
+  // Başkasının gerçek anı açılınca "gördü" olarak kaydedilir (sahibi görenler listesinde görür)
+  const seenId = moment && moment.remote && !isMine ? moment.id : null;
+  useEffect(() => {
+    if (myId && seenId) markMomentSeen(myId, seenId);
+  }, [myId, seenId]);
+
+  const openViewers = async () => {
+    if (!moment?.remote) return;
+    setPaused(true);
+    setViewers({ id: moment.id, list: null });
+    const r = await fetchMomentViewers(moment.id);
+    setViewers({ id: moment.id, list: r.ok ? r.data : [] });
+  };
+
+  const sendReply = async () => {
+    const t = reply.trim();
+    if (!t || !moment?.remote || sendingReply) return;
+    setSendingReply(true);
+    const dm = await openDm(author.id);
+    const r = dm.ok && myId ? await sendMessage(myId, dm.data, { text: `↩ Anına yanıt${moment.title ? ` (${moment.title})` : ''}: ${t}` }) : dm;
+    setSendingReply(false);
+    if (!r.ok) {
+      setReplyNote(r.error);
+      return;
+    }
+    setReply('');
+    setReplyNote('Yanıtın mesaj olarak gönderildi.');
+    setPaused(false);
+    setTimeout(() => setReplyNote(null), 2500);
+  };
 
   const go = useCallback(
     (dir: 1 | -1) => {
@@ -120,7 +164,7 @@ export default function AnGoruntuleyici() {
   const key = `${moment.id}-${itemIndex}`;
 
   return (
-    <View style={styles.root}>
+    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {item.type === 'video' ? (
         <View key={key} style={StyleSheet.absoluteFill}>
           <VideoPlayer uri={item.uri} autoPlay loop={false} controls={false} />
@@ -175,15 +219,50 @@ export default function AnGoruntuleyici() {
         </View>
       </View>
 
+      {replyNote ? (
+        <View style={[styles.note, { bottom: insets.bottom + 76 }]}>
+          <VText variant="caption" color="#fff">
+            {replyNote}
+          </VText>
+        </View>
+      ) : null}
       <View style={[styles.bottom, { paddingBottom: insets.bottom + 16 }]}>
         {isMine ? (
           moment.remote ? (
-            <Pressable onPress={remove} style={[styles.follow, styles.following]}>
-              <VText variant="label" color={OnImage.text}>
-                {deleting ? 'Siliniyor…' : 'Anı sil'}
-              </VText>
-            </Pressable>
+            <>
+              <Pressable onPress={openViewers} style={[styles.follow, styles.following, styles.row]} accessibilityLabel="Görenler">
+                <Eye size={16} color="#fff" />
+                <VText variant="label" color={OnImage.text}>
+                  Görenler
+                </VText>
+              </Pressable>
+              <Pressable onPress={remove} style={[styles.follow, styles.following, { marginLeft: 10 }]}>
+                <VText variant="label" color={OnImage.text}>
+                  {deleting ? 'Siliniyor…' : 'Anı sil'}
+                </VText>
+              </Pressable>
+            </>
           ) : null
+        ) : moment.remote && myId ? (
+          <View style={styles.replyBox}>
+            <TextInput
+              value={reply}
+              onChangeText={setReply}
+              onFocus={() => setPaused(true)}
+              onBlur={() => !reply.trim() && setPaused(false)}
+              placeholder={`${author.name} kişisine yanıt ver…`}
+              placeholderTextColor="rgba(255,255,255,0.7)"
+              style={styles.replyInput}
+              maxLength={500}
+              returnKeyType="send"
+              onSubmitEditing={sendReply}
+            />
+            {reply.trim() ? (
+              <Pressable onPress={sendReply} hitSlop={8} accessibilityLabel="Yanıtı gönder">
+                {sendingReply ? <ActivityIndicator size="small" color="#fff" /> : <Send size={20} color="#fff" />}
+              </Pressable>
+            ) : null}
+          </View>
         ) : (
           <Pressable
             onPress={() => store.toggleFollow(author.id)}
@@ -193,7 +272,7 @@ export default function AnGoruntuleyici() {
             </VText>
           </Pressable>
         )}
-        <View style={{ flex: 1 }} />
+        {isMine || !(moment.remote && myId) ? <View style={{ flex: 1 }} /> : <View style={{ width: 12 }} />}
         <Pressable
           onPress={async () => {
             const on = !liked[moment.id];
@@ -208,8 +287,57 @@ export default function AnGoruntuleyici() {
           <Heart size={30} color={liked[moment.id] ? Colors.heart : '#fff'} fill={liked[moment.id] ? Colors.heart : 'transparent'} />
         </Pressable>
       </View>
+
+      {/* Görenler listesi (yalnız kendi anım) */}
+      {viewers && viewers.id === moment.id ? (
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}>
+          <View style={styles.sheetHead}>
+            <Eye size={18} color="#fff" />
+            <VText variant="bodyBold" style={{ flex: 1 }}>
+              {viewers.list ? `${viewers.list.length} kişi gördü` : 'Görenler'}
+            </VText>
+            <Pressable
+              onPress={() => {
+                setViewers(null);
+                setPaused(false);
+              }}
+              hitSlop={10}
+              accessibilityLabel="Kapat">
+              <X size={22} color="#fff" />
+            </Pressable>
+          </View>
+          {viewers.list === null ? (
+            <ActivityIndicator color={Colors.cyan} style={{ marginVertical: 24 }} />
+          ) : viewers.list.length ? (
+            <ScrollView style={{ maxHeight: 360 }}>
+              {viewers.list.map((v) => (
+                <Pressable
+                  key={v.user.id}
+                  style={styles.viewer}
+                  onPress={() => {
+                    setViewers(null);
+                    router.push(`/kullanici/${v.user.id}` as Href);
+                  }}>
+                  <Avatar uri={v.user.avatar} size={36} />
+                  <View style={{ flex: 1 }}>
+                    <VText variant="label">{v.user.name}</VText>
+                    <VText variant="caption" color="rgba(255,255,255,0.7)">
+                      @{v.user.username} · {v.time}
+                    </VText>
+                  </View>
+                  {v.liked ? <Heart size={16} color={Colors.heart} fill={Colors.heart} /> : null}
+                </Pressable>
+              ))}
+            </ScrollView>
+          ) : (
+            <VText variant="caption" color="rgba(255,255,255,0.75)" style={{ marginVertical: 20, textAlign: 'center' }}>
+              Henüz kimse görmedi.
+            </VText>
+          )}
+        </View>
+      ) : null}
       </OnDark>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -241,4 +369,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   following: { backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)' },
+  row: { flexDirection: 'row', gap: 6 },
+  replyBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    height: 44,
+    paddingHorizontal: 14,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.6)',
+  },
+  replyInput: { flex: 1, color: '#fff', fontSize: 14 },
+  note: {
+    position: 'absolute',
+    alignSelf: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+  },
+  sheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    backgroundColor: 'rgba(10,14,24,0.97)',
+  },
+  sheetHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  viewer: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
 });
