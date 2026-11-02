@@ -72,7 +72,7 @@ Testçiler video yükleyince sorun çıkmasın.
   Anahtar dosyası depoya girmez; yedeğini siz saklarsınız.
 - 4.3 Siz: APK'yı Google Drive'a yükleyip bağlantıyı davet mesajına eklersiniz.
 - ✅ 4.4 Uygulama bağlantıları: beta.vopila.com/davet ve /u bağlantıları Android'de doğrudan uygulamada açılır (assetlinks yayında).
-- Not: Windows'un uzun dosya yolu sınırı yüzünden derleme `subst R: "...\wopila uygulama"` ile `R:opila-appndroid` içinden yapılır.
+- Not: Windows'un uzun dosya yolu sınırı yüzünden APK, proje `C:bopila-app`'e kopyalanarak derlenir: `scriptsuild-apk.ps1` (çıktı: `beta\VOPILA-beta-<sürüm>.apk`).
 
 ## Faz 5 — Hesap açmanız gerekenler (sizin kararınız)
 
